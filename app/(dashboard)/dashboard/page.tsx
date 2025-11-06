@@ -1,32 +1,406 @@
-export default function DashboardPage() {
+import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
+import { PracticeRole, OrderStatus } from '@prisma/client';
+
+import { requireActivePractice } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { hasRole } from '@/lib/rbac';
+
+export default async function DashboardPage() {
+  const { session, practiceId } = await requireActivePractice();
+
+  // Fetch all data in parallel
+  const [items, orders, adjustments, suppliers] = await Promise.all([
+    // Fetch all items with inventory to calculate low stock
+    prisma.item.findMany({
+      where: { practiceId },
+      include: {
+        defaultSupplier: { select: { id: true, name: true } },
+        inventory: {
+          include: {
+            location: { select: { id: true, name: true, code: true } },
+          },
+          orderBy: { location: { name: 'asc' } },
+        },
+        supplierItems: {
+          select: { unitPrice: true },
+          take: 1,
+        },
+      },
+      orderBy: { name: 'asc' },
+    }),
+    // Fetch orders for stats and recent orders table
+    prisma.order.findMany({
+      where: { practiceId },
+      include: {
+        supplier: { select: { id: true, name: true } },
+        items: {
+          select: {
+            id: true,
+            quantity: true,
+            unitPrice: true,
+          },
+        },
+        createdBy: {
+          select: { name: true, email: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    }),
+    // Fetch recent stock adjustments
+    prisma.stockAdjustment.findMany({
+      where: { practiceId },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      include: {
+        item: { select: { id: true, name: true, sku: true } },
+        location: { select: { id: true, name: true, code: true } },
+        createdBy: { select: { id: true, name: true, email: true } },
+      },
+    }),
+    // Fetch all suppliers for links
+    prisma.supplier.findMany({
+      where: { practiceId },
+      select: { id: true, name: true },
+    }),
+  ]);
+
+  // Calculate low-stock information for each item
+  const lowStockItems = items.filter((item) => {
+    const lowStockLocations = item.inventory.filter(
+      (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
+    );
+    return lowStockLocations.length > 0;
+  });
+
+  // Calculate low-stock info with details
+  const lowStockInfoWithDetails = lowStockItems.slice(0, 10).map((item) => {
+    const lowStockLocations = item.inventory.filter(
+      (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
+    );
+    const suggestedQuantity = lowStockLocations.reduce((sum, inv) => {
+      return sum + (inv.reorderQuantity || inv.reorderPoint || 1);
+    }, 0);
+
+    return {
+      item,
+      lowStockLocations,
+      suggestedQuantity,
+    };
+  });
+
+  // Calculate KPIs
+  const lowStockCount = lowStockItems.length;
+  const draftOrdersCount = orders.filter((o) => o.status === OrderStatus.DRAFT).length;
+  const sentOrdersCount = orders.filter((o) => o.status === OrderStatus.SENT).length;
+  const receivedOrdersCount = orders.filter((o) => o.status === OrderStatus.RECEIVED).length;
+
+  // Calculate total stock value (optional, if unit prices available)
+  let totalStockValue = 0;
+  let hasStockValue = false;
+  for (const item of items) {
+    const unitPrice = item.supplierItems[0]?.unitPrice;
+    if (unitPrice) {
+      hasStockValue = true;
+      const totalQuantity = item.inventory.reduce((sum, inv) => sum + inv.quantity, 0);
+      totalStockValue += parseFloat(unitPrice.toString()) * totalQuantity;
+    }
+  }
+
+  const canManage = hasRole({
+    memberships: session.user.memberships,
+    practiceId,
+    minimumRole: PracticeRole.STAFF,
+  });
+
   return (
     <section className="space-y-6">
       <header className="space-y-1">
         <p className="text-xs uppercase tracking-wide text-slate-400">Overview</p>
-        <h1 className="text-3xl font-semibold text-white">Welcome to Remcura</h1>
-        <p className="max-w-2xl text-sm text-slate-300">
-          Track stock levels, suppliers, and orders for each practice location. When authentication is in
-          place you&apos;ll see tenant-specific insights here.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold text-white">Dashboard</h1>
+            <p className="max-w-2xl text-sm text-slate-300">
+              Quick overview of your stock levels, orders, and recent activity.
+            </p>
+          </div>
+          {canManage ? (
+            <Link
+              href="/orders/new"
+              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
+            >
+              Create Order
+            </Link>
+          ) : null}
+        </div>
       </header>
-      <div className="grid gap-4 md:grid-cols-3">
+
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
           <h2 className="text-sm font-medium text-slate-200">Low Stock Items</h2>
-          <p className="mt-2 text-3xl font-semibold text-white">0</p>
-          <p className="mt-1 text-xs text-slate-400">Connect your database to surface live counts.</p>
+          <p className="mt-2 text-3xl font-semibold text-white">{lowStockCount}</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {lowStockCount > 0 ? (
+              <Link href="/inventory" className="text-amber-400 hover:text-amber-300">
+                View inventory →
+              </Link>
+            ) : (
+              'All items adequately stocked'
+            )}
+          </p>
         </article>
         <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-          <h2 className="text-sm font-medium text-slate-200">Pending Orders</h2>
-          <p className="mt-2 text-3xl font-semibold text-white">0</p>
-          <p className="mt-1 text-xs text-slate-400">Draft, sent, and received orders will display here.</p>
+          <h2 className="text-sm font-medium text-slate-200">Draft Orders</h2>
+          <p className="mt-2 text-3xl font-semibold text-white">{draftOrdersCount}</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {draftOrdersCount > 0 ? (
+              <Link href="/orders" className="text-sky-400 hover:text-sky-300">
+                View orders →
+              </Link>
+            ) : (
+              'No pending drafts'
+            )}
+          </p>
         </article>
         <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-          <h2 className="text-sm font-medium text-slate-200">Active Locations</h2>
-          <p className="mt-2 text-3xl font-semibold text-white">0</p>
-          <p className="mt-1 text-xs text-slate-400">Add locations to monitor individual stock positions.</p>
+          <h2 className="text-sm font-medium text-slate-200">Sent Orders</h2>
+          <p className="mt-2 text-3xl font-semibold text-white">{sentOrdersCount}</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {sentOrdersCount > 0 ? 'Awaiting delivery' : 'No orders in transit'}
+          </p>
         </article>
+        <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+          <h2 className="text-sm font-medium text-slate-200">Received Orders</h2>
+          <p className="mt-2 text-3xl font-semibold text-white">{receivedOrdersCount}</p>
+          <p className="mt-1 text-xs text-slate-400">Recently completed</p>
+        </article>
+        {hasStockValue ? (
+          <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+            <h2 className="text-sm font-medium text-slate-200">Total Stock Value</h2>
+            <p className="mt-2 text-3xl font-semibold text-white">€{totalStockValue.toFixed(2)}</p>
+            <p className="mt-1 text-xs text-slate-400">Based on available unit prices</p>
+          </article>
+        ) : null}
       </div>
+
+      {/* Recent Orders Table */}
+      {orders.length > 0 ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Recent Orders</h2>
+            <Link
+              href="/orders"
+              className="text-sm font-medium text-sky-400 transition hover:text-sky-300"
+            >
+              View all →
+            </Link>
+          </div>
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-slate-800 bg-slate-950/40">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Supplier
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Total
+                    </th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {orders.map((order) => {
+                    const total = order.items.reduce((sum, item) => {
+                      const price = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0;
+                      return sum + price * item.quantity;
+                    }, 0);
+
+                    return (
+                      <tr key={order.id} className="transition hover:bg-slate-800/40">
+                        <td className="px-4 py-3 text-slate-300">
+                          <div className="flex flex-col">
+                            <span>{formatDistanceToNow(order.createdAt, { addSuffix: true })}</span>
+                            <span className="text-xs text-slate-500">
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/suppliers#${order.supplier.id}`}
+                            className="font-medium text-sky-400 hover:text-sky-300"
+                          >
+                            {order.supplier.name}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={order.status} />
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-slate-200">
+                          {total > 0 ? `€${total.toFixed(2)}` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Link
+                            href={`/orders/${order.id}`}
+                            className="text-sm font-medium text-sky-400 transition hover:text-sky-300"
+                          >
+                            View →
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
+          <p className="font-medium text-slate-200">No orders yet</p>
+          <p className="mt-2 text-sm text-slate-400">
+            {canManage
+              ? 'Create your first purchase order using the "Create Order" button above.'
+              : 'Orders will appear here once created by staff members.'}
+          </p>
+        </div>
+      )}
+
+      {/* Low Stock Items */}
+      {lowStockInfoWithDetails.length > 0 ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Low Stock Items</h2>
+            <Link
+              href="/inventory"
+              className="text-sm font-medium text-amber-400 transition hover:text-amber-300"
+            >
+              View all →
+            </Link>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {lowStockInfoWithDetails.map(({ item, lowStockLocations, suggestedQuantity }) => (
+              <div
+                key={item.id}
+                className="rounded-xl border border-amber-700 bg-amber-900/10 p-4"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-white">{item.name}</h3>
+                    {item.sku ? (
+                      <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
+                        {item.sku}
+                      </span>
+                    ) : null}
+                    <span className="rounded-full bg-amber-900/60 border border-amber-700 px-2 py-0.5 text-xs font-medium text-amber-300">
+                      Low stock
+                    </span>
+                  </div>
+                  {item.defaultSupplier ? (
+                    <p className="text-xs text-slate-400">
+                      Supplier:{' '}
+                      <Link
+                        href={`/suppliers#${item.defaultSupplier.id}`}
+                        className="text-sky-400 hover:text-sky-300"
+                      >
+                        {item.defaultSupplier.name}
+                      </Link>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-amber-400">⚠ No default supplier set</p>
+                  )}
+                  <div className="text-xs text-slate-300">
+                    <p className="font-medium text-amber-300">Low at:</p>
+                    <ul className="mt-1 space-y-1">
+                      {lowStockLocations.map((inv) => (
+                        <li key={inv.locationId} className="flex items-center justify-between">
+                          <span>
+                            {inv.location.name}
+                            {inv.location.code ? ` (${inv.location.code})` : ''}
+                          </span>
+                          <span className="text-amber-300">
+                            {inv.quantity} / {inv.reorderPoint}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {suggestedQuantity > 0 && (
+                    <p className="text-xs text-amber-300">
+                      Suggested order quantity: {suggestedQuantity}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Recent Stock Adjustments */}
+      {adjustments.length > 0 ? (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-white">Recent Stock Adjustments</h2>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {adjustments.map((adjustment) => (
+              <div
+                key={adjustment.id}
+                className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+              >
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>
+                    {formatDistanceToNow(adjustment.createdAt, { addSuffix: true })}
+                  </span>
+                  <span className="rounded-full bg-slate-800 px-2 py-0.5">
+                    {adjustment.reason ?? 'Adjustment'}
+                  </span>
+                </div>
+                <p className="mt-2 font-medium text-slate-100">
+                  {adjustment.quantity > 0 ? '+' : ''}
+                  {adjustment.quantity}{' '}
+                  <span className="text-slate-300">{adjustment.item.name}</span>
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Location: {adjustment.location.name}
+                  {adjustment.location.code ? ` (${adjustment.location.code})` : ''}
+                </p>
+                <p className="text-xs text-slate-500">
+                  By {adjustment.createdBy?.name ?? adjustment.createdBy?.email ?? 'Unknown'}
+                </p>
+                {adjustment.note ? (
+                  <p className="mt-1 text-xs text-slate-300">{adjustment.note}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
 
+function StatusBadge({ status }: { status: OrderStatus }) {
+  const styles = {
+    [OrderStatus.DRAFT]: 'bg-slate-700 text-slate-200',
+    [OrderStatus.SENT]: 'bg-blue-900/50 text-blue-300',
+    [OrderStatus.RECEIVED]: 'bg-green-900/50 text-green-300',
+    [OrderStatus.CANCELLED]: 'bg-rose-900/50 text-rose-300',
+  };
+
+  return (
+    <span
+      className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
+    >
+      {status}
+    </span>
+  );
+}

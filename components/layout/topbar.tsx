@@ -3,6 +3,7 @@
 import { Menu } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 import { UserMenu } from '../auth/user-menu';
+import { NotificationBell } from '../notifications/notification-bell';
 
 type TopBarProps = {
   userName?: string | null;
@@ -25,9 +26,10 @@ export function TopBar({ userName, practiceName, onMenuClick }: TopBarProps) {
       {/* Spacer for desktop */}
       <div className="hidden md:block" />
 
-      {/* Right Side: Theme Toggle + User Menu */}
+      {/* Right Side: Theme Toggle + Notifications + User Menu */}
       <div className="flex items-center gap-2">
         <ThemeToggle />
+        <NotificationBell />
         <UserMenu userName={userName} practiceName={practiceName} />
       </div>
     </header>

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { requireActivePractice } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasRole } from '@/lib/rbac';
+import { checkAndCreateLowStockNotification } from '@/lib/notifications';
 
 const upsertItemSchema = z.object({
   itemId: z.string().cuid().optional(),
@@ -336,6 +337,8 @@ export async function createStockAdjustmentAction(_prevState: unknown, formData:
       throw new Error('Resulting quantity cannot be negative');
     }
 
+    const reorderPoint = existing?.reorderPoint ?? null;
+
     await tx.locationInventory.upsert({
       where: {
         locationId_itemId: {
@@ -364,6 +367,18 @@ export async function createStockAdjustmentAction(_prevState: unknown, formData:
         createdById: session.user.id,
       },
     });
+
+    // Check for low stock after adjustment
+    await checkAndCreateLowStockNotification(
+      {
+        practiceId,
+        itemId,
+        locationId,
+        newQuantity: nextQuantity,
+        reorderPoint,
+      },
+      tx
+    );
   });
 
   revalidatePath('/inventory');

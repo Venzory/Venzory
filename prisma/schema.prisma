@@ -44,6 +44,7 @@ model User {
   inventoryTransfers InventoryTransfer[] @relation("TransferCreatedBy")
   auditLogs         AuditLog[]      @relation("AuditLogActor")
   notifications     Notification[]  @relation("NotificationRecipient")
+  inAppNotifications InAppNotification[] @relation("InAppNotificationUser")
   passwordResetTokens PasswordResetToken[]
   orderItemReceipts OrderItemReceipt[]
   createdOrderTemplates OrderTemplate[] @relation("OrderTemplateCreatedBy")
@@ -72,6 +73,7 @@ model Practice {
   stockAdjustments StockAdjustment[]
   auditLogs    AuditLog[]
   notifications Notification[]
+  inAppNotifications InAppNotification[]
   invites      UserInvite[]
   orderTemplates OrderTemplate[]
 }
@@ -359,6 +361,27 @@ model Notification {
 
   @@index([practiceId])
   @@index([recipientId])
+}
+
+model InAppNotification {
+  id          String   @id @default(cuid())
+  practiceId  String
+  userId      String?
+  type        String
+  title       String
+  message     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  orderId     String?
+  itemId      String?
+  locationId  String?
+
+  practice Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  user     User?    @relation("InAppNotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([practiceId])
+  @@index([userId])
+  @@index([read])
 }
 
 model Account {

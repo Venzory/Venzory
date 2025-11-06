@@ -9,6 +9,7 @@ import { requireActivePractice } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasRole } from '@/lib/rbac';
 import { sendOrderEmail } from '@/lib/email';
+import { createNotificationForPracticeUsers, checkAndCreateLowStockNotification } from '@/lib/notifications';
 
 const createDraftOrderSchema = z.object({
   supplierId: z.string().cuid(),
@@ -476,6 +477,15 @@ export async function sendOrderAction(orderId: string) {
     },
   });
 
+  // Create notification for ADMIN + STAFF users
+  await createNotificationForPracticeUsers({
+    practiceId,
+    type: 'ORDER_SENT',
+    title: 'Order sent to supplier',
+    message: `Order ${order.reference ? `"${order.reference}"` : `#${orderId.slice(0, 8)}`} to ${order.supplier.name} was sent.`,
+    orderId,
+  });
+
   // Send email to supplier (or log if not configured)
   if (order.supplier.email) {
     await sendOrderEmail({
@@ -648,6 +658,7 @@ export async function receiveOrderAction(_prevState: unknown, formData: FormData
       });
 
       const newQuantity = (existingInventory?.quantity ?? 0) + receiptItem.receivedQuantity;
+      const reorderPoint = existingInventory?.reorderPoint ?? null;
 
       await tx.locationInventory.upsert({
         where: {
@@ -665,6 +676,18 @@ export async function receiveOrderAction(_prevState: unknown, formData: FormData
           quantity: newQuantity,
         },
       });
+
+      // Check for low stock after receiving
+      await checkAndCreateLowStockNotification(
+        {
+          practiceId,
+          itemId: orderItem.itemId,
+          locationId,
+          newQuantity,
+          reorderPoint,
+        },
+        tx
+      );
     }
 
     // Check if all items are fully received
@@ -699,6 +722,29 @@ export async function receiveOrderAction(_prevState: unknown, formData: FormData
             receivedAt: new Date(),
           },
         });
+
+        // Create notification for ADMIN + STAFF users
+        const orderWithDetails = await tx.order.findUnique({
+          where: { id: orderId },
+          include: {
+            supplier: {
+              select: { name: true },
+            },
+          },
+        });
+
+        if (orderWithDetails) {
+          await createNotificationForPracticeUsers(
+            {
+              practiceId,
+              type: 'ORDER_RECEIVED',
+              title: 'Order received',
+              message: `Order ${order.reference ? `"${order.reference}"` : `#${orderId.slice(0, 8)}`} from ${orderWithDetails.supplier.name} was fully received.`,
+              orderId,
+            },
+            tx
+          );
+        }
       }
     }
   });
