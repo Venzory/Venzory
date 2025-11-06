@@ -370,3 +370,170 @@ export async function createStockAdjustmentAction(_prevState: unknown, formData:
   return { success: 'Stock adjustment recorded' } as const;
 }
 
+export async function createOrdersFromLowStockAction(selectedItemIds: string[]) {
+  const { session, practiceId } = await requireActivePractice();
+
+  if (
+    !hasRole({
+      memberships: session.user.memberships,
+      practiceId,
+      minimumRole: PracticeRole.STAFF,
+    })
+  ) {
+    return { error: 'Insufficient permissions' } as const;
+  }
+
+  if (selectedItemIds.length === 0) {
+    return { error: 'No items selected' } as const;
+  }
+
+  // Fetch selected items with their inventory and supplier info
+  const items = await prisma.item.findMany({
+    where: {
+      id: { in: selectedItemIds },
+      practiceId,
+    },
+    include: {
+      defaultSupplier: {
+        select: { id: true, name: true },
+      },
+      inventory: {
+        select: {
+          locationId: true,
+          quantity: true,
+          reorderPoint: true,
+          reorderQuantity: true,
+        },
+      },
+      supplierItems: {
+        select: {
+          supplierId: true,
+          unitPrice: true,
+        },
+      },
+    },
+  });
+
+  if (items.length === 0) {
+    return { error: 'No valid items found' } as const;
+  }
+
+  // Calculate order quantities for each item and group by supplier
+  const supplierGroups = new Map<
+    string,
+    {
+      supplierName: string;
+      items: { itemId: string; quantity: number; unitPrice: number | null }[];
+    }
+  >();
+
+  const skippedItems: string[] = [];
+
+  for (const item of items) {
+    // Skip items without a default supplier
+    if (!item.defaultSupplier) {
+      skippedItems.push(item.name);
+      continue;
+    }
+
+    // Calculate total needed quantity from low-stock locations
+    const lowStockLocations = item.inventory.filter(
+      (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
+    );
+
+    if (lowStockLocations.length === 0) {
+      // Not actually low stock, skip
+      continue;
+    }
+
+    // Sum the reorderQuantity from all low-stock locations
+    const totalQuantity = lowStockLocations.reduce((sum, inv) => {
+      // Use reorderQuantity if available, otherwise use reorderPoint, fallback to 1
+      return sum + (inv.reorderQuantity || inv.reorderPoint || 1);
+    }, 0);
+
+    if (totalQuantity <= 0) {
+      continue;
+    }
+
+    // Get unit price from supplier items
+    const supplierItem = item.supplierItems.find(
+      (si) => si.supplierId === item.defaultSupplier!.id
+    );
+    const unitPrice = supplierItem?.unitPrice
+      ? parseFloat(supplierItem.unitPrice.toString())
+      : null;
+
+    // Add to supplier group
+    const supplierId = item.defaultSupplier.id;
+    if (!supplierGroups.has(supplierId)) {
+      supplierGroups.set(supplierId, {
+        supplierName: item.defaultSupplier.name,
+        items: [],
+      });
+    }
+
+    supplierGroups.get(supplierId)!.items.push({
+      itemId: item.id,
+      quantity: totalQuantity,
+      unitPrice,
+    });
+  }
+
+  if (supplierGroups.size === 0) {
+    if (skippedItems.length > 0) {
+      return {
+        error: `Cannot create orders: ${skippedItems.length} item(s) have no default supplier (${skippedItems.join(', ')})`,
+      } as const;
+    }
+    return { error: 'No valid items to order' } as const;
+  }
+
+  // Create one draft order per supplier
+  const createdOrders: { id: string; supplierName: string }[] = [];
+
+  try {
+    for (const [supplierId, group] of supplierGroups.entries()) {
+      const order = await prisma.order.create({
+        data: {
+          practiceId,
+          supplierId,
+          status: 'DRAFT',
+          createdById: session.user.id,
+          notes: 'Created from low-stock items',
+          items: {
+            create: group.items.map((item) => ({
+              itemId: item.itemId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+            })),
+          },
+        },
+      });
+
+      createdOrders.push({
+        id: order.id,
+        supplierName: group.supplierName,
+      });
+    }
+  } catch (error) {
+    console.error('Error creating orders:', error);
+    return { error: 'Failed to create orders. Please try again.' } as const;
+  }
+
+  revalidatePath('/inventory');
+  revalidatePath('/orders');
+
+  const message =
+    createdOrders.length === 1
+      ? `Created 1 draft order for ${createdOrders[0].supplierName}`
+      : `Created ${createdOrders.length} draft orders for ${createdOrders.length} suppliers`;
+
+  return {
+    success: true,
+    message,
+    orders: createdOrders,
+    skippedItems: skippedItems.length > 0 ? skippedItems : undefined,
+  } as const;
+}
+
