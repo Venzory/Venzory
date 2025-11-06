@@ -44,9 +44,21 @@ const createLocationSchema = updateLocationSchema.omit({ locationId: true });
 const upsertSupplierSchema = z.object({
   supplierId: z.string().cuid().optional(),
   name: z.string().min(1, 'Name is required'),
-  email: z.string().email().optional().transform((value) => value?.trim() || null),
+  email: z
+    .string()
+    .optional()
+    .transform((value) => value?.trim() || null)
+    .refine((value) => !value || z.string().email().safeParse(value).success, {
+      message: 'Invalid email address',
+    }),
   phone: z.string().max(32).optional().transform((value) => value?.trim() || null),
-  website: z.string().url().optional().transform((value) => value?.trim() || null),
+  website: z
+    .string()
+    .optional()
+    .transform((value) => value?.trim() || null)
+    .refine((value) => !value || z.string().url().safeParse(value).success, {
+      message: 'Invalid website URL',
+    }),
   notes: z
     .string()
     .max(512)

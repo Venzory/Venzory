@@ -45,6 +45,7 @@ model User {
   auditLogs         AuditLog[]      @relation("AuditLogActor")
   notifications     Notification[]  @relation("NotificationRecipient")
   passwordResetTokens PasswordResetToken[]
+  orderItemReceipts OrderItemReceipt[]
 }
 
 model Practice {
@@ -109,6 +110,7 @@ model Location {
   stockAdjustments StockAdjustment[]
   outgoingTransfers InventoryTransfer[] @relation("TransferFromLocation")
   incomingTransfers InventoryTransfer[] @relation("TransferToLocation")
+  orderItemReceipts OrderItemReceipt[]
 
   @@index([practiceId])
 }
@@ -220,8 +222,27 @@ model OrderItem {
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   item  Item  @relation(fields: [itemId], references: [id])
+  receipts OrderItemReceipt[]
 
   @@unique([orderId, itemId])
+}
+
+model OrderItemReceipt {
+  id                String   @id @default(cuid())
+  orderItemId       String
+  locationId        String
+  receivedQuantity  Int
+  batchNumber       String?
+  expiryDate        DateTime?
+  createdById       String
+  createdAt         DateTime @default(now())
+
+  orderItem  OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  location   Location  @relation(fields: [locationId], references: [id])
+  createdBy  User      @relation(fields: [createdById], references: [id])
+
+  @@index([orderItemId])
+  @@index([locationId])
 }
 
 model StockAdjustment {

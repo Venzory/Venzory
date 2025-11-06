@@ -8,13 +8,57 @@ import { hasRole } from '@/lib/rbac';
 
 import { CreateItemForm } from './_components/create-item-form';
 import { StockAdjustmentForm } from './_components/stock-adjustment-form';
+import { SearchFilters } from './_components/search-filters';
 import { deleteItemAction, upsertItemInlineAction } from './actions';
 
-export default async function InventoryPage() {
+interface InventoryPageProps {
+  searchParams?: Promise<{
+    q?: string;
+    location?: string;
+    supplier?: string;
+  }>;
+}
+
+export default async function InventoryPage({ searchParams }: InventoryPageProps) {
   const { session, practiceId } = await requireActivePractice();
+  const params = searchParams ? await searchParams : {};
+  
+  const { q, location, supplier } = params;
+  
+  // Build filter conditions
+  const filterConditions: any[] = [];
+  
+  // Text search on name and SKU
+  if (q && q.trim()) {
+    filterConditions.push({
+      OR: [
+        { name: { contains: q.trim(), mode: 'insensitive' } },
+        { sku: { contains: q.trim(), mode: 'insensitive' } },
+      ],
+    });
+  }
+  
+  // Location filter - items with stock in selected location
+  if (location) {
+    filterConditions.push({
+      inventory: {
+        some: { locationId: location },
+      },
+    });
+  }
+  
+  // Supplier filter
+  if (supplier) {
+    filterConditions.push({
+      defaultSupplierId: supplier,
+    });
+  }
 
   const items = await prisma.item.findMany({
-    where: { practiceId },
+    where: {
+      practiceId,
+      ...(filterConditions.length > 0 ? { AND: filterConditions } : {}),
+    },
     include: {
       defaultSupplier: { select: { id: true, name: true } },
       inventory: {
@@ -56,18 +100,43 @@ export default async function InventoryPage() {
     minimumRole: PracticeRole.STAFF,
   });
 
+  const hasActiveFilters = Boolean(q || location || supplier);
+
   return (
     <div className="space-y-10">
       <section className="space-y-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-white">Inventory</h1>
-          <p className="text-sm text-slate-300">
-            Manage catalog items, default suppliers, and on-hand balances per location.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-white">Inventory</h1>
+            <p className="text-sm text-slate-300">
+              Manage catalog items, default suppliers, and on-hand balances per location.
+            </p>
+          </div>
+          {canManage ? (
+            <Link
+              href="/orders/new"
+              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
+            >
+              Create Order
+            </Link>
+          ) : null}
         </div>
 
+        <SearchFilters
+          initialSearch={q}
+          initialLocation={location}
+          initialSupplier={supplier}
+          locations={locations}
+          suppliers={suppliers}
+        />
+
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <ItemList items={items} suppliers={suppliers} canManage={canManage} />
+          <ItemList
+            items={items}
+            suppliers={suppliers}
+            canManage={canManage}
+            hasActiveFilters={hasActiveFilters}
+          />
           {canManage ? <CreateItemForm suppliers={suppliers} /> : null}
         </div>
       </section>
@@ -93,20 +162,35 @@ export default async function InventoryPage() {
   );
 }
 
-function ItemList({ items, suppliers, canManage }: {
+function ItemList({
+  items,
+  suppliers,
+  canManage,
+  hasActiveFilters,
+}: {
   items: any;
   suppliers: { id: string; name: string }[];
   canManage: boolean;
+  hasActiveFilters: boolean;
 }) {
   if (items.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400">
-        <p className="font-medium text-slate-200">No items yet</p>
-        <p className="mt-2">
-          {canManage
-            ? 'Add your first inventory item using the form on the right.'
-            : 'An administrator needs to add items before they appear here.'}
-        </p>
+        {hasActiveFilters ? (
+          <>
+            <p className="font-medium text-slate-200">No items match your filters</p>
+            <p className="mt-2">Try adjusting your search or filter criteria to see more results.</p>
+          </>
+        ) : (
+          <>
+            <p className="font-medium text-slate-200">No items yet</p>
+            <p className="mt-2">
+              {canManage
+                ? 'Add your first inventory item using the form on the right.'
+                : 'An administrator needs to add items before they appear here.'}
+            </p>
+          </>
+        )}
       </div>
     );
   }
