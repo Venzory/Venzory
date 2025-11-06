@@ -115,7 +115,7 @@ export async function deleteItemAction(itemId: string) {
     !hasRole({
       memberships: session.user.memberships,
       practiceId,
-      minimumRole: PracticeRole.ADMIN,
+      minimumRole: PracticeRole.STAFF,
     })
   ) {
     throw new Error('Insufficient permissions');
@@ -185,7 +185,7 @@ export async function deleteLocationAction(locationId: string) {
     !hasRole({
       memberships: session.user.memberships,
       practiceId,
-      minimumRole: PracticeRole.ADMIN,
+      minimumRole: PracticeRole.STAFF,
     })
   ) {
     throw new Error('Insufficient permissions');
@@ -252,7 +252,7 @@ export async function deleteSupplierAction(supplierId: string) {
     !hasRole({
       memberships: session.user.memberships,
       practiceId,
-      minimumRole: PracticeRole.ADMIN,
+      minimumRole: PracticeRole.STAFF,
     })
   ) {
     throw new Error('Insufficient permissions');

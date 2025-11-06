@@ -25,6 +25,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     <DashboardLayoutClient
       userName={session.user.name}
       practiceName={activeMembership?.practice.name ?? null}
+      userRole={activeMembership?.role ?? null}
     >
       {children}
     </DashboardLayoutClient>

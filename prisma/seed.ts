@@ -50,6 +50,20 @@ async function main() {
     },
   });
 
+  // Create a second user without practice membership for testing invite flow
+  await prisma.user.upsert({
+    where: { email: 'existing@remcura.test' },
+    update: {
+      name: 'Existing User',
+      passwordHash,
+    },
+    create: {
+      email: 'existing@remcura.test',
+      name: 'Existing User',
+      passwordHash,
+    },
+  });
+
   const location = await prisma.location.upsert({
     where: { id: 'seed-main-location' },
     update: {

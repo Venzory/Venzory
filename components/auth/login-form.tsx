@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import Link from 'next/link';
 
 type FormState = {
   email: string;
@@ -17,6 +18,7 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const callbackUrl = useMemo(() => searchParams.get('callbackUrl') ?? '/dashboard', [searchParams]);
+  const resetSuccess = useMemo(() => searchParams.get('reset') === 'success', [searchParams]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -55,6 +57,14 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {resetSuccess ? (
+        <div className="rounded-lg border border-emerald-800 bg-emerald-900/30 p-4">
+          <p className="text-sm text-emerald-300">
+            Your password has been reset successfully. You can now sign in with your new password.
+          </p>
+        </div>
+      ) : null}
+
       <div className="space-y-2">
         <label htmlFor="email" className="text-sm font-medium text-slate-200">
           Email
@@ -73,9 +83,14 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium text-slate-200">
-          Password
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="password" className="text-sm font-medium text-slate-200">
+            Password
+          </label>
+          <Link href="/forgot-password" className="text-xs text-sky-400 hover:text-sky-300">
+            Forgot password?
+          </Link>
+        </div>
         <input
           id="password"
           name="password"

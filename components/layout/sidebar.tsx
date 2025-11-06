@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { PracticeRole } from '@prisma/client';
 import {
   LayoutDashboard,
   Package,
@@ -18,6 +19,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  minRole?: PracticeRole; // Minimum role required to see this item
 };
 
 const navItems: NavItem[] = [
@@ -26,19 +28,33 @@ const navItems: NavItem[] = [
   { href: '/locations', label: 'Locations', icon: MapPin },
   { href: '/suppliers', label: 'Suppliers', icon: Building2 },
   { href: '/orders', label: 'Orders', icon: ShoppingCart },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/settings', label: 'Settings', icon: Settings, minRole: 'STAFF' },
 ];
 
 type SidebarProps = {
   practiceName?: string | null;
+  userRole?: PracticeRole | null;
   isOpen: boolean;
   onClose: () => void;
 };
 
-export function Sidebar({ practiceName, isOpen, onClose }: SidebarProps) {
+export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // Role priority for filtering
+  const rolePriority: Record<PracticeRole, number> = {
+    ADMIN: 3,
+    STAFF: 2,
+    VIEWER: 1,
+  };
+
+  // Filter navigation items based on user role
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.minRole || !userRole) return true;
+    return rolePriority[userRole] >= rolePriority[item.minRole];
+  });
 
   // Load collapsed state from localStorage
   useEffect(() => {
@@ -131,7 +147,7 @@ export function Sidebar({ practiceName, isOpen, onClose }: SidebarProps) {
 
         {/* Navigation Items */}
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 

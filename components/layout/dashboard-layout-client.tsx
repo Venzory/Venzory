@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import type { PracticeRole } from '@prisma/client';
 
 import { Sidebar } from './sidebar';
 import { TopBar } from './topbar';
@@ -10,12 +11,14 @@ type DashboardLayoutClientProps = {
   children: ReactNode;
   userName?: string | null;
   practiceName?: string | null;
+  userRole?: PracticeRole | null;
 };
 
 export function DashboardLayoutClient({
   children,
   userName,
   practiceName,
+  userRole,
 }: DashboardLayoutClientProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -23,6 +26,7 @@ export function DashboardLayoutClient({
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
       <Sidebar
         practiceName={practiceName}
+        userRole={userRole}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />

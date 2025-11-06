@@ -1,4 +1,17 @@
-export default function OrdersPage() {
+import { PracticeRole } from '@prisma/client';
+
+import { requireActivePractice } from '@/lib/auth';
+import { hasRole } from '@/lib/rbac';
+
+export default async function OrdersPage() {
+  const { session, practiceId } = await requireActivePractice();
+
+  const canPlaceOrders = hasRole({
+    memberships: session.user.memberships,
+    practiceId,
+    minimumRole: PracticeRole.STAFF,
+  });
+
   return (
     <section className="space-y-4">
       <div className="space-y-1">
@@ -8,9 +21,24 @@ export default function OrdersPage() {
         </p>
       </div>
       <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
-        <p>
-          Order workflows, status management, and receipts will be implemented in the next development phase.
-        </p>
+        {canPlaceOrders ? (
+          <div>
+            <p className="font-medium text-white">Coming Soon</p>
+            <p className="mt-2">
+              Order workflows, status management, and receipts will be implemented in the next
+              development phase. You will be able to create, edit, and manage purchase orders.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <p className="font-medium text-white">View Only Access</p>
+            <p className="mt-2">
+              Orders are view-only for your role. Only staff members and administrators can create
+              and manage purchase orders. Contact your practice administrator if you need elevated
+              access.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -28,8 +28,15 @@ application with App Router, Tailwind CSS, and Prisma for data access.
 
    ```bash
    cp .env.example .env.local
-   # update DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL
+   # update DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL, RESEND_API_KEY, NEXT_PUBLIC_APP_URL
    ```
+   
+   Required environment variables:
+   - `DATABASE_URL` – PostgreSQL connection string
+   - `NEXTAUTH_SECRET` – Random secret for NextAuth (generate with `openssl rand -base64 32`)
+   - `NEXTAUTH_URL` – App URL (e.g., `http://localhost:3000`)
+   - `RESEND_API_KEY` – API key from [Resend](https://resend.com) for password reset emails
+   - `NEXT_PUBLIC_APP_URL` – Public app URL for email links (e.g., `http://localhost:3000`)
 
 3. Push the Prisma schema to your database (creates tables):
 
@@ -53,6 +60,7 @@ application with App Router, Tailwind CSS, and Prisma for data access.
 - Afterwards, sign in at `/login`. Protected routes (`/dashboard`, `/inventory`, `/suppliers`, `/orders`, `/locations`)
   require an authenticated session.
 - Middleware redirects unauthenticated users back to `/login` with a `callbackUrl` parameter for smooth returns.
+- Password reset: Users can request a password reset at `/forgot-password`. Reset links are valid for 60 minutes and are sent via Resend.
 
 ### Project Structure
 

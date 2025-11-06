@@ -35,3 +35,74 @@ export function findMembership({
   return memberships.find((membership) => membership.practiceId === practiceId) ?? null;
 }
 
+// Specific permission helpers
+export function canManageUsers({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'ADMIN' });
+}
+
+export function canManagePracticeSettings({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'ADMIN' });
+}
+
+export function canEditInventory({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'STAFF' });
+}
+
+export function canEditSuppliers({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'STAFF' });
+}
+
+export function canPlaceOrders({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'STAFF' });
+}
+
+export function canDelete({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'STAFF' });
+}
+
+export function canView({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'VIEWER' });
+}
+
