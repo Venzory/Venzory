@@ -44,12 +44,20 @@ model User {
   inventoryTransfers InventoryTransfer[] @relation("TransferCreatedBy")
   auditLogs         AuditLog[]      @relation("AuditLogActor")
   notifications     Notification[]  @relation("NotificationRecipient")
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Practice {
   id        String         @id @default(cuid())
   name      String
   slug      String         @unique
+  street    String?
+  city      String?
+  postalCode String?
+  country   String?
+  contactEmail String?
+  contactPhone String?
+  logoUrl   String?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
@@ -62,6 +70,7 @@ model Practice {
   stockAdjustments StockAdjustment[]
   auditLogs    AuditLog[]
   notifications Notification[]
+  invites      UserInvite[]
 }
 
 model PracticeUser {
@@ -328,5 +337,36 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+}
+
+model UserInvite {
+  id          String       @id @default(cuid())
+  token       String       @unique
+  email       String
+  practiceId  String
+  role        PracticeRole @default(STAFF)
+  inviterName String?
+  expiresAt   DateTime
+  used        Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+
+  practice Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([practiceId])
 }
 
