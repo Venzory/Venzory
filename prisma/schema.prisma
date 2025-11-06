@@ -46,6 +46,7 @@ model User {
   notifications     Notification[]  @relation("NotificationRecipient")
   passwordResetTokens PasswordResetToken[]
   orderItemReceipts OrderItemReceipt[]
+  createdOrderTemplates OrderTemplate[] @relation("OrderTemplateCreatedBy")
 }
 
 model Practice {
@@ -72,6 +73,7 @@ model Practice {
   auditLogs    AuditLog[]
   notifications Notification[]
   invites      UserInvite[]
+  orderTemplates OrderTemplate[]
 }
 
 model PracticeUser {
@@ -130,6 +132,7 @@ model Supplier {
   items    SupplierItem[]
   defaultItems Item[] @relation("ItemDefaultSupplier")
   orders   Order[]
+  orderTemplateItems OrderTemplateItem[]
 
   @@index([practiceId])
 }
@@ -152,6 +155,7 @@ model Item {
   orderItems OrderItem[]
   stockAdjustments StockAdjustment[]
   transfers InventoryTransfer[]
+  orderTemplateItems OrderTemplateItem[]
 
   @@index([practiceId])
   @@index([defaultSupplierId])
@@ -243,6 +247,39 @@ model OrderItemReceipt {
 
   @@index([orderItemId])
   @@index([locationId])
+}
+
+model OrderTemplate {
+  id          String   @id @default(cuid())
+  practiceId  String
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  practice Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("OrderTemplateCreatedBy", fields: [createdById], references: [id])
+  items     OrderTemplateItem[]
+
+  @@index([practiceId])
+}
+
+model OrderTemplateItem {
+  id              String   @id @default(cuid())
+  templateId      String
+  itemId          String
+  defaultQuantity Int
+  supplierId      String?
+  createdAt       DateTime @default(now())
+
+  template OrderTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  item     Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  supplier Supplier?     @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  @@unique([templateId, itemId])
+  @@index([templateId])
+  @@index([itemId])
 }
 
 model StockAdjustment {

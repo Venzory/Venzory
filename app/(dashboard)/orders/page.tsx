@@ -44,14 +44,22 @@ export default async function OrdersPage() {
             Track purchase orders from draft through receipt across suppliers.
           </p>
         </div>
-        {canManage ? (
+        <div className="flex items-center gap-2">
           <Link
-            href="/orders/new"
-            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
+            href="/orders/templates"
+            className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
           >
-            New Order
+            Order Templates
           </Link>
-        ) : null}
+          {canManage ? (
+            <Link
+              href="/orders/new"
+              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
+            >
+              New Order
+            </Link>
+          ) : null}
+        </div>
       </div>
 
       <OrdersList orders={orders} canManage={canManage} />
