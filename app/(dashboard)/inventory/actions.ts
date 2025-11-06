@@ -8,6 +8,7 @@ import { requireActivePractice } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasRole } from '@/lib/rbac';
 import { checkAndCreateLowStockNotification } from '@/lib/notifications';
+import { getOrCreateProductForItem } from '@/lib/integrations';
 
 const upsertItemSchema = z.object({
   itemId: z.string().cuid().optional(),
@@ -23,6 +24,16 @@ const upsertItemSchema = z.object({
     .string()
     .optional()
     .transform((value) => (value && value !== 'none' ? value : null)),
+  gtin: z
+    .string()
+    .max(14)
+    .optional()
+    .transform((value) => value?.trim() || null),
+  brand: z
+    .string()
+    .max(128)
+    .optional()
+    .transform((value) => value?.trim() || null),
 });
 
 const updateLocationSchema = z.object({
@@ -95,24 +106,46 @@ export async function upsertItemAction(_prevState: unknown, formData: FormData) 
     description: formData.get('description'),
     unit: formData.get('unit'),
     defaultSupplierId: formData.get('defaultSupplierId'),
+    gtin: formData.get('gtin'),
+    brand: formData.get('brand'),
   });
 
   if (!parsed.success) {
     return { error: 'Invalid item fields' } as const;
   }
 
-  const { itemId, ...values } = parsed.data;
+  const { itemId, gtin, brand, name, description, sku, unit, defaultSupplierId } = parsed.data;
 
   if (itemId) {
+    // Updating existing item
     await prisma.item.update({
       where: { id: itemId, practiceId },
-      data: values,
+      data: {
+        name,
+        description,
+        sku,
+        unit,
+        defaultSupplierId,
+      },
     });
   } else {
+    // Creating new item - auto-create/link Product
+    const productId = await getOrCreateProductForItem(
+      name,
+      gtin ?? undefined,
+      brand ?? undefined,
+      description ?? undefined
+    );
+
     await prisma.item.create({
       data: {
-        ...values,
+        productId,
+        name,
+        description,
+        sku,
+        unit,
         practiceId,
+        defaultSupplierId,
       },
     });
   }

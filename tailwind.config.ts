@@ -9,10 +9,26 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      colors: {
+        brand: {
+          DEFAULT: 'rgb(var(--color-brand-primary) / <alpha-value>)',
+          hover: 'rgb(var(--color-brand-primary-hover) / <alpha-value>)',
+          light: 'rgb(var(--color-brand-light) / <alpha-value>)',
+        },
+        surface: {
+          DEFAULT: 'rgb(var(--color-surface) / <alpha-value>)',
+          secondary: 'rgb(var(--color-surface-secondary) / <alpha-value>)',
+        },
+      },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+      },
+      boxShadow: {
+        'sm': 'var(--shadow-sm)',
+        'md': 'var(--shadow-md)',
+        'lg': 'var(--shadow-lg)',
       },
     },
   },

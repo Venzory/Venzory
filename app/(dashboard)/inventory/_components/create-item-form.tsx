@@ -29,7 +29,7 @@ export function CreateItemForm({ suppliers }: { suppliers: SupplierOption[] }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="item-name" className="text-sm font-medium text-slate-200">
-            Name
+            Name <span className="text-rose-400">*</span>
           </label>
           <input
             id="item-name"
@@ -45,6 +45,29 @@ export function CreateItemForm({ suppliers }: { suppliers: SupplierOption[] }) {
           <input
             id="item-sku"
             name="sku"
+            placeholder="Optional"
+            className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="item-gtin" className="text-sm font-medium text-slate-200">
+            GTIN / Barcode
+          </label>
+          <input
+            id="item-gtin"
+            name="gtin"
+            placeholder="e.g. 08712345678906"
+            maxLength={14}
+            className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="item-brand" className="text-sm font-medium text-slate-200">
+            Brand
+          </label>
+          <input
+            id="item-brand"
+            name="brand"
             placeholder="Optional"
             className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
           />
@@ -92,8 +115,8 @@ export function CreateItemForm({ suppliers }: { suppliers: SupplierOption[] }) {
         </div>
       </div>
 
-      {state.error ? <p className="text-sm text-rose-400">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-emerald-400">{state.success}</p> : null}
+      {state.error ? <p className="text-sm text-rose-600 dark:text-rose-400">{state.error}</p> : null}
+      {state.success ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{state.success}</p> : null}
 
       <SubmitButton label="Create item" />
     </form>

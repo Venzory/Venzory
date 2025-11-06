@@ -26,6 +26,22 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum Gs1VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  FAILED
+  EXPIRED
+}
+
+enum IntegrationType {
+  MANUAL
+  API
+  EDI
+  OCI
+  CSV
+}
+
 model User {
   id        String         @id @default(cuid())
   email     String         @unique
@@ -119,6 +135,28 @@ model Location {
   @@index([practiceId])
 }
 
+// Canonical product data (GS1-driven, shared across all practices)
+// This represents the "universal" product information
+model Product {
+  id                    String                @id @default(cuid())
+  gtin                  String?               @unique  // Global Trade Item Number (nullable for non-GS1 products)
+  brand                 String?
+  name                  String
+  description           String?
+  isGs1Product          Boolean               @default(false)
+  gs1VerificationStatus Gs1VerificationStatus @default(UNVERIFIED)
+  gs1VerifiedAt         DateTime?
+  gs1Data               Json?                 // Raw GS1 API response for reference
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  items            Item[]
+  supplierCatalogs SupplierCatalog[]
+
+  @@index([gtin])
+  @@index([isGs1Product])
+}
+
 model Supplier {
   id          String    @id @default(cuid())
   practiceId  String
@@ -135,22 +173,53 @@ model Supplier {
   defaultItems Item[] @relation("ItemDefaultSupplier")
   orders   Order[]
   orderTemplateItems OrderTemplateItem[]
+  supplierCatalogs SupplierCatalog[]
 
   @@index([practiceId])
 }
 
+// Links suppliers to canonical products with supplier-specific pricing and integration details
+// This enables multiple suppliers to offer the same GS1 product with different terms
+model SupplierCatalog {
+  id                String           @id @default(cuid())
+  supplierId        String
+  productId         String
+  supplierSku       String?          // Supplier's own SKU for this product
+  unitPrice         Decimal?         @db.Decimal(12, 2)
+  currency          String?          @default("EUR")
+  minOrderQty       Int?             @default(1)
+  integrationType   IntegrationType  @default(MANUAL)
+  integrationConfig Json?            // Store API endpoints, EDI settings, OCI params, etc.
+  lastSyncAt        DateTime?        // Last time this catalog entry was synced
+  isActive          Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, productId])
+  @@index([supplierId])
+  @@index([productId])
+  @@index([isActive])
+}
+
+// Practice-specific view of a Product
+// Each practice can have their own name, SKU, and settings for the same canonical Product
 model Item {
   id               String     @id @default(cuid())
   practiceId       String
+  productId        String     // Links to canonical Product
   defaultSupplierId String?
-  name             String
-  sku              String?
-  description      String?
-  unit             String?
+  name             String     // Practice-specific name (can override Product name)
+  sku              String?    // Practice-specific SKU
+  description      String?    // Practice-specific description
+  unit             String?    // Practice-specific unit
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
   practice Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
   defaultSupplier Supplier? @relation("ItemDefaultSupplier", fields: [defaultSupplierId], references: [id])
   inventory LocationInventory[]
   supplierItems SupplierItem[]
@@ -160,6 +229,7 @@ model Item {
   orderTemplateItems OrderTemplateItem[]
 
   @@index([practiceId])
+  @@index([productId])
   @@index([defaultSupplierId])
 }
 

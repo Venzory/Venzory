@@ -129,8 +129,8 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
       <section className="space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold text-white">Inventory</h1>
-            <p className="text-sm text-slate-300">
+            <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Inventory</h1>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Manage catalog items, default suppliers, and on-hand balances per location.
             </p>
           </div>
@@ -173,8 +173,8 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             locations={locations}
           />
         ) : (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
-            <h2 className="text-lg font-semibold text-white">No adjustment permissions</h2>
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 dark:shadow-none">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">No adjustment permissions</h2>
             <p className="mt-2">
               Only staff and administrators can record stock movements. Contact a practice admin for access.
             </p>
@@ -197,9 +197,9 @@ function RecentAdjustments({
 }) {
   if (adjustments.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
-        <h2 className="text-lg font-semibold text-white">Recent adjustments</h2>
-        <p className="mt-2 text-sm text-slate-400">No stock adjustments recorded yet.</p>
+      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 dark:shadow-none">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recent adjustments</h2>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">No stock adjustments recorded yet.</p>
         {canManage ? (
           <p className="mt-4 text-xs text-slate-500">
             Tip: record adjustments when receiving goods, auditing counts, or writing off waste.
@@ -210,30 +210,30 @@ function RecentAdjustments({
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
-      <h2 className="text-lg font-semibold text-white">Recent adjustments</h2>
-      <ul className="mt-4 space-y-3 text-sm text-slate-200">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recent adjustments</h2>
+      <ul className="mt-4 space-y-3 text-sm text-slate-900 dark:text-slate-200">
         {adjustments.map((adjustment: any) => (
-          <li key={adjustment.id} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
-            <div className="flex items-center justify-between text-xs text-slate-400">
+          <li key={adjustment.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
               <span>
                 {formatDistanceToNow(adjustment.createdAt, { addSuffix: true })}
               </span>
               <span>{adjustment.reason ?? 'No reason provided'}</span>
             </div>
-            <p className="mt-2 font-medium text-slate-100">
+            <p className="mt-2 font-medium text-slate-900 dark:text-slate-100">
               {adjustment.quantity > 0 ? '+' : ''}
               {adjustment.quantity}{' '}
-              <span className="text-slate-300">{adjustment.item.name}</span>
+              <span className="text-slate-700 dark:text-slate-300">{adjustment.item.name}</span>
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Location: {adjustment.location.name}
               {adjustment.location.code ? ` (${adjustment.location.code})` : ''}
             </p>
             <p className="text-xs text-slate-500">
               By {adjustment.createdBy?.name ?? adjustment.createdBy?.email ?? 'Unknown'}
             </p>
-            {adjustment.note ? <p className="mt-1 text-xs text-slate-300">{adjustment.note}</p> : null}
+            {adjustment.note ? <p className="mt-1 text-xs text-slate-700 dark:text-slate-300">{adjustment.note}</p> : null}
           </li>
         ))}
       </ul>

@@ -5,6 +5,88 @@
 @layer base {
   :root {
     color-scheme: light dark;
+
+    /* Background colors */
+    --color-bg: 255 255 255; /* white */
+    --color-bg-secondary: 248 250 252; /* slate-50 */
+    --color-surface: 255 255 255; /* white */
+    --color-surface-secondary: 248 250 252; /* slate-50 */
+    
+    /* Border colors */
+    --color-border: 226 232 240; /* slate-200 */
+    --color-border-light: 241 245 249; /* slate-100 */
+    
+    /* Text colors */
+    --color-text-primary: 15 23 42; /* slate-900 */
+    --color-text-secondary: 71 85 105; /* slate-600 */
+    --color-text-muted: 148 163 184; /* slate-400 */
+    
+    /* Brand colors */
+    --color-brand-primary: 2 132 199; /* sky-600 */
+    --color-brand-primary-hover: 3 105 161; /* sky-700 */
+    --color-brand-light: 7 89 133; /* sky-800 for light mode links */
+    
+    /* Semantic colors */
+    --color-success: 22 163 74; /* green-600 */
+    --color-success-light: 220 252 231; /* green-100 */
+    --color-warning: 245 158 11; /* amber-500 */
+    --color-warning-light: 254 243 199; /* amber-100 */
+    --color-danger: 225 29 72; /* rose-600 */
+    --color-danger-light: 255 228 230; /* rose-100 */
+    
+    /* Component-specific */
+    --color-card-bg: 255 255 255; /* white */
+    --color-table-header: 248 250 252; /* slate-50 */
+    --color-table-hover: 248 250 252; /* slate-50 */
+    --color-input-bg: 255 255 255; /* white */
+    --color-input-border: 203 213 225; /* slate-300 */
+    
+    /* Shadows (opacity values) */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  }
+
+  .dark {
+    /* Background colors */
+    --color-bg: 2 6 23; /* slate-950 */
+    --color-bg-secondary: 15 23 42; /* slate-900 */
+    --color-surface: 15 23 42; /* slate-900 with opacity handled in classes */
+    --color-surface-secondary: 30 41 59; /* slate-800 */
+    
+    /* Border colors */
+    --color-border: 30 41 59; /* slate-800 */
+    --color-border-light: 51 65 85; /* slate-700 */
+    
+    /* Text colors */
+    --color-text-primary: 248 250 252; /* slate-50 */
+    --color-text-secondary: 203 213 225; /* slate-300 */
+    --color-text-muted: 148 163 184; /* slate-400 */
+    
+    /* Brand colors */
+    --color-brand-primary: 2 132 199; /* sky-600 */
+    --color-brand-primary-hover: 3 105 161; /* sky-700 */
+    --color-brand-light: 56 189 248; /* sky-400 for dark mode links */
+    
+    /* Semantic colors */
+    --color-success: 34 197 94; /* green-500 */
+    --color-success-light: 20 83 45; /* green-900 */
+    --color-warning: 251 191 36; /* amber-400 */
+    --color-warning-light: 120 53 15; /* amber-900 */
+    --color-danger: 244 63 94; /* rose-500 */
+    --color-danger-light: 136 19 55; /* rose-900 */
+    
+    /* Component-specific */
+    --color-card-bg: 15 23 42; /* slate-900 with opacity */
+    --color-table-header: 2 6 23; /* slate-950 */
+    --color-table-hover: 30 41 59; /* slate-800 */
+    --color-input-bg: 15 23 42; /* slate-900 */
+    --color-input-border: 30 41 59; /* slate-800 */
+    
+    /* Shadows (minimal in dark mode) */
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
   }
 
   body {

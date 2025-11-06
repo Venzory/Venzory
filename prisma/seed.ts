@@ -130,10 +130,87 @@ async function main() {
     },
   });
 
+  // Create canonical Products first (GS1 foundation)
+  // Mix of GS1 products (with GTIN) and non-GS1 products
+  const productsData = [
+    {
+      id: 'seed-product-gloves',
+      gtin: '08712345678906',  // Example GTIN for Nitrile Gloves
+      brand: 'MediCare',
+      name: 'Nitrile Gloves',
+      description: 'Powder-free nitrile examination gloves.',
+      isGs1Product: true,
+    },
+    {
+      id: 'seed-product-syringes',
+      gtin: '08723456789017',  // Example GTIN for Syringes
+      brand: 'SafeMed',
+      name: 'Sterile Syringes 5ml',
+      description: 'Single-use sterile syringes with luer lock.',
+      isGs1Product: true,
+    },
+    {
+      id: 'seed-product-bandages',
+      gtin: null,  // Non-GS1 product
+      brand: 'Generic',
+      name: 'Elastic Bandages',
+      description: 'Standard elastic medical bandages.',
+      isGs1Product: false,
+    },
+    {
+      id: 'seed-product-gauze',
+      gtin: '08734567890128',  // Example GTIN for Gauze
+      brand: 'CurePlus',
+      name: 'Sterile Gauze Pads',
+      description: 'Sterile gauze pads for wound care.',
+      isGs1Product: true,
+    },
+    {
+      id: 'seed-product-alcohol',
+      gtin: null,  // Non-GS1 product
+      brand: 'CleanCare',
+      name: 'Alcohol Prep Pads',
+      description: 'Isopropyl alcohol prep pads for disinfection.',
+      isGs1Product: false,
+    },
+    {
+      id: 'seed-product-masks',
+      gtin: '08745678901239',  // Example GTIN for Masks
+      brand: 'SafeGuard',
+      name: 'Surgical Face Masks',
+      description: '3-ply disposable surgical masks.',
+      isGs1Product: true,
+    },
+  ];
+
+  for (const productData of productsData) {
+    await prisma.product.upsert({
+      where: { id: productData.id },
+      update: {
+        name: productData.name,
+        brand: productData.brand,
+        description: productData.description,
+        gtin: productData.gtin,
+        isGs1Product: productData.isGs1Product,
+      },
+      create: {
+        id: productData.id,
+        name: productData.name,
+        brand: productData.brand,
+        description: productData.description,
+        gtin: productData.gtin,
+        isGs1Product: productData.isGs1Product,
+        gs1VerificationStatus: 'UNVERIFIED',
+      },
+    });
+  }
+
   // Create items with varied stock levels (some low, some adequate)
+  // Items are practice-specific views of Products
   const itemsData = [
     {
       id: 'seed-item-gloves',
+      productId: 'seed-product-gloves',
       name: 'Nitrile Gloves',
       sku: 'GLV-100',
       unit: 'box',
@@ -146,6 +223,7 @@ async function main() {
     },
     {
       id: 'seed-item-syringes',
+      productId: 'seed-product-syringes',
       name: 'Syringes 5ml',
       sku: 'SYR-5ML',
       unit: 'pack',
@@ -158,6 +236,7 @@ async function main() {
     },
     {
       id: 'seed-item-bandages',
+      productId: 'seed-product-bandages',
       name: 'Elastic Bandages',
       sku: 'BND-EL',
       unit: 'roll',
@@ -170,6 +249,7 @@ async function main() {
     },
     {
       id: 'seed-item-gauze',
+      productId: 'seed-product-gauze',
       name: 'Sterile Gauze Pads',
       sku: 'GAU-4X4',
       unit: 'pack',
@@ -182,6 +262,7 @@ async function main() {
     },
     {
       id: 'seed-item-alcohol',
+      productId: 'seed-product-alcohol',
       name: 'Alcohol Wipes',
       sku: 'ALC-100',
       unit: 'box',
@@ -194,6 +275,7 @@ async function main() {
     },
     {
       id: 'seed-item-masks',
+      productId: 'seed-product-masks',
       name: 'Surgical Masks',
       sku: 'MSK-50',
       unit: 'box',
@@ -217,11 +299,13 @@ async function main() {
         sku: itemData.sku,
         unit: itemData.unit,
         practiceId: practice.id,
+        productId: itemData.productId,
         defaultSupplierId: itemData.supplierId,
       },
       create: {
         id: itemData.id,
         practiceId: practice.id,
+        productId: itemData.productId,
         name: itemData.name,
         description: itemData.description,
         sku: itemData.sku,
@@ -623,8 +707,113 @@ async function main() {
     },
   });
 
+  // Create SupplierCatalog entries to demonstrate multi-supplier capability
+  // Some products available from multiple suppliers with different prices
+  await prisma.supplierCatalog.upsert({
+    where: {
+      supplierId_productId: {
+        supplierId: supplier1.id,
+        productId: 'seed-product-gloves',
+      },
+    },
+    update: {
+      supplierSku: 'MED-GLV-100',
+      unitPrice: 12.50,
+      currency: 'EUR',
+      minOrderQty: 10,
+      integrationType: 'MANUAL',
+      isActive: true,
+    },
+    create: {
+      supplierId: supplier1.id,
+      productId: 'seed-product-gloves',
+      supplierSku: 'MED-GLV-100',
+      unitPrice: 12.50,
+      currency: 'EUR',
+      minOrderQty: 10,
+      integrationType: 'MANUAL',
+      isActive: true,
+    },
+  });
+
+  // Same gloves from supplier2, different price (demonstrating multi-supplier)
+  await prisma.supplierCatalog.upsert({
+    where: {
+      supplierId_productId: {
+        supplierId: supplier2.id,
+        productId: 'seed-product-gloves',
+      },
+    },
+    update: {
+      supplierSku: 'PD-GLOVES-NIT',
+      unitPrice: 11.75,
+      currency: 'EUR',
+      minOrderQty: 20,
+      integrationType: 'API',
+      integrationConfig: {
+        apiEndpoint: 'https://api.pharmadirect.test/catalog',
+        syncFrequency: 'daily',
+      },
+      isActive: true,
+    },
+    create: {
+      supplierId: supplier2.id,
+      productId: 'seed-product-gloves',
+      supplierSku: 'PD-GLOVES-NIT',
+      unitPrice: 11.75,
+      currency: 'EUR',
+      minOrderQty: 20,
+      integrationType: 'API',
+      integrationConfig: {
+        apiEndpoint: 'https://api.pharmadirect.test/catalog',
+        syncFrequency: 'daily',
+      },
+      isActive: true,
+    },
+  });
+
+  // Add catalog entries for other products
+  const catalogEntries = [
+    { supplierId: supplier1.id, productId: 'seed-product-syringes', sku: 'MED-SYR-5ML', price: 18.00 },
+    { supplierId: supplier1.id, productId: 'seed-product-bandages', sku: 'MED-BND-EL', price: 3.25 },
+    { supplierId: supplier2.id, productId: 'seed-product-gauze', sku: 'PD-GAUZE-4X4', price: 8.99 },
+    { supplierId: supplier2.id, productId: 'seed-product-alcohol', sku: 'PD-ALC-100', price: 6.50 },
+    { supplierId: supplier2.id, productId: 'seed-product-masks', sku: 'PD-MASK-3PLY', price: 9.75 },
+  ];
+
+  for (const entry of catalogEntries) {
+    await prisma.supplierCatalog.upsert({
+      where: {
+        supplierId_productId: {
+          supplierId: entry.supplierId,
+          productId: entry.productId,
+        },
+      },
+      update: {
+        supplierSku: entry.sku,
+        unitPrice: entry.price,
+        currency: 'EUR',
+        minOrderQty: 1,
+        integrationType: 'MANUAL',
+        isActive: true,
+      },
+      create: {
+        supplierId: entry.supplierId,
+        productId: entry.productId,
+        supplierSku: entry.sku,
+        unitPrice: entry.price,
+        currency: 'EUR',
+        minOrderQty: 1,
+        integrationType: 'MANUAL',
+        isActive: true,
+      },
+    });
+  }
+
   console.log('✅ Seed data created successfully!');
-  console.log(`📦 Created ${itemsData.length} items (4 low stock, 2 adequate)`);
+  console.log(`📦 Created ${productsData.length} canonical Products (4 GS1, 2 non-GS1)`);
+  console.log(`🏥 Created ${itemsData.length} practice Items (4 low stock, 2 adequate)`);
+  console.log('🔗 Created 7 SupplierCatalog entries (one product from multiple suppliers)');
   console.log('📋 Created 4 orders (1 draft, 1 sent, 2 received)');
   console.log('📊 Created 5 stock adjustments');
   console.log('💰 Added unit prices for stock value calculation');

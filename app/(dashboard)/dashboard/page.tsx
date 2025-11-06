@@ -117,11 +117,11 @@ export default async function DashboardPage() {
   return (
     <section className="space-y-6">
       <header className="space-y-1">
-        <p className="text-xs uppercase tracking-wide text-slate-400">Overview</p>
+        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Overview</p>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-white">Dashboard</h1>
-            <p className="max-w-2xl text-sm text-slate-300">
+            <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">Dashboard</h1>
+            <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">
               Quick overview of your stock levels, orders, and recent activity.
             </p>
           </div>
@@ -138,12 +138,12 @@ export default async function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-          <h2 className="text-sm font-medium text-slate-200">Low Stock Items</h2>
-          <p className="mt-2 text-3xl font-semibold text-white">{lowStockCount}</p>
-          <p className="mt-1 text-xs text-slate-400">
+        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Low Stock Items</h2>
+          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{lowStockCount}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {lowStockCount > 0 ? (
-              <Link href="/inventory" className="text-amber-400 hover:text-amber-300">
+              <Link href="/inventory" className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
                 View inventory →
               </Link>
             ) : (
@@ -151,12 +151,12 @@ export default async function DashboardPage() {
             )}
           </p>
         </article>
-        <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-          <h2 className="text-sm font-medium text-slate-200">Draft Orders</h2>
-          <p className="mt-2 text-3xl font-semibold text-white">{draftOrdersCount}</p>
-          <p className="mt-1 text-xs text-slate-400">
+        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Draft Orders</h2>
+          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{draftOrdersCount}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {draftOrdersCount > 0 ? (
-              <Link href="/orders" className="text-sky-400 hover:text-sky-300">
+              <Link href="/orders" className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
                 View orders →
               </Link>
             ) : (
@@ -164,23 +164,23 @@ export default async function DashboardPage() {
             )}
           </p>
         </article>
-        <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-          <h2 className="text-sm font-medium text-slate-200">Sent Orders</h2>
-          <p className="mt-2 text-3xl font-semibold text-white">{sentOrdersCount}</p>
-          <p className="mt-1 text-xs text-slate-400">
+        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Sent Orders</h2>
+          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{sentOrdersCount}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {sentOrdersCount > 0 ? 'Awaiting delivery' : 'No orders in transit'}
           </p>
         </article>
-        <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-          <h2 className="text-sm font-medium text-slate-200">Received Orders</h2>
-          <p className="mt-2 text-3xl font-semibold text-white">{receivedOrdersCount}</p>
-          <p className="mt-1 text-xs text-slate-400">Recently completed</p>
+        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Received Orders</h2>
+          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{receivedOrdersCount}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Recently completed</p>
         </article>
         {hasStockValue ? (
-          <article className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <h2 className="text-sm font-medium text-slate-200">Total Stock Value</h2>
-            <p className="mt-2 text-3xl font-semibold text-white">€{totalStockValue.toFixed(2)}</p>
-            <p className="mt-1 text-xs text-slate-400">Based on available unit prices</p>
+          <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+            <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Total Stock Value</h2>
+            <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">€{totalStockValue.toFixed(2)}</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Based on available unit prices</p>
           </article>
         ) : null}
       </div>
@@ -189,35 +189,35 @@ export default async function DashboardPage() {
       {orders.length > 0 ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Recent Orders</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recent Orders</h2>
             <Link
               href="/orders"
-              className="text-sm font-medium text-sky-400 transition hover:text-sky-300"
+              className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
             >
               View all →
             </Link>
           </div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="border-b border-slate-800 bg-slate-950/40">
+                <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Supplier
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Total
                     </th>
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                   {orders.map((order) => {
                     const total = order.items.reduce((sum, item) => {
                       const price = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0;
@@ -225,11 +225,11 @@ export default async function DashboardPage() {
                     }, 0);
 
                     return (
-                      <tr key={order.id} className="transition hover:bg-slate-800/40">
-                        <td className="px-4 py-3 text-slate-300">
+                      <tr key={order.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                           <div className="flex flex-col">
                             <span>{formatDistanceToNow(order.createdAt, { addSuffix: true })}</span>
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-slate-500 dark:text-slate-500">
                               {new Date(order.createdAt).toLocaleDateString()}
                             </span>
                           </div>
@@ -237,7 +237,7 @@ export default async function DashboardPage() {
                         <td className="px-4 py-3">
                           <Link
                             href={`/suppliers#${order.supplier.id}`}
-                            className="font-medium text-sky-400 hover:text-sky-300"
+                            className="font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                           >
                             {order.supplier.name}
                           </Link>
@@ -245,13 +245,13 @@ export default async function DashboardPage() {
                         <td className="px-4 py-3">
                           <StatusBadge status={order.status} />
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-slate-200">
+                        <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-200">
                           {total > 0 ? `€${total.toFixed(2)}` : '-'}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <Link
                             href={`/orders/${order.id}`}
-                            className="text-sm font-medium text-sky-400 transition hover:text-sky-300"
+                            className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                           >
                             View →
                           </Link>
@@ -265,9 +265,9 @@ export default async function DashboardPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
-          <p className="font-medium text-slate-200">No orders yet</p>
-          <p className="mt-2 text-sm text-slate-400">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center dark:border-slate-800 dark:bg-slate-900/40">
+          <p className="font-medium text-slate-900 dark:text-slate-200">No orders yet</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {canManage
               ? 'Create your first purchase order using the "Create Order" button above.'
               : 'Orders will appear here once created by staff members.'}
@@ -279,10 +279,10 @@ export default async function DashboardPage() {
       {lowStockInfoWithDetails.length > 0 ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Low Stock Items</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Low Stock Items</h2>
             <Link
               href="/inventory"
-              className="text-sm font-medium text-amber-400 transition hover:text-amber-300"
+              className="text-sm font-medium text-amber-600 transition hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
             >
               View all →
             </Link>
@@ -291,35 +291,35 @@ export default async function DashboardPage() {
             {lowStockInfoWithDetails.map(({ item, lowStockLocations, suggestedQuantity }) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-amber-700 bg-amber-900/10 p-4"
+                className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/10"
               >
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-white">{item.name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">{item.name}</h3>
                     {item.sku ? (
-                      <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
+                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         {item.sku}
                       </span>
                     ) : null}
-                    <span className="rounded-full bg-amber-900/60 border border-amber-700 px-2 py-0.5 text-xs font-medium text-amber-300">
+                    <span className="rounded-full bg-amber-100 border border-amber-400 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/60 dark:border-amber-700 dark:text-amber-300">
                       Low stock
                     </span>
                   </div>
                   {item.defaultSupplier ? (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
                       Supplier:{' '}
                       <Link
                         href={`/suppliers#${item.defaultSupplier.id}`}
-                        className="text-sky-400 hover:text-sky-300"
+                        className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                       >
                         {item.defaultSupplier.name}
                       </Link>
                     </p>
                   ) : (
-                    <p className="text-xs text-amber-400">⚠ No default supplier set</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400">⚠ No default supplier set</p>
                   )}
-                  <div className="text-xs text-slate-300">
-                    <p className="font-medium text-amber-300">Low at:</p>
+                  <div className="text-xs text-slate-700 dark:text-slate-300">
+                    <p className="font-medium text-amber-800 dark:text-amber-300">Low at:</p>
                     <ul className="mt-1 space-y-1">
                       {lowStockLocations.map((inv) => (
                         <li key={inv.locationId} className="flex items-center justify-between">
@@ -327,7 +327,7 @@ export default async function DashboardPage() {
                             {inv.location.name}
                             {inv.location.code ? ` (${inv.location.code})` : ''}
                           </span>
-                          <span className="text-amber-300">
+                          <span className="text-amber-800 dark:text-amber-300">
                             {inv.quantity} / {inv.reorderPoint}
                           </span>
                         </li>
@@ -335,7 +335,7 @@ export default async function DashboardPage() {
                     </ul>
                   </div>
                   {suggestedQuantity > 0 && (
-                    <p className="text-xs text-amber-300">
+                    <p className="text-xs text-amber-800 dark:text-amber-300">
                       Suggested order quantity: {suggestedQuantity}
                     </p>
                   )}
@@ -349,27 +349,27 @@ export default async function DashboardPage() {
       {/* Recent Stock Adjustments */}
       {adjustments.length > 0 ? (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-white">Recent Stock Adjustments</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recent Stock Adjustments</h2>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {adjustments.map((adjustment) => (
               <div
                 key={adjustment.id}
-                className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none"
               >
-                <div className="flex items-center justify-between text-xs text-slate-400">
+                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>
                     {formatDistanceToNow(adjustment.createdAt, { addSuffix: true })}
                   </span>
-                  <span className="rounded-full bg-slate-800 px-2 py-0.5">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">
                     {adjustment.reason ?? 'Adjustment'}
                   </span>
                 </div>
-                <p className="mt-2 font-medium text-slate-100">
+                <p className="mt-2 font-medium text-slate-900 dark:text-slate-100">
                   {adjustment.quantity > 0 ? '+' : ''}
                   {adjustment.quantity}{' '}
-                  <span className="text-slate-300">{adjustment.item.name}</span>
+                  <span className="text-slate-700 dark:text-slate-300">{adjustment.item.name}</span>
                 </p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                   Location: {adjustment.location.name}
                   {adjustment.location.code ? ` (${adjustment.location.code})` : ''}
                 </p>
@@ -377,7 +377,7 @@ export default async function DashboardPage() {
                   By {adjustment.createdBy?.name ?? adjustment.createdBy?.email ?? 'Unknown'}
                 </p>
                 {adjustment.note ? (
-                  <p className="mt-1 text-xs text-slate-300">{adjustment.note}</p>
+                  <p className="mt-1 text-xs text-slate-700 dark:text-slate-300">{adjustment.note}</p>
                 ) : null}
               </div>
             ))}
@@ -390,10 +390,10 @@ export default async function DashboardPage() {
 
 function StatusBadge({ status }: { status: OrderStatus }) {
   const styles = {
-    [OrderStatus.DRAFT]: 'bg-slate-700 text-slate-200',
-    [OrderStatus.SENT]: 'bg-blue-900/50 text-blue-300',
-    [OrderStatus.RECEIVED]: 'bg-green-900/50 text-green-300',
-    [OrderStatus.CANCELLED]: 'bg-rose-900/50 text-rose-300',
+    [OrderStatus.DRAFT]: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+    [OrderStatus.SENT]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+    [OrderStatus.RECEIVED]: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
+    [OrderStatus.CANCELLED]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
   };
 
   return (

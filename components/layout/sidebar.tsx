@@ -103,7 +103,7 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-slate-200 bg-white transition-transform duration-300 dark:border-slate-800 dark:bg-slate-900 md:static md:z-auto ${
+        className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-slate-200 bg-white shadow-sm transition-transform duration-300 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none md:static md:z-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         } ${isCollapsed && mounted ? 'md:w-16' : 'w-60'}`}
         role="navigation"
@@ -121,14 +121,14 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
                 Remcura
               </Link>
               {practiceName && (
-                <span className="text-xs text-slate-500 dark:text-slate-400">{practiceName}</span>
+                <span className="text-xs text-slate-600 dark:text-slate-400">{practiceName}</span>
               )}
             </div>
           )}
           {(!isCollapsed || !mounted) && (
             <button
               onClick={toggleCollapse}
-              className="hidden rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white md:block"
+              className="hidden rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white md:block"
               aria-label="Toggle sidebar"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -137,7 +137,7 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
           {isCollapsed && mounted && (
             <button
               onClick={toggleCollapse}
-              className="hidden rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white md:block"
+              className="hidden rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white md:block"
               aria-label="Toggle sidebar"
             >
               <ChevronRight className="h-4 w-4" />
@@ -158,8 +158,8 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
                 onClick={handleLinkClick}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                   isActive
-                    ? 'border-l-2 border-sky-600 bg-slate-100 text-slate-900 dark:border-sky-500 dark:bg-slate-800 dark:text-white'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/50 dark:hover:text-white'
+                    ? 'bg-sky-50 text-sky-700 border-l-2 border-sky-600 dark:border-sky-500 dark:bg-slate-800 dark:text-white'
+                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/50 dark:hover:text-white'
                 } ${isCollapsed && mounted ? 'justify-center' : ''}`}
                 aria-current={isActive ? 'page' : undefined}
                 title={isCollapsed && mounted ? item.label : undefined}
