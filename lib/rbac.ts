@@ -106,3 +106,23 @@ export function canView({
   return hasRole({ memberships, practiceId, minimumRole: 'VIEWER' });
 }
 
+export function canManageProducts({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'ADMIN' });
+}
+
+export function canViewProductPricing({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'STAFF' });
+}
+

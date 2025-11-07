@@ -36,10 +36,10 @@ export default async function OrdersPage() {
   });
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-8">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Orders</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Orders</h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
             Track purchase orders from draft through receipt across suppliers.
           </p>
@@ -47,14 +47,14 @@ export default async function OrdersPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/orders/templates"
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
           >
             Order Templates
           </Link>
           {canManage ? (
             <Link
               href="/orders/new"
-              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
+              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
             >
               New Order
             </Link>
@@ -76,11 +76,11 @@ function OrdersList({
 }) {
   if (orders.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
-        <p className="font-medium text-slate-900 dark:text-slate-200">No orders yet</p>
-        <p className="mt-2">
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
+        <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No orders yet</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           {canManage
-            ? 'Create your first purchase order using the "New Order" button above.'
+            ? 'Create your first purchase order to start tracking inventory deliveries.'
             : 'Orders will appear here once created by staff members.'}
         </p>
       </div>
@@ -93,22 +93,22 @@ function OrdersList({
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 Date
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 Supplier
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 Status
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 Items
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 Total
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 Created By
               </th>
               <th className="px-4 py-3"></th>
@@ -172,15 +172,15 @@ function OrdersList({
 
 function StatusBadge({ status }: { status: OrderStatus }) {
   const styles = {
-    [OrderStatus.DRAFT]: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
-    [OrderStatus.SENT]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
-    [OrderStatus.RECEIVED]: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
-    [OrderStatus.CANCELLED]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
+    [OrderStatus.DRAFT]: 'bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600',
+    [OrderStatus.SENT]: 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
+    [OrderStatus.RECEIVED]: 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
+    [OrderStatus.CANCELLED]: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700',
   };
 
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
+      className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}
     >
       {status}
     </span>

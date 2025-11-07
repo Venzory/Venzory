@@ -70,7 +70,7 @@ export async function updateGs1Verification(
     data: {
       gs1VerificationStatus: status,
       gs1VerifiedAt: status === Gs1VerificationStatus.VERIFIED ? new Date() : null,
-      gs1Data: gs1Data || null,
+      gs1Data: gs1Data ? (gs1Data as any) : null,
     },
   });
 }

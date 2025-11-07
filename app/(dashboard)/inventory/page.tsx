@@ -125,11 +125,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const hasActiveFilters = Boolean(q || location || supplier);
 
   return (
-    <div className="space-y-10">
-      <section className="space-y-4">
+    <div className="space-y-8">
+      <section className="space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Inventory</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Inventory</h1>
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Manage catalog items, default suppliers, and on-hand balances per location.
             </p>
@@ -137,7 +137,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           {canManage ? (
             <Link
               href="/orders/new"
-              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
+              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
             >
               Create Order
             </Link>
@@ -166,7 +166,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <section className="grid gap-6 lg:grid-cols-[1fr_1fr] mt-8">
         {canManage ? (
           <StockAdjustmentForm
             items={items.map((item) => ({ id: item.id, name: item.name, sku: item.sku }))}
@@ -174,7 +174,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           />
         ) : (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 dark:shadow-none">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">No adjustment permissions</h2>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">No adjustment permissions</h2>
             <p className="mt-2">
               Only staff and administrators can record stock movements. Contact a practice admin for access.
             </p>
@@ -198,7 +198,7 @@ function RecentAdjustments({
   if (adjustments.length === 0) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 dark:shadow-none">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recent adjustments</h2>
+        <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent adjustments</h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">No stock adjustments recorded yet.</p>
         {canManage ? (
           <p className="mt-4 text-xs text-slate-500">
@@ -211,7 +211,7 @@ function RecentAdjustments({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recent adjustments</h2>
+      <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent adjustments</h2>
       <ul className="mt-4 space-y-3 text-sm text-slate-900 dark:text-slate-200">
         {adjustments.map((adjustment: any) => (
           <li key={adjustment.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">

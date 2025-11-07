@@ -7,6 +7,7 @@ import type { PracticeRole } from '@prisma/client';
 import {
   LayoutDashboard,
   Package,
+  Package2,
   MapPin,
   Building2,
   ShoppingCart,
@@ -25,6 +26,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/inventory', label: 'Inventory', icon: Package },
+  { href: '/products', label: 'Products', icon: Package2 },
   { href: '/locations', label: 'Locations', icon: MapPin },
   { href: '/suppliers', label: 'Suppliers', icon: Building2 },
   { href: '/orders', label: 'Orders', icon: ShoppingCart },

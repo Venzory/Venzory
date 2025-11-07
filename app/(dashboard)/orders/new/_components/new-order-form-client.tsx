@@ -101,13 +101,13 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
           <div className="flex items-center gap-3">
             <Link
               href="/orders"
-              className="text-sm text-slate-400 transition hover:text-slate-200"
+              className="text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             >
               ← Back to Orders
             </Link>
           </div>
-          <h1 className="text-2xl font-semibold text-white">New Order</h1>
-          <p className="text-sm text-slate-300">Create a new draft purchase order</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">New Order</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Create a new draft purchase order</p>
         </div>
       </div>
 
@@ -119,10 +119,10 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Supplier Selection */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white">Supplier</h2>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Supplier</h2>
           <div className="space-y-2">
-            <label htmlFor="supplierId" className="text-sm text-slate-400">
+            <label htmlFor="supplierId" className="text-sm text-slate-700 dark:text-slate-400">
               Select Supplier *
             </label>
             <select
@@ -133,7 +133,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
                 setSelectedItems([]); // Clear items when supplier changes
               }}
               required
-              className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
             >
               <option value="">Choose a supplier...</option>
               {suppliers.map((supplier) => (
@@ -145,7 +145,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
           </div>
 
           {!selectedSupplier ? (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-500">
               Select a supplier to see available items
             </p>
           ) : null}
@@ -153,39 +153,39 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
 
         {/* Items Selection */}
         {selectedSupplier ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-            <div className="border-b border-slate-800 bg-slate-950/40 p-4">
-              <h2 className="text-lg font-semibold text-white">Order Items</h2>
+          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+            <div className="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Order Items</h2>
             </div>
 
             {selectedItems.length === 0 ? (
-              <div className="p-8 text-center text-sm text-slate-400">
-                <p className="font-medium text-slate-200">No items added yet</p>
+              <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-400">
+                <p className="font-medium text-slate-900 dark:text-slate-200">No items added yet</p>
                 <p className="mt-2">Add items to this order using the dropdown below</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-slate-800 bg-slate-950/40">
+                  <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                         Item
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                         Quantity
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                         Unit Price
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                         Total
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800">
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {selectedItems.map((selectedItem) => {
                       const item = items.find((i) => i.id === selectedItem.itemId);
                       const lineTotal = selectedItem.quantity * selectedItem.unitPrice;
@@ -194,9 +194,9 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
                         <tr key={selectedItem.itemId}>
                           <td className="px-4 py-3">
                             <div className="flex flex-col">
-                              <span className="font-medium text-slate-200">{item?.name}</span>
+                              <span className="font-medium text-slate-900 dark:text-slate-200">{item?.name}</span>
                               {item?.sku ? (
-                                <span className="text-xs text-slate-500">{item.sku}</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-500">{item.sku}</span>
                               ) : null}
                             </div>
                           </td>
@@ -211,12 +211,12 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
                                   parseInt(e.target.value) || 1
                                 )
                               }
-                              className="w-20 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-center text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
+                              className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-center text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                             />
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="inline-flex items-center gap-1">
-                              <span className="text-slate-400">€</span>
+                              <span className="text-slate-600 dark:text-slate-400">€</span>
                               <input
                                 type="number"
                                 min="0"
@@ -228,18 +228,18 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
                                     parseFloat(e.target.value) || 0
                                   )
                                 }
-                                className="w-24 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-right text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
+                                className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                               />
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-right font-medium text-slate-200">
+                          <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-200">
                             €{lineTotal.toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <button
                               type="button"
                               onClick={() => handleRemoveItem(selectedItem.itemId)}
-                              className="text-sm text-rose-400 transition hover:text-rose-300"
+                              className="text-sm text-rose-600 transition hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
                             >
                               Remove
                             </button>
@@ -248,12 +248,12 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
                       );
                     })}
                   </tbody>
-                  <tfoot className="border-t border-slate-800 bg-slate-950/40">
+                  <tfoot className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                     <tr>
-                      <td colSpan={3} className="px-4 py-3 text-right font-semibold text-slate-200">
+                      <td colSpan={3} className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-200">
                         Total
                       </td>
-                      <td className="px-4 py-3 text-right text-lg font-bold text-white">
+                      <td className="px-4 py-3 text-right text-lg font-bold text-slate-900 dark:text-white">
                         €{total.toFixed(2)}
                       </td>
                       <td></td>
@@ -264,9 +264,9 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
             )}
 
             {/* Add Item Dropdown */}
-            <div className="border-t border-slate-800 bg-slate-950/40 p-4">
+            <div className="border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
               <div className="space-y-2">
-                <label className="text-sm text-slate-400">Add Item</label>
+                <label className="text-sm text-slate-700 dark:text-slate-400">Add Item</label>
                 <select
                   value=""
                   onChange={(e) => {
@@ -275,7 +275,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
                       e.target.value = '';
                     }
                   }}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                 >
                   <option value="">Select an item to add...</option>
                   {items
@@ -308,22 +308,22 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
 
         {/* Notes and Reference */}
         {selectedSupplier ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-white">Additional Information</h2>
+          <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Additional Information</h2>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="reference" className="text-sm text-slate-400">
+                <label htmlFor="reference" className="text-sm text-slate-700 dark:text-slate-400">
                   Reference Number (optional)
                 </label>
                 <input
                   id="reference"
                   name="reference"
                   placeholder="PO-12345"
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="notes" className="text-sm text-slate-400">
+                <label htmlFor="notes" className="text-sm text-slate-700 dark:text-slate-400">
                   Notes (optional)
                 </label>
                 <textarea
@@ -331,7 +331,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
                   name="notes"
                   rows={3}
                   placeholder="Add any notes about this order..."
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>

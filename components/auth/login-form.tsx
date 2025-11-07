@@ -87,7 +87,7 @@ export function LoginForm() {
           <label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-200">
             Password
           </label>
-          <Link href="/forgot-password" className="text-xs text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
+          <Link href="/forgot-password" tabIndex={-1} className="text-xs text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
             Forgot password?
           </Link>
         </div>

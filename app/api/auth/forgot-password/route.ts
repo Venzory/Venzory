@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
 import { sendPasswordResetEmail } from '@/lib/email';
+import { passwordResetRateLimiter, getClientIp } from '@/lib/rate-limit';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Valid email required'),
@@ -26,6 +27,27 @@ export async function POST(request: Request) {
 
     const { email } = parsed.data;
     const normalizedEmail = email.toLowerCase();
+
+    // Rate limiting: Check both IP and email
+    const clientIp = getClientIp(request);
+    const rateLimitKey = `${clientIp}:${normalizedEmail}`;
+    const rateLimitResult = await passwordResetRateLimiter.check(rateLimitKey);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many password reset requests. Please try again later.',
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+          },
+        },
+      );
+    }
 
     // Look up user by email
     const user = await prisma.user.findUnique({

@@ -115,12 +115,12 @@ export default async function DashboardPage() {
   });
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-8">
       <header className="space-y-1">
         <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Overview</p>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
             <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">
               Quick overview of your stock levels, orders, and recent activity.
             </p>
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
           {canManage ? (
             <Link
               href="/orders/new"
-              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
+              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
             >
               Create Order
             </Link>
@@ -138,9 +138,9 @@ export default async function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-          <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Low Stock Items</h2>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{lowStockCount}</p>
+        <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Low Stock Items</h2>
+          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">{lowStockCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {lowStockCount > 0 ? (
               <Link href="/inventory" className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
@@ -151,9 +151,9 @@ export default async function DashboardPage() {
             )}
           </p>
         </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-          <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Draft Orders</h2>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{draftOrdersCount}</p>
+        <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Draft Orders</h2>
+          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">{draftOrdersCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {draftOrdersCount > 0 ? (
               <Link href="/orders" className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
@@ -164,22 +164,22 @@ export default async function DashboardPage() {
             )}
           </p>
         </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-          <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Sent Orders</h2>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{sentOrdersCount}</p>
+        <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Sent Orders</h2>
+          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">{sentOrdersCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {sentOrdersCount > 0 ? 'Awaiting delivery' : 'No orders in transit'}
           </p>
         </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-          <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Received Orders</h2>
-          <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">{receivedOrdersCount}</p>
+        <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Received Orders</h2>
+          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">{receivedOrdersCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Recently completed</p>
         </article>
         {hasStockValue ? (
-          <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-            <h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Total Stock Value</h2>
-            <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-white">€{totalStockValue.toFixed(2)}</p>
+          <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Stock Value</h2>
+            <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">€{totalStockValue.toFixed(2)}</p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Based on available unit prices</p>
           </article>
         ) : null}
@@ -187,9 +187,9 @@ export default async function DashboardPage() {
 
       {/* Recent Orders Table */}
       {orders.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recent Orders</h2>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent Orders</h2>
             <Link
               href="/orders"
               className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
@@ -202,16 +202,16 @@ export default async function DashboardPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Supplier
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Total
                     </th>
                     <th className="px-4 py-3"></th>
@@ -265,11 +265,11 @@ export default async function DashboardPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center dark:border-slate-800 dark:bg-slate-900/40">
-          <p className="font-medium text-slate-900 dark:text-slate-200">No orders yet</p>
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
+          <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No orders yet</p>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {canManage
-              ? 'Create your first purchase order using the "Create Order" button above.'
+              ? 'Create your first purchase order to get started with inventory management.'
               : 'Orders will appear here once created by staff members.'}
           </p>
         </div>
@@ -277,9 +277,9 @@ export default async function DashboardPage() {
 
       {/* Low Stock Items */}
       {lowStockInfoWithDetails.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Low Stock Items</h2>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Low Stock Items</h2>
             <Link
               href="/inventory"
               className="text-sm font-medium text-amber-600 transition hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
@@ -291,7 +291,7 @@ export default async function DashboardPage() {
             {lowStockInfoWithDetails.map(({ item, lowStockLocations, suggestedQuantity }) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/10"
+                className="rounded-xl border border-amber-300 bg-amber-50 p-6 dark:border-amber-700 dark:bg-amber-900/10"
               >
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -348,13 +348,13 @@ export default async function DashboardPage() {
 
       {/* Recent Stock Adjustments */}
       {adjustments.length > 0 ? (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recent Stock Adjustments</h2>
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent Stock Adjustments</h2>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {adjustments.map((adjustment) => (
               <div
                 key={adjustment.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none"
+                className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none"
               >
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>
@@ -390,15 +390,15 @@ export default async function DashboardPage() {
 
 function StatusBadge({ status }: { status: OrderStatus }) {
   const styles = {
-    [OrderStatus.DRAFT]: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
-    [OrderStatus.SENT]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
-    [OrderStatus.RECEIVED]: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
-    [OrderStatus.CANCELLED]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
+    [OrderStatus.DRAFT]: 'bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600',
+    [OrderStatus.SENT]: 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
+    [OrderStatus.RECEIVED]: 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
+    [OrderStatus.CANCELLED]: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700',
   };
 
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
+      className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}
     >
       {status}
     </span>

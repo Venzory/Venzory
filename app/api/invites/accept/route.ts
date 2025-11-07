@@ -5,6 +5,7 @@ import { MembershipStatus } from '@prisma/client';
 
 import { signIn } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { inviteAcceptRateLimiter, getClientIp } from '@/lib/rate-limit';
 
 const acceptInviteSchema = z.object({
   token: z.string().min(1, 'Token is required'),
@@ -28,6 +29,27 @@ export async function POST(request: Request) {
     }
 
     const { token, name, password } = parsed.data;
+
+    // Rate limiting: Check based on IP and token
+    const clientIp = getClientIp(request);
+    const rateLimitKey = `${clientIp}:${token}`;
+    const rateLimitResult = await inviteAcceptRateLimiter.check(rateLimitKey);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Too many attempts. Please try again later.',
+        },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+          },
+        },
+      );
+    }
 
     // Find and validate invite
     const invite = await prisma.userInvite.findUnique({

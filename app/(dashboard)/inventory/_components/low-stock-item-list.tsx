@@ -94,16 +94,16 @@ export function LowStockItemList({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400">
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
         {hasActiveFilters ? (
           <>
-            <p className="font-medium text-slate-200">No items match your filters</p>
-            <p className="mt-2">Try adjusting your search or filter criteria to see more results.</p>
+            <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No items match your filters</p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Try adjusting your search or filter criteria to see more results.</p>
           </>
         ) : (
           <>
-            <p className="font-medium text-slate-200">No items yet</p>
-            <p className="mt-2">
+            <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No items yet</p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
               {canManage
                 ? 'Add your first inventory item using the form on the right.'
                 : 'An administrator needs to add items before they appear here.'}
@@ -146,14 +146,14 @@ export function LowStockItemList({
 
       {/* Bulk Actions Bar */}
       {canManage && lowStockItems.length > 0 && (
-        <div className="rounded-xl border border-amber-800 bg-amber-900/20 p-4">
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-amber-300">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-300">
                 {lowStockItems.length} low-stock item{lowStockItems.length !== 1 ? 's' : ''} detected
               </p>
               {selectedItemIds.size > 0 && (
-                <p className="text-xs text-amber-400">
+                <p className="text-xs text-amber-800 dark:text-amber-400">
                   {selectedItemIds.size} item{selectedItemIds.size !== 1 ? 's' : ''} selected
                 </p>
               )}
@@ -201,10 +201,10 @@ export function LowStockItemList({
         return (
           <div
             key={item.id}
-            className={`rounded-xl border p-5 transition ${
+            className={`rounded-xl border p-6 shadow-sm transition ${
               isLowStock
-                ? 'border-amber-700 bg-amber-900/10'
-                : 'border-slate-800 bg-slate-900/60'
+                ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/10'
+                : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none'
             }`}
           >
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
@@ -227,41 +227,41 @@ export function LowStockItemList({
 
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-lg font-semibold text-white">{item.name}</h2>
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{item.name}</h2>
                     {item.sku ? (
-                      <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         {item.sku}
                       </span>
                     ) : null}
                     {isLowStock && (
-                      <span className="rounded-full bg-amber-900/60 border border-amber-700 px-2 py-0.5 text-xs font-medium text-amber-300">
+                      <span className="rounded-full bg-amber-100 border border-amber-400 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/60 dark:border-amber-700 dark:text-amber-300">
                         Low stock
                       </span>
                     )}
                   </div>
                   {item.description ? (
-                    <p className="text-sm text-slate-300">{item.description}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{item.description}</p>
                   ) : null}
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Total on hand: <span className="text-slate-200">{totalQuantity}</span>
+                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-500">
+                    Total on hand: <span className="text-slate-900 dark:text-slate-200">{totalQuantity}</span>
                   </p>
                   {item.defaultSupplier ? (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
                       Default supplier:{' '}
                       <Link
                         href={`/suppliers#${item.defaultSupplier.id}`}
-                        className="text-sky-400 hover:text-sky-300"
+                        className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                       >
                         {item.defaultSupplier.name}
                       </Link>
                     </p>
                   ) : isLowStock ? (
-                    <p className="text-xs text-amber-400">
+                    <p className="text-xs text-amber-700 dark:text-amber-400">
                       ⚠ No default supplier set
                     </p>
                   ) : null}
                   {isLowStock && itemLowStockInfo.suggestedQuantity > 0 && (
-                    <p className="text-xs text-amber-300">
+                    <p className="text-xs text-amber-800 dark:text-amber-300">
                       Suggested order quantity: {itemLowStockInfo.suggestedQuantity}
                     </p>
                   )}
@@ -272,7 +272,7 @@ export function LowStockItemList({
                 <form action={deleteItemAction.bind(null, item.id)} className="self-start">
                   <button
                     type="submit"
-                    className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:border-rose-500 hover:text-rose-300"
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-rose-500 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 dark:hover:text-rose-300"
                   >
                     Delete
                   </button>
@@ -282,11 +282,11 @@ export function LowStockItemList({
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                   Locations
                 </h3>
                 {item.inventory?.length ? (
-                  <ul className="space-y-1 text-sm text-slate-300">
+                  <ul className="space-y-1 text-sm text-slate-700 dark:text-slate-300">
                     {item.inventory.map((row) => {
                       const isLocationLowStock =
                         row.reorderPoint !== null && row.quantity < row.reorderPoint;
@@ -304,7 +304,7 @@ export function LowStockItemList({
                               </span>
                             )}
                           </span>
-                          <span className={isLocationLowStock ? 'text-amber-300' : 'text-slate-100'}>
+                          <span className={isLocationLowStock ? 'text-amber-800 dark:text-amber-300' : 'text-slate-900 dark:text-slate-100'}>
                             {row.quantity}
                             {row.reorderPoint !== null && ` / ${row.reorderPoint}`}
                           </span>
@@ -313,19 +313,19 @@ export function LowStockItemList({
                     })}
                   </ul>
                 ) : (
-                  <p className="text-xs text-slate-500">No stock recorded yet.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-500">No stock recorded yet.</p>
                 )}
               </div>
 
               {canManage ? (
-                <details className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 text-sm text-slate-200">
-                  <summary className="cursor-pointer text-sm font-medium text-slate-200">
+                <details className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/40">
+                  <summary className="cursor-pointer text-sm font-medium text-slate-900 dark:text-slate-200">
                     Edit item
                   </summary>
                   <form action={upsertItemInlineAction} className="mt-3 space-y-3">
                     <input type="hidden" name="itemId" value={item.id} />
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400" htmlFor={`name-${item.id}`}>
+                      <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`name-${item.id}`}>
                         Name
                       </label>
                       <input
@@ -333,35 +333,35 @@ export function LowStockItemList({
                         name="name"
                         defaultValue={item.name}
                         required
-                        className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                       />
                     </div>
                     <div className="flex gap-3">
                       <div className="flex-1 space-y-1">
-                        <label className="text-xs text-slate-400" htmlFor={`sku-${item.id}`}>
+                        <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`sku-${item.id}`}>
                           SKU
                         </label>
                         <input
                           id={`sku-${item.id}`}
                           name="sku"
                           defaultValue={item.sku ?? ''}
-                          className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                         />
                       </div>
                       <div className="flex-1 space-y-1">
-                        <label className="text-xs text-slate-400" htmlFor={`unit-${item.id}`}>
+                        <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`unit-${item.id}`}>
                           Unit
                         </label>
                         <input
                           id={`unit-${item.id}`}
                           name="unit"
                           defaultValue={item.unit ?? ''}
-                          className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                         />
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400" htmlFor={`description-${item.id}`}>
+                      <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`description-${item.id}`}>
                         Description
                       </label>
                       <textarea
@@ -369,18 +369,18 @@ export function LowStockItemList({
                         name="description"
                         rows={2}
                         defaultValue={item.description ?? ''}
-                        className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-slate-400" htmlFor={`supplier-${item.id}`}>
+                      <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`supplier-${item.id}`}>
                         Default supplier
                       </label>
                       <select
                         id={`supplier-${item.id}`}
                         name="defaultSupplierId"
                         defaultValue={item.defaultSupplier?.id ?? 'none'}
-                        className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                       >
                         <option value="none">No default</option>
                         {suppliers.map((supplier) => (
@@ -392,7 +392,7 @@ export function LowStockItemList({
                     </div>
                     <button
                       type="submit"
-                      className="rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
+                      className="rounded-lg bg-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                     >
                       Save changes
                     </button>

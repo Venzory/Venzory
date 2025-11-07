@@ -156,18 +156,18 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
       {/* Order Info */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white">Order Information</h2>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Order Information</h2>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <dt className="text-slate-400">Status</dt>
+              <dt className="text-slate-600 dark:text-slate-400">Status</dt>
               <dd>
                 <StatusBadge status={order.status} />
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-400">Supplier</dt>
-              <dd className="text-slate-200">
+              <dt className="text-slate-600 dark:text-slate-400">Supplier</dt>
+              <dd className="text-slate-900 dark:text-slate-200">
                 <Link
                   href={`/suppliers#${order.supplier.id}`}
                   className="text-sky-400 hover:text-sky-300"
@@ -177,37 +177,37 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-400">Created</dt>
-              <dd className="text-slate-200">
+              <dt className="text-slate-600 dark:text-slate-400">Created</dt>
+              <dd className="text-slate-900 dark:text-slate-200">
                 {format(order.createdAt, 'MMM d, yyyy h:mm a')}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-400">Created By</dt>
-              <dd className="text-slate-200">
+              <dt className="text-slate-600 dark:text-slate-400">Created By</dt>
+              <dd className="text-slate-900 dark:text-slate-200">
                 {order.createdBy?.name || order.createdBy?.email || 'Unknown'}
               </dd>
             </div>
             {order.sentAt ? (
               <div className="flex justify-between">
-                <dt className="text-slate-400">Sent</dt>
-                <dd className="text-slate-200">
+                <dt className="text-slate-600 dark:text-slate-400">Sent</dt>
+                <dd className="text-slate-900 dark:text-slate-200">
                   {format(order.sentAt, 'MMM d, yyyy h:mm a')}
                 </dd>
               </div>
             ) : null}
             {order.expectedAt ? (
               <div className="flex justify-between">
-                <dt className="text-slate-400">Expected</dt>
-                <dd className="text-slate-200">
+                <dt className="text-slate-600 dark:text-slate-400">Expected</dt>
+                <dd className="text-slate-900 dark:text-slate-200">
                   {format(order.expectedAt, 'MMM d, yyyy')}
                 </dd>
               </div>
             ) : null}
             {order.receivedAt ? (
               <div className="flex justify-between">
-                <dt className="text-slate-400">Received</dt>
-                <dd className="text-slate-200">
+                <dt className="text-slate-600 dark:text-slate-400">Received</dt>
+                <dd className="text-slate-900 dark:text-slate-200">
                   {format(order.receivedAt, 'MMM d, yyyy h:mm a')}
                 </dd>
               </div>
@@ -216,13 +216,13 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         </div>
 
         {/* Notes and Reference */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white">Notes & Reference</h2>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Notes & Reference</h2>
           {canEdit ? (
             <form action={updateOrderAction} className="space-y-4">
               <input type="hidden" name="orderId" value={order.id} />
               <div className="space-y-2">
-                <label htmlFor="reference" className="text-sm text-slate-400">
+                <label htmlFor="reference" className="text-sm text-slate-700 dark:text-slate-400">
                   Reference Number
                 </label>
                 <input
@@ -230,11 +230,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   name="reference"
                   defaultValue={order.reference ?? ''}
                   placeholder="PO-12345"
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="notes" className="text-sm text-slate-400">
+                <label htmlFor="notes" className="text-sm text-slate-700 dark:text-slate-400">
                   Notes
                 </label>
                 <textarea
@@ -243,12 +243,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   rows={4}
                   defaultValue={order.notes ?? ''}
                   placeholder="Add any notes about this order..."
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                 />
               </div>
               <button
                 type="submit"
-                className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
               >
                 Save Changes
               </button>
@@ -257,17 +257,17 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             <div className="space-y-3 text-sm">
               {order.reference ? (
                 <div>
-                  <dt className="text-slate-400">Reference</dt>
-                  <dd className="mt-1 text-slate-200">{order.reference}</dd>
+                  <dt className="text-slate-600 dark:text-slate-400">Reference</dt>
+                  <dd className="mt-1 text-slate-900 dark:text-slate-200">{order.reference}</dd>
                 </div>
               ) : null}
               {order.notes ? (
                 <div>
-                  <dt className="text-slate-400">Notes</dt>
-                  <dd className="mt-1 text-slate-200 whitespace-pre-wrap">{order.notes}</dd>
+                  <dt className="text-slate-600 dark:text-slate-400">Notes</dt>
+                  <dd className="mt-1 text-slate-900 dark:text-slate-200 whitespace-pre-wrap">{order.notes}</dd>
                 </div>
               ) : (
-                <p className="text-slate-500">No notes or reference added.</p>
+                <p className="text-slate-500 dark:text-slate-500">No notes or reference added.</p>
               )}
             </div>
           )}
@@ -275,13 +275,13 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       </div>
 
       {/* Order Items */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-        <div className="border-b border-slate-800 bg-slate-950/40 p-4">
-          <h2 className="text-lg font-semibold text-white">Order Items</h2>
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+        <div className="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Order Items</h2>
         </div>
 
         {order.items.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-400">
+          <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-400">
             <p className="font-medium text-slate-200">No items in this order</p>
             <p className="mt-2">
               {canEdit ? 'Add items using the form below.' : 'This order has no items yet.'}

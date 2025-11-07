@@ -4,6 +4,7 @@ import { compare } from 'bcryptjs';
 import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
+import { loginRateLimiter } from '@/lib/rate-limit';
 
 const credentialsSchema = z.object({
   email: z.string().email().min(1),
@@ -24,7 +25,7 @@ export const {
   },
   providers: [
     Credentials({
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) {
           return null;
@@ -32,6 +33,15 @@ export const {
 
         const email = parsed.data.email.toLowerCase();
         const password = parsed.data.password;
+
+        // Rate limiting based on email
+        // Note: In production, you'd also want IP-based limiting at the reverse proxy level
+        const rateLimitResult = await loginRateLimiter.check(email);
+        if (!rateLimitResult.success) {
+          console.warn(`[Auth] Rate limit exceeded for email: ${email}`);
+          // Return null to fail authentication (NextAuth doesn't support custom error responses in authorize)
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { auth } from '@/auth';
+import { checkRouteAccess } from '@/lib/route-guards';
 
 const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings'];
 const authRoutes = ['/login', '/register'];
@@ -21,6 +22,21 @@ export default auth((request) => {
     const signInUrl = new URL('/login', request.nextUrl.origin);
     signInUrl.searchParams.set('callbackUrl', request.nextUrl.href);
     return NextResponse.redirect(signInUrl);
+  }
+
+  // For authenticated users on protected routes, check role-based access
+  if (request.auth && isProtected) {
+    const { allowed } = checkRouteAccess({
+      pathname,
+      session: request.auth,
+    });
+
+    if (!allowed) {
+      // Redirect to access denied page
+      const accessDeniedUrl = new URL('/access-denied', request.nextUrl.origin);
+      accessDeniedUrl.searchParams.set('from', pathname);
+      return NextResponse.redirect(accessDeniedUrl);
+    }
   }
 
   return NextResponse.next();

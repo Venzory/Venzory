@@ -31,9 +31,9 @@ export default async function LocationsPage() {
   });
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Locations</h1>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Locations</h1>
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Organise stock by physical location and understand how items are distributed.
         </p>
@@ -47,7 +47,7 @@ export default async function LocationsPage() {
           />
         ) : (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 dark:shadow-none">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">View only</h2>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">View only</h2>
             <p className="mt-2">
               Location hierarchy is managed by staff. Request access to reorganise storage areas or rooms.
             </p>
@@ -67,12 +67,12 @@ function LocationList({
 }) {
   if (locations.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
-        <p className="font-medium text-slate-900 dark:text-slate-200">No locations yet</p>
-        <p className="mt-2">
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
+        <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No locations yet</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           {canManage
-            ? 'Add locations to start tracking stock distribution.'
-            : 'Ask a teammate with edit access to set up the location structure.'}
+            ? 'Add your first location to organize stock by storage area or room.'
+            : 'Locations will be set up by staff members to organize inventory.'}
         </p>
       </div>
     );
@@ -84,7 +84,7 @@ function LocationList({
         const totalQuantity = location.inventory.reduce((sum: number, row: any) => sum + row.quantity, 0);
 
         return (
-          <div key={location.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <div key={location.id} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
