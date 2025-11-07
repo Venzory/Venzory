@@ -1,4 +1,15 @@
-import Redis from 'ioredis';
+// Dynamic import for ioredis to avoid Edge Runtime issues
+let Redis: typeof import('ioredis').default | null = null;
+
+// Only import ioredis in Node.js runtime (not Edge)
+if (typeof process !== 'undefined' && process.versions?.node) {
+  try {
+    // Dynamic import to avoid Edge Runtime bundling issues
+    Redis = require('ioredis');
+  } catch (error) {
+    console.warn('[RateLimit] ioredis not available, using in-memory fallback');
+  }
+}
 
 export type RateLimitConfig = {
   /**
@@ -34,10 +45,13 @@ interface RateLimiter {
  * Redis-based rate limiter implementation
  */
 class RedisRateLimiter implements RateLimiter {
-  private redis: Redis;
+  private redis: any;
   private config: RateLimitConfig;
 
   constructor(redisUrl: string, config: RateLimitConfig) {
+    if (!Redis) {
+      throw new Error('Redis not available in this runtime');
+    }
     this.redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
@@ -187,11 +201,17 @@ class InMemoryRateLimiter implements RateLimiter {
  * Create a rate limiter instance based on environment configuration
  */
 export function createRateLimiter(config: RateLimitConfig): RateLimiter {
-  const redisUrl = process.env.REDIS_URL;
+  const redisUrl = typeof process !== 'undefined' ? process.env?.REDIS_URL : undefined;
 
-  if (redisUrl) {
-    console.log(`[RateLimit] Using Redis for rate limiter: ${config.id}`);
-    return new RedisRateLimiter(redisUrl, config);
+  // Use Redis only if URL is configured AND Redis client is available
+  if (redisUrl && Redis) {
+    try {
+      console.log(`[RateLimit] Using Redis for rate limiter: ${config.id}`);
+      return new RedisRateLimiter(redisUrl, config);
+    } catch (error) {
+      console.warn(`[RateLimit] Failed to create Redis rate limiter, falling back to in-memory:`, error);
+      return new InMemoryRateLimiter(config);
+    }
   } else {
     console.log(`[RateLimit] Using in-memory rate limiter: ${config.id}`);
     return new InMemoryRateLimiter(config);

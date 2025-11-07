@@ -3,6 +3,7 @@ const { withSentryConfig } = require('@sentry/nextjs');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Instrumentation is now enabled by default in Next.js 15
+  // Note: Keep .next in project root. OneDrive symlink issues are resolved by clearing cache.
 }
 
 // Sentry configuration options
