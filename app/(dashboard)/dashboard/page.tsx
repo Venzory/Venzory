@@ -120,7 +120,7 @@ export default async function DashboardPage() {
         <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Overview</p>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Dashboard</h1>
             <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">
               Quick overview of your stock levels, orders, and recent activity.
             </p>
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Low Stock Items</h2>
-          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">{lowStockCount}</p>
+          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{lowStockCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {lowStockCount > 0 ? (
               <Link href="/inventory" className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
@@ -153,7 +153,7 @@ export default async function DashboardPage() {
         </article>
         <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Draft Orders</h2>
-          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">{draftOrdersCount}</p>
+          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{draftOrdersCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {draftOrdersCount > 0 ? (
               <Link href="/orders" className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
@@ -166,20 +166,20 @@ export default async function DashboardPage() {
         </article>
         <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Sent Orders</h2>
-          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">{sentOrdersCount}</p>
+          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{sentOrdersCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {sentOrdersCount > 0 ? 'Awaiting delivery' : 'No orders in transit'}
           </p>
         </article>
         <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Received Orders</h2>
-          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">{receivedOrdersCount}</p>
+          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{receivedOrdersCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Recently completed</p>
         </article>
         {hasStockValue ? (
           <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Stock Value</h2>
-            <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">€{totalStockValue.toFixed(2)}</p>
+            <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">€{totalStockValue.toFixed(2)}</p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Based on available unit prices</p>
           </article>
         ) : null}

@@ -99,7 +99,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Settings</h1>
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Manage your practice settings, users, and preferences.
         </p>

@@ -129,7 +129,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
       <section className="space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Inventory</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Inventory</h1>
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Manage catalog items, default suppliers, and on-hand balances per location.
             </p>

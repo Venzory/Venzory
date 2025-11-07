@@ -30,7 +30,7 @@ export default async function SuppliersPage() {
   return (
     <section className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Suppliers</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Suppliers</h1>
         <p className="text-sm text-slate-600 dark:text-slate-300">
           Store supplier contacts, payment notes, and link their preferred catalog items.
         </p>
