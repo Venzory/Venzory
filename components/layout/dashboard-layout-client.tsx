@@ -23,7 +23,7 @@ export function DashboardLayoutClient({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="flex h-screen bg-surface-secondary">
       <Sidebar
         practiceName={practiceName}
         userRole={userRole}

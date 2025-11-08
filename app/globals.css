@@ -36,10 +36,21 @@
     
     /* Component-specific */
     --color-card-bg: 255 255 255; /* white */
+    --color-card-border: 226 232 240; /* slate-200 */
     --color-table-header: 248 250 252; /* slate-50 */
     --color-table-hover: 248 250 252; /* slate-50 */
     --color-input-bg: 255 255 255; /* white */
     --color-input-border: 203 213 225; /* slate-300 */
+    
+    /* Sidebar-specific */
+    --color-sidebar-bg: 249 250 251; /* gray-50 - distinct warm neutral */
+    --color-sidebar-border: 226 232 240; /* slate-200 */
+    --color-sidebar-text: 15 23 42; /* slate-900 */
+    --color-sidebar-text-muted: 71 85 105; /* slate-600 */
+    --color-sidebar-hover: 241 245 249; /* slate-100 */
+    --color-sidebar-active-bg: 240 249 255; /* sky-50 */
+    --color-sidebar-active-text: 3 105 161; /* sky-700 */
+    --color-sidebar-active-border: 2 132 199; /* sky-600 */
     
     /* Shadows (opacity values) */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -78,10 +89,21 @@
     
     /* Component-specific */
     --color-card-bg: 15 23 42; /* slate-900 with opacity */
+    --color-card-border: 30 41 59; /* slate-800 */
     --color-table-header: 2 6 23; /* slate-950 */
     --color-table-hover: 30 41 59; /* slate-800 */
     --color-input-bg: 15 23 42; /* slate-900 */
     --color-input-border: 30 41 59; /* slate-800 */
+    
+    /* Sidebar-specific */
+    --color-sidebar-bg: 15 23 42; /* slate-900 */
+    --color-sidebar-border: 30 41 59; /* slate-800 */
+    --color-sidebar-text: 248 250 252; /* slate-50 */
+    --color-sidebar-text-muted: 148 163 184; /* slate-400 */
+    --color-sidebar-hover: 30 41 59; /* slate-800 */
+    --color-sidebar-active-bg: 30 41 59; /* slate-800 */
+    --color-sidebar-active-text: 255 255 255; /* white */
+    --color-sidebar-active-border: 14 165 233; /* sky-500 */
     
     /* Shadows (minimal in dark mode) */
     --shadow-sm: none;

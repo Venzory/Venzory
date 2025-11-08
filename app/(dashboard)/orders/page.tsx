@@ -5,6 +5,7 @@ import { PracticeRole, OrderStatus } from '@prisma/client';
 import { requireActivePractice } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasRole } from '@/lib/rbac';
+import { Card } from '@/components/ui/card';
 
 export default async function OrdersPage() {
   const { session, practiceId } = await requireActivePractice();
@@ -76,22 +77,22 @@ function OrdersList({
 }) {
   if (orders.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
+      <Card className="border-dashed p-12 text-center">
         <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No orders yet</p>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           {canManage
             ? 'Create your first purchase order to start tracking inventory deliveries.'
             : 'Orders will appear here once created by staff members.'}
         </p>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+    <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
+          <thead className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 Date
@@ -166,7 +167,7 @@ function OrdersList({
           </tbody>
         </table>
       </div>
-    </div>
+    </Card>
   );
 }
 

@@ -13,11 +13,11 @@ type TopBarProps = {
 
 export function TopBar({ userName, practiceName, onMenuClick }: TopBarProps) {
   return (
-    <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white/60 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/60 md:px-6">
+    <header className="flex h-16 items-center justify-between border-b border-border bg-surface/60 px-4 backdrop-blur md:px-6">
       {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}
-        className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white md:hidden"
+        className="rounded-lg p-2 text-sidebar-text-muted transition hover:bg-sidebar-hover hover:text-sidebar-text md:hidden"
         aria-label="Toggle menu"
       >
         <Menu className="h-5 w-5" />

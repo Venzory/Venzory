@@ -15,7 +15,6 @@ import {
   sendOrderAction,
 } from '../actions';
 import { EditableOrderItem } from './_components/editable-order-item';
-import { ReceiveOrderButton } from './_components/receive-order-button';
 import { AddItemForm } from './_components/add-item-form';
 
 interface OrderDetailPageProps {
@@ -39,17 +38,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               sku: true,
               unit: true,
             },
-          },
-          receipts: {
-            include: {
-              location: {
-                select: { name: true },
-              },
-              createdBy: {
-                select: { name: true, email: true },
-              },
-            },
-            orderBy: { createdAt: 'desc' },
           },
         },
         orderBy: { item: { name: 'asc' } },
@@ -149,7 +137,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             </>
           ) : null}
           {canReceive ? (
-            <ReceiveOrderButton orderId={order.id} orderItems={order.items} locations={locations} />
+            <Link
+              href={`/receiving/new?orderId=${order.id}`}
+              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
+            >
+              Receive This Order
+            </Link>
           ) : null}
         </div>
       </div>
@@ -296,18 +289,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     Item
                   </th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Ordered
+                    Quantity
                   </th>
-                  {(order.status === OrderStatus.SENT || order.status === OrderStatus.RECEIVED) ? (
-                    <>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        Received
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
-                        Remaining
-                      </th>
-                    </>
-                  ) : null}
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
                     Unit Price
                   </th>
@@ -343,12 +326,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     );
                   }
 
-                  const totalReceived = orderItem.receipts.reduce(
-                    (sum, r) => sum + r.receivedQuantity,
-                    0
-                  );
-                  const remaining = orderItem.quantity - totalReceived;
-
                   return (
                     <tr key={orderItem.id}>
                       <td className="px-4 py-3">
@@ -366,20 +343,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                           {orderItem.quantity} {orderItem.item.unit || 'units'}
                         </span>
                       </td>
-                      {(order.status === OrderStatus.SENT || order.status === OrderStatus.RECEIVED) ? (
-                        <>
-                          <td className="px-4 py-3 text-right">
-                            <span className="text-green-400 font-medium">
-                              {totalReceived}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className={remaining > 0 ? 'text-amber-400' : 'text-slate-500'}>
-                              {remaining}
-                            </span>
-                          </td>
-                        </>
-                      ) : null}
                       <td className="px-4 py-3 text-right">
                         <span className="text-slate-200">
                           {unitPrice > 0 ? `€${unitPrice.toFixed(2)}` : '-'}
@@ -395,13 +358,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               <tfoot className="border-t border-slate-800 bg-slate-950/40">
                 <tr>
                   <td 
-                    colSpan={
-                      canEdit 
-                        ? 4 
-                        : (order.status === OrderStatus.SENT || order.status === OrderStatus.RECEIVED) 
-                          ? 5 
-                          : 3
-                    } 
+                    colSpan={canEdit ? 3 : 3} 
                     className="px-4 py-3 text-right font-semibold text-slate-200"
                   >
                     Total
@@ -424,92 +381,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         ) : null}
       </div>
 
-      {/* Receipt History */}
-      {(order.status === OrderStatus.SENT || order.status === OrderStatus.RECEIVED) &&
-        order.items.some((item) => item.receipts.length > 0) ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-          <div className="border-b border-slate-800 bg-slate-950/40 p-4">
-            <h2 className="text-lg font-semibold text-white">Receipt History</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-slate-800 bg-slate-950/40">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Item
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Location
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Quantity
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Batch
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Expiry
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Received By
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {order.items.flatMap((orderItem) =>
-                  orderItem.receipts.map((receipt) => (
-                    <tr key={receipt.id}>
-                      <td className="px-4 py-3">
-                        <span className="text-slate-200">
-                          {format(receipt.createdAt, 'MMM d, yyyy h:mm a')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-slate-200">
-                            {orderItem.item.name}
-                          </span>
-                          {orderItem.item.sku ? (
-                            <span className="text-xs text-slate-500">{orderItem.item.sku}</span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-slate-200">{receipt.location.name}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-green-400 font-medium">
-                          {receipt.receivedQuantity}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-slate-200">
-                          {receipt.batchNumber || '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-slate-200">
-                          {receipt.expiryDate
-                            ? format(receipt.expiryDate, 'MMM d, yyyy')
-                            : '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-slate-200">
-                          {receipt.createdBy?.name || receipt.createdBy?.email || 'Unknown'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

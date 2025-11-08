@@ -256,7 +256,7 @@ export default async function SettingsPage() {
         <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-800/50">
+              <thead className="bg-white dark:bg-slate-800/50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Name
@@ -366,7 +366,7 @@ export default async function SettingsPage() {
           <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-800/50">
+                <thead className="bg-white dark:bg-slate-800/50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
                       Email

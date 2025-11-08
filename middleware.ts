@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { checkRouteAccess } from '@/lib/route-guards';
 
-const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings'];
+const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products'];
 const authRoutes = ['/login', '/register'];
 
 export default auth((request) => {

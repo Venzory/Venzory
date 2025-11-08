@@ -5,6 +5,7 @@ import { PracticeRole, OrderStatus } from '@prisma/client';
 import { requireActivePractice } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasRole } from '@/lib/rbac';
+import { Card } from '@/components/ui/card';
 
 export default async function DashboardPage() {
   const { session, practiceId } = await requireActivePractice();
@@ -138,7 +139,7 @@ export default async function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+        <Card>
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Low Stock Items</h2>
           <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{lowStockCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -150,8 +151,8 @@ export default async function DashboardPage() {
               'All items adequately stocked'
             )}
           </p>
-        </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+        </Card>
+        <Card>
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Draft Orders</h2>
           <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{draftOrdersCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -163,25 +164,25 @@ export default async function DashboardPage() {
               'No pending drafts'
             )}
           </p>
-        </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+        </Card>
+        <Card>
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Sent Orders</h2>
           <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{sentOrdersCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {sentOrdersCount > 0 ? 'Awaiting delivery' : 'No orders in transit'}
           </p>
-        </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+        </Card>
+        <Card>
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Received Orders</h2>
           <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{receivedOrdersCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Recently completed</p>
-        </article>
+        </Card>
         {hasStockValue ? (
-          <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <Card>
             <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Stock Value</h2>
             <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">€{totalStockValue.toFixed(2)}</p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Based on available unit prices</p>
-          </article>
+          </Card>
         ) : null}
       </div>
 
@@ -197,10 +198,10 @@ export default async function DashboardPage() {
               View all →
             </Link>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
+                <thead className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Date
@@ -262,17 +263,17 @@ export default async function DashboardPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
+        <Card className="border-dashed p-12 text-center">
           <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No orders yet</p>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {canManage
               ? 'Create your first purchase order to get started with inventory management.'
               : 'Orders will appear here once created by staff members.'}
           </p>
-        </div>
+        </Card>
       )}
 
       {/* Low Stock Items */}
@@ -352,10 +353,7 @@ export default async function DashboardPage() {
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent Stock Adjustments</h2>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {adjustments.map((adjustment) => (
-              <div
-                key={adjustment.id}
-                className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none"
-              >
+              <Card key={adjustment.id}>
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>
                     {formatDistanceToNow(adjustment.createdAt, { addSuffix: true })}
@@ -379,7 +377,7 @@ export default async function DashboardPage() {
                 {adjustment.note ? (
                   <p className="mt-1 text-xs text-slate-700 dark:text-slate-300">{adjustment.note}</p>
                 ) : null}
-              </div>
+              </Card>
             ))}
           </div>
         </div>

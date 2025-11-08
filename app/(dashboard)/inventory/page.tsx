@@ -5,6 +5,7 @@ import { PracticeRole } from '@prisma/client';
 import { requireActivePractice } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hasRole } from '@/lib/rbac';
+import { Card } from '@/components/ui/card';
 
 import { CreateItemForm } from './_components/create-item-form';
 import { StockAdjustmentForm } from './_components/stock-adjustment-form';
@@ -173,12 +174,12 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
             locations={locations}
           />
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 dark:shadow-none">
+          <Card className="text-sm text-slate-700 dark:text-slate-300">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">No adjustment permissions</h2>
             <p className="mt-2">
               Only staff and administrators can record stock movements. Contact a practice admin for access.
             </p>
-          </div>
+          </Card>
         )}
 
         <RecentAdjustments adjustments={adjustments} canManage={canManage} />
@@ -197,7 +198,7 @@ function RecentAdjustments({
 }) {
   if (adjustments.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 dark:shadow-none">
+      <Card className="text-sm text-slate-700 dark:text-slate-300">
         <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent adjustments</h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">No stock adjustments recorded yet.</p>
         {canManage ? (
@@ -205,12 +206,12 @@ function RecentAdjustments({
             Tip: record adjustments when receiving goods, auditing counts, or writing off waste.
           </p>
         ) : null}
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+    <Card>
       <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent adjustments</h2>
       <ul className="mt-4 space-y-3 text-sm text-slate-900 dark:text-slate-200">
         {adjustments.map((adjustment: any) => (
@@ -237,7 +238,7 @@ function RecentAdjustments({
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }
 

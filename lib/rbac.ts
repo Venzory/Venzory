@@ -126,3 +126,33 @@ export function canViewProductPricing({
   return hasRole({ memberships, practiceId, minimumRole: 'STAFF' });
 }
 
+export function canReceiveGoods({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'STAFF' });
+}
+
+export function canPerformStockCount({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'STAFF' });
+}
+
+export function canDeleteReceipts({
+  memberships,
+  practiceId,
+}: {
+  memberships: SessionPractice[];
+  practiceId: string;
+}) {
+  return hasRole({ memberships, practiceId, minimumRole: 'ADMIN' });
+}
+

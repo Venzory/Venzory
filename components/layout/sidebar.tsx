@@ -14,6 +14,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  PackageCheck,
+  ClipboardCheck,
 } from 'lucide-react';
 
 type NavItem = {
@@ -30,6 +32,8 @@ const navItems: NavItem[] = [
   { href: '/locations', label: 'Locations', icon: MapPin },
   { href: '/suppliers', label: 'Suppliers', icon: Building2 },
   { href: '/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/receiving', label: 'Receiving', icon: PackageCheck, minRole: 'STAFF' },
+  { href: '/stock-count', label: 'Stock Count', icon: ClipboardCheck, minRole: 'STAFF' },
   { href: '/settings', label: 'Settings', icon: Settings, minRole: 'STAFF' },
 ];
 
@@ -105,32 +109,32 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-slate-200 bg-white shadow-sm transition-transform duration-300 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none md:static md:z-auto ${
+        className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-sidebar-border bg-sidebar shadow-sm transition-transform duration-300 dark:shadow-none md:static md:z-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         } ${isCollapsed && mounted ? 'md:w-16' : 'w-60'}`}
         role="navigation"
         aria-label="Main navigation"
       >
         {/* Logo and Practice Name */}
-        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800">
+        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
           {(!isCollapsed || !mounted) && (
             <div className="flex flex-col">
               <Link
                 href="/dashboard"
-                className="text-lg font-semibold text-slate-900 transition hover:text-sky-600 dark:text-white dark:hover:text-sky-400"
+                className="text-lg font-semibold text-sidebar-text transition hover:text-brand"
                 onClick={handleLinkClick}
               >
                 Remcura
               </Link>
               {practiceName && (
-                <span className="text-xs text-slate-600 dark:text-slate-400">{practiceName}</span>
+                <span className="text-xs text-sidebar-text-muted">{practiceName}</span>
               )}
             </div>
           )}
           {(!isCollapsed || !mounted) && (
             <button
               onClick={toggleCollapse}
-              className="hidden rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white md:block"
+              className="hidden rounded-lg p-1.5 text-sidebar-text-muted transition hover:bg-sidebar-hover hover:text-sidebar-text md:block"
               aria-label="Toggle sidebar"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -139,7 +143,7 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
           {isCollapsed && mounted && (
             <button
               onClick={toggleCollapse}
-              className="hidden rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white md:block"
+              className="hidden rounded-lg p-1.5 text-sidebar-text-muted transition hover:bg-sidebar-hover hover:text-sidebar-text md:block"
               aria-label="Toggle sidebar"
             >
               <ChevronRight className="h-4 w-4" />
@@ -160,8 +164,8 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
                 onClick={handleLinkClick}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                   isActive
-                    ? 'bg-sky-50 text-sky-700 border-l-2 border-sky-600 dark:border-sky-500 dark:bg-slate-800 dark:text-white'
-                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/50 dark:hover:text-white'
+                    ? 'bg-sidebar-active-bg text-sidebar-active-text border-l-2 border-sidebar-active-border'
+                    : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text'
                 } ${isCollapsed && mounted ? 'justify-center' : ''}`}
                 aria-current={isActive ? 'page' : undefined}
                 title={isCollapsed && mounted ? item.label : undefined}

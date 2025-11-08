@@ -166,7 +166,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
+                  <thead className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                         Item

@@ -22,6 +22,7 @@
     "@sentry/nextjs": "^10.23.0",
     "bcryptjs": "^3.0.3",
     "date-fns": "^3.6.0",
+    "html5-qrcode": "^2.3.8",
     "ioredis": "^5.8.2",
     "lucide-react": "^0.552.0",
     "next": "^15.5.6",
