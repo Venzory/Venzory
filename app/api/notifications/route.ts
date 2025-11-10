@@ -1,38 +1,18 @@
 import { NextResponse } from 'next/server';
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getNotificationService } from '@/src/services';
 
 export async function GET() {
   try {
     const { session, practiceId } = await requireActivePractice();
+    const ctx = buildRequestContextFromSession(session);
 
-    // Fetch recent notifications (last 10) for current user's practice
-    // Include notifications where userId is null (for all users) OR userId matches current user
-    const notifications = await prisma.inAppNotification.findMany({
-      where: {
-        practiceId,
-        OR: [
-          { userId: null },
-          { userId: session.user.id },
-        ],
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 10,
-    });
-
-    // Count unread notifications
-    const unreadCount = await prisma.inAppNotification.count({
-      where: {
-        practiceId,
-        read: false,
-        OR: [
-          { userId: null },
-          { userId: session.user.id },
-        ],
-      },
-    });
+    // Fetch recent notifications using NotificationService
+    const [notifications, unreadCount] = await Promise.all([
+      getNotificationService().getNotifications(ctx, 10),
+      getNotificationService().getUnreadCount(ctx),
+    ]);
 
     return NextResponse.json({
       notifications,
@@ -46,4 +26,5 @@ export async function GET() {
     );
   }
 }
+
 

@@ -75,6 +75,7 @@ export const {
           id: m.id,
           practiceId: m.practiceId,
           role: m.role,
+          status: m.status,
           practice: m.practice,
         })) ?? [];
       }

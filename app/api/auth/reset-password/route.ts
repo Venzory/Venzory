@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { hash } from 'bcryptjs';
 import { z } from 'zod';
 
-import { prisma } from '@/lib/prisma';
+import { getAuthService } from '@/src/services';
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1, 'Token is required'),
@@ -26,55 +25,28 @@ export async function POST(request: Request) {
 
     const { token, password } = parsed.data;
 
-    // Look up token from database
-    const resetToken = await prisma.passwordResetToken.findUnique({
-      where: { token },
-      include: { user: true },
-    });
-
-    // Validate token exists, not used, and not expired
-    if (!resetToken) {
-      return NextResponse.json(
-        { error: 'Invalid or expired reset token' },
-        { status: 400 },
-      );
-    }
-
-    if (resetToken.used) {
-      return NextResponse.json(
-        { error: 'This reset token has already been used' },
-        { status: 400 },
-      );
-    }
-
-    if (new Date() > resetToken.expiresAt) {
-      return NextResponse.json(
-        { error: 'This reset token has expired' },
-        { status: 400 },
-      );
-    }
-
-    // Hash new password using bcryptjs with 12 rounds (matching existing pattern)
-    const passwordHash = await hash(password, 12);
-
-    // Update user's password and mark token as used in a transaction
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: resetToken.userId },
-        data: { passwordHash },
-      }),
-      prisma.passwordResetToken.update({
-        where: { id: resetToken.id },
-        data: { used: true },
-      }),
-    ]);
+    // Reset password using AuthService
+    const result = await getAuthService().resetPassword(token, password);
 
     return NextResponse.json(
-      { message: 'Password reset successfully' },
+      { message: result.message },
       { status: 200 },
     );
   } catch (error) {
     console.error('[reset-password]', error);
+    
+    // Handle specific errors
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid or expired') || 
+          error.message.includes('already been used') || 
+          error.message.includes('expired')) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400 },
+        );
+      }
+    }
+    
     return NextResponse.json(
       { error: 'An unexpected error occurred' },
       { status: 500 },

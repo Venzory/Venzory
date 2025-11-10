@@ -194,12 +194,12 @@ export function TemplatePreviewClient({
       setIsSubmitting(false);
     } else if ('success' in result && result.success) {
       setSuccessMessage(result.message);
-      setCreatedOrders(result.orders);
+      setCreatedOrders(result.orders || []);
       setIsSubmitting(false);
 
       // Redirect after a short delay
       setTimeout(() => {
-        if (result.orders.length === 1) {
+        if (result.orders && result.orders.length === 1) {
           router.push(`/orders/${result.orders[0].id}`);
         } else {
           router.push('/orders');

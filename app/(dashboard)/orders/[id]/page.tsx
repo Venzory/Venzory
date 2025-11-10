@@ -4,7 +4,8 @@ import { PracticeRole, OrderStatus } from '@prisma/client';
 import { format } from 'date-fns';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getOrderService, getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 
 import {
@@ -24,31 +25,13 @@ interface OrderDetailPageProps {
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = await params;
   const { session, practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
 
-  const order = await prisma.order.findUnique({
-    where: { id, practiceId },
-    include: {
-      supplier: true,
-      items: {
-        include: {
-          item: {
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              unit: true,
-            },
-          },
-        },
-        orderBy: { item: { name: 'asc' } },
-      },
-      createdBy: {
-        select: { name: true, email: true },
-      },
-    },
-  });
-
-  if (!order) {
+  // Fetch order using OrderService
+  let order;
+  try {
+    order = await getOrderService().getOrderById(ctx, id);
+  } catch (error) {
     notFound();
   }
 
@@ -59,43 +42,38 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   });
 
   const canEdit = canManage && order.status === OrderStatus.DRAFT;
-  const canReceive = canManage && order.status === OrderStatus.SENT;
+  const canReceive = canManage && (order.status === OrderStatus.SENT || order.status === OrderStatus.PARTIALLY_RECEIVED);
 
   // Get all locations for receiving
-  const locations = await prisma.location.findMany({
-    where: { practiceId },
-    orderBy: { name: 'asc' },
-    select: { id: true, name: true },
-  });
+  const locations = await getInventoryService().getLocations(ctx);
 
-  // Get all items for adding to order
+  // Get all items for adding to order (only if can edit)
   const allItems = canEdit
-    ? await prisma.item.findMany({
-        where: { practiceId },
-        orderBy: { name: 'asc' },
-        include: {
-          supplierItems: {
-            where: { supplierId: order.supplierId },
-            select: { unitPrice: true },
-          },
-        },
-      })
+    ? await getInventoryService().findItems(ctx, {})
     : [];
 
-  // Filter out items already in the order and convert Decimal to plain number
+  // Filter items that match the order's supplier and convert Decimal to plain number
   const availableItems = allItems
-    .filter((item) => !order.items.some((oi) => oi.itemId === item.id))
+    .filter((item) => {
+      // Check if item is related to this supplier
+      const hasSupplierItem = item.supplierItems?.some((si: any) => si.supplierId === order.supplierId);
+      const hasDefaultSupplier = item.defaultSupplierId === order.supplierId;
+      return hasSupplierItem || hasDefaultSupplier;
+    })
+    .filter((item) => !order.items?.some((oi: any) => oi.itemId === item.id))
     .map((item) => ({
       ...item,
-      supplierItems: item.supplierItems.map((si) => ({
+      defaultSupplierId: item.defaultSupplierId,
+      supplierItems: item.supplierItems?.map((si: any) => ({
+        supplierId: si.supplierId,
         unitPrice: si.unitPrice ? parseFloat(si.unitPrice.toString()) : null,
       })),
     }));
 
-  const total = order.items.reduce((sum, item) => {
+  const total = order.items?.reduce((sum, item) => {
     const price = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0;
     return sum + price * item.quantity;
-  }, 0);
+  }, 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -162,10 +140,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               <dt className="text-slate-600 dark:text-slate-400">Supplier</dt>
               <dd className="text-slate-900 dark:text-slate-200">
                 <Link
-                  href={`/suppliers#${order.supplier.id}`}
+                  href={`/suppliers#${order.supplier?.id}`}
                   className="text-sky-400 hover:text-sky-300"
                 >
-                  {order.supplier.name}
+                  {order.supplier?.name}
                 </Link>
               </dd>
             </div>
@@ -273,7 +251,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Order Items</h2>
         </div>
 
-        {order.items.length === 0 ? (
+        {(order.items?.length || 0) === 0 ? (
           <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-400">
             <p className="font-medium text-slate-200">No items in this order</p>
             <p className="mt-2">
@@ -305,7 +283,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {order.items.map((orderItem) => {
+                {order.items?.map((orderItem: any) => {
                   const unitPrice = orderItem.unitPrice
                     ? parseFloat(orderItem.unitPrice.toString())
                     : 0;
@@ -319,9 +297,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                         itemId={orderItem.itemId}
                         quantity={orderItem.quantity}
                         unitPrice={unitPrice}
-                        itemName={orderItem.item.name}
-                        itemSku={orderItem.item.sku}
-                        itemUnit={orderItem.item.unit}
+                        itemName={orderItem.item?.name || ''}
+                        itemSku={orderItem.item?.sku}
+                        itemUnit={orderItem.item?.unit}
                       />
                     );
                   }
@@ -331,16 +309,16 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       <td className="px-4 py-3">
                         <div className="flex flex-col">
                           <span className="font-medium text-slate-200">
-                            {orderItem.item.name}
+                            {orderItem.item?.name}
                           </span>
-                          {orderItem.item.sku ? (
-                            <span className="text-xs text-slate-500">{orderItem.item.sku}</span>
+                          {orderItem.item?.sku ? (
+                            <span className="text-xs text-slate-500">{orderItem.item?.sku}</span>
                           ) : null}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className="text-slate-200">
-                          {orderItem.quantity} {orderItem.item.unit || 'units'}
+                          {orderItem.quantity} {orderItem.item?.unit || 'units'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -373,10 +351,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </div>
         )}
 
-        {/* Add Item Form */}
-        {canEdit && availableItems.length > 0 ? (
-          <div className="border-t border-slate-800 bg-slate-950/40 p-4">
-            <AddItemForm orderId={order.id} items={availableItems} />
+        {/* Add Item Form - Always visible for draft orders */}
+        {canEdit ? (
+          <div className="border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <AddItemForm 
+              orderId={order.id} 
+              supplierId={order.supplierId}
+              items={availableItems} 
+            />
           </div>
         ) : null}
       </div>
@@ -389,6 +371,7 @@ function StatusBadge({ status }: { status: OrderStatus }) {
   const styles = {
     [OrderStatus.DRAFT]: 'bg-slate-700 text-slate-200',
     [OrderStatus.SENT]: 'bg-blue-900/50 text-blue-300',
+    [OrderStatus.PARTIALLY_RECEIVED]: 'bg-amber-900/50 text-amber-300',
     [OrderStatus.RECEIVED]: 'bg-green-900/50 text-green-300',
     [OrderStatus.CANCELLED]: 'bg-rose-900/50 text-rose-300',
   };
@@ -397,7 +380,7 @@ function StatusBadge({ status }: { status: OrderStatus }) {
     <span
       className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
     >
-      {status}
+      {status.replace('_', ' ')}
     </span>
   );
 }

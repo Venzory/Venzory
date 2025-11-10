@@ -1,15 +1,21 @@
+/**
+ * Stock Count Actions (Refactored)
+ * Thin wrappers around InventoryService stock count methods
+ */
+
 'use server';
 
-import { PracticeRole, StockCountStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
-import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { hasRole } from '@/lib/rbac';
-import { checkAndCreateLowStockNotification } from '@/lib/notifications';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getInventoryService } from '@/src/services/inventory';
+import { isDomainError } from '@/src/domain/errors';
 
+const inventoryService = getInventoryService();
+
+// Validation schemas
 const createStockCountSessionSchema = z.object({
   locationId: z.string().min(1, 'Location is required'),
   notes: z.string().max(512).optional().transform((value) => value?.trim() || null),
@@ -28,475 +34,210 @@ const updateCountLineSchema = z.object({
   notes: z.string().max(256).optional().transform((value) => value?.trim() || null),
 });
 
-const completeStockCountSchema = z.object({
-  sessionId: z.string().min(1),
-  applyAdjustments: z.boolean().default(false),
-});
-
 export async function createStockCountSessionAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
+    // Parse and validate input
+    const parsed = createStockCountSessionSchema.safeParse({
+      locationId: formData.get('locationId'),
+      notes: formData.get('notes'),
+    });
 
-  const parsed = createStockCountSessionSchema.safeParse({
-    locationId: formData.get('locationId'),
-    notes: formData.get('notes'),
-  });
+    if (!parsed.success) {
+      return { error: 'Invalid session details' } as const;
+    }
 
-  if (!parsed.success) {
-    return { error: 'Invalid session details' } as const;
-  }
+    const { locationId, notes } = parsed.data;
 
-  const { locationId, notes } = parsed.data;
-
-  // Verify location belongs to practice
-  const location = await prisma.location.findUnique({
-    where: { id: locationId, practiceId },
-  });
-
-  if (!location) {
-    return { error: 'Location not found' } as const;
-  }
-
-  const countSession = await prisma.stockCountSession.create({
-    data: {
-      practiceId,
+    // Create session via service
+    const { id: sessionId } = await inventoryService.createStockCountSession(
+      ctx,
       locationId,
-      notes,
-      status: StockCountStatus.IN_PROGRESS,
-      createdById: session.user.id,
-    },
-  });
+      notes
+    );
 
-  revalidatePath('/stock-count');
-  return { success: true, sessionId: countSession.id } as const;
+    revalidatePath('/stock-count');
+    return { success: true, sessionId } as const;
+  } catch (error) {
+    console.error('[Stock Count Actions] Error creating session:', error);
+    
+    if (isDomainError(error)) {
+      return { error: error.message } as const;
+    }
+    
+    return { error: 'Failed to create stock count session' } as const;
+  }
 }
 
 export async function addCountLineAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
-
-  const parsed = addCountLineSchema.safeParse({
-    sessionId: formData.get('sessionId'),
-    itemId: formData.get('itemId'),
-    countedQuantity: formData.get('countedQuantity'),
-    notes: formData.get('notes'),
-  });
-
-  if (!parsed.success) {
-    return { error: 'Invalid line details' } as const;
-  }
-
-  const { sessionId, itemId, countedQuantity, notes } = parsed.data;
-
-  // Verify session exists and is IN_PROGRESS
-  const countSession = await prisma.stockCountSession.findUnique({
-    where: { id: sessionId, practiceId },
-  });
-
-  if (!countSession) {
-    return { error: 'Session not found' } as const;
-  }
-
-  if (countSession.status !== StockCountStatus.IN_PROGRESS) {
-    return { error: 'Cannot edit completed session' } as const;
-  }
-
-  // Verify item belongs to practice
-  const item = await prisma.item.findUnique({
-    where: { id: itemId, practiceId },
-  });
-
-  if (!item) {
-    return { error: 'Item not found' } as const;
-  }
-
-  // Get current system quantity from LocationInventory
-  const inventory = await prisma.locationInventory.findUnique({
-    where: {
-      locationId_itemId: {
-        locationId: countSession.locationId,
-        itemId,
-      },
-    },
-  });
-
-  const systemQuantity = inventory?.quantity ?? 0;
-  const variance = countedQuantity - systemQuantity;
-
-  // Check if line already exists for this item
-  const existingLine = await prisma.stockCountLine.findFirst({
-    where: {
-      sessionId,
-      itemId,
-    },
-  });
-
-  if (existingLine) {
-    // Update existing line
-    const line = await prisma.stockCountLine.update({
-      where: { id: existingLine.id },
-      data: {
-        countedQuantity,
-        systemQuantity,
-        variance,
-        notes: notes || existingLine.notes,
-      },
+    // Parse and validate input
+    const parsed = addCountLineSchema.safeParse({
+      sessionId: formData.get('sessionId'),
+      itemId: formData.get('itemId'),
+      countedQuantity: formData.get('countedQuantity'),
+      notes: formData.get('notes'),
     });
 
-    revalidatePath(`/stock-count/${sessionId}`);
-    return { success: true, variance, lineId: line.id } as const;
-  }
+    if (!parsed.success) {
+      return { error: 'Invalid line details' } as const;
+    }
 
-  // Create new line
-  const line = await prisma.stockCountLine.create({
-    data: {
+    const { sessionId, itemId, countedQuantity, notes } = parsed.data;
+
+    // Add count line via service
+    const { lineId, variance } = await inventoryService.addCountLine(
+      ctx,
       sessionId,
       itemId,
       countedQuantity,
-      systemQuantity,
-      variance,
-      notes,
-    },
-  });
+      notes
+    );
 
-  revalidatePath(`/stock-count/${sessionId}`);
-  return { success: true, variance, lineId: line.id } as const;
+    revalidatePath(`/stock-count/${sessionId}`);
+    return { success: true, variance, lineId } as const;
+  } catch (error) {
+    console.error('[Stock Count Actions] Error adding line:', error);
+    
+    if (isDomainError(error)) {
+      return { error: error.message } as const;
+    }
+    
+    return { error: 'Failed to add count line' } as const;
+  }
 }
 
 export async function updateCountLineAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
+    // Parse and validate input
+    const parsed = updateCountLineSchema.safeParse({
+      lineId: formData.get('lineId'),
+      countedQuantity: formData.get('countedQuantity'),
+      notes: formData.get('notes'),
+    });
 
-  const parsed = updateCountLineSchema.safeParse({
-    lineId: formData.get('lineId'),
-    countedQuantity: formData.get('countedQuantity'),
-    notes: formData.get('notes'),
-  });
+    if (!parsed.success) {
+      return { error: 'Invalid line details' } as const;
+    }
 
-  if (!parsed.success) {
-    return { error: 'Invalid line details' } as const;
-  }
+    const { lineId, countedQuantity, notes } = parsed.data;
 
-  const { lineId, countedQuantity, notes } = parsed.data;
-
-  // Verify line exists and session is IN_PROGRESS
-  const line = await prisma.stockCountLine.findUnique({
-    where: { id: lineId },
-    include: {
-      session: true,
-    },
-  });
-
-  if (!line || line.session.practiceId !== practiceId) {
-    return { error: 'Line not found' } as const;
-  }
-
-  if (line.session.status !== StockCountStatus.IN_PROGRESS) {
-    return { error: 'Cannot edit completed session' } as const;
-  }
-
-  // Recalculate variance
-  const variance = countedQuantity - line.systemQuantity;
-
-  await prisma.stockCountLine.update({
-    where: { id: lineId },
-    data: {
+    // Update count line via service
+    const { variance } = await inventoryService.updateCountLine(
+      ctx,
+      lineId,
       countedQuantity,
-      variance,
-      notes,
-    },
-  });
+      notes
+    );
 
-  revalidatePath(`/stock-count/${line.sessionId}`);
-  return { success: true, variance } as const;
+    revalidatePath(`/stock-count`);
+    return { success: true, variance } as const;
+  } catch (error) {
+    console.error('[Stock Count Actions] Error updating line:', error);
+    
+    if (isDomainError(error)) {
+      return { error: error.message } as const;
+    }
+    
+    return { error: 'Failed to update count line' } as const;
+  }
 }
 
 export async function removeCountLineAction(lineId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    // Remove count line via service
+    await inventoryService.removeCountLine(ctx, lineId);
+
+    revalidatePath('/stock-count');
+  } catch (error) {
+    console.error('[Stock Count Actions] Error removing line:', error);
+    
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+    
+    throw new Error('Failed to remove count line');
   }
-
-  // Verify line exists and session is IN_PROGRESS
-  const line = await prisma.stockCountLine.findUnique({
-    where: { id: lineId },
-    include: {
-      session: true,
-    },
-  });
-
-  if (!line || line.session.practiceId !== practiceId) {
-    throw new Error('Line not found');
-  }
-
-  if (line.session.status !== StockCountStatus.IN_PROGRESS) {
-    throw new Error('Cannot edit completed session');
-  }
-
-  await prisma.stockCountLine.delete({
-    where: { id: lineId },
-  });
-
-  revalidatePath(`/stock-count/${line.sessionId}`);
 }
 
 export async function completeStockCountAction(sessionId: string, applyAdjustments: boolean) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
-  }
-
-  // Fetch session with lines
-  const countSession = await prisma.stockCountSession.findUnique({
-    where: { id: sessionId, practiceId },
-    include: {
-      lines: {
-        include: {
-          item: true,
-        },
-      },
-    },
-  });
-
-  if (!countSession) {
-    throw new Error('Session not found');
-  }
-
-  if (countSession.status !== StockCountStatus.IN_PROGRESS) {
-    throw new Error('Session is not in progress');
-  }
-
-  if (countSession.lines.length === 0) {
-    throw new Error('Session must have at least one line');
-  }
-
-  let adjustedItems = 0;
-
-  // Process session in a transaction
-  await prisma.$transaction(async (tx) => {
-    if (applyAdjustments) {
-      // Apply adjustments for lines with variance
-      for (const line of countSession.lines) {
-        if (line.variance === 0) {
-          continue; // Skip items with no variance
-        }
-
-        // Update LocationInventory
-        const existingInventory = await tx.locationInventory.findUnique({
-          where: {
-            locationId_itemId: {
-              locationId: countSession.locationId,
-              itemId: line.itemId,
-            },
-          },
-        });
-
-        const reorderPoint = existingInventory?.reorderPoint ?? null;
-
-        await tx.locationInventory.upsert({
-          where: {
-            locationId_itemId: {
-              locationId: countSession.locationId,
-              itemId: line.itemId,
-            },
-          },
-          create: {
-            locationId: countSession.locationId,
-            itemId: line.itemId,
-            quantity: line.countedQuantity,
-          },
-          update: {
-            quantity: line.countedQuantity,
-          },
-        });
-
-        // Create StockAdjustment
-        await tx.stockAdjustment.create({
-          data: {
-            itemId: line.itemId,
-            locationId: countSession.locationId,
-            practiceId,
-            quantity: line.variance,
-            reason: 'Stock Count',
-            note: `Count session #${sessionId.slice(0, 8)}${line.notes ? ` - ${line.notes}` : ''}`,
-            createdById: session.user.id,
-          },
-        });
-
-        // Check for low stock after adjustment
-        await checkAndCreateLowStockNotification(
-          {
-            practiceId,
-            itemId: line.itemId,
-            locationId: countSession.locationId,
-            newQuantity: line.countedQuantity,
-            reorderPoint,
-          },
-          tx
-        );
-
-        adjustedItems++;
-      }
-    }
-
-    // Mark session as COMPLETED
-    await tx.stockCountSession.update({
-      where: { id: sessionId },
-      data: {
-        status: StockCountStatus.COMPLETED,
-        completedAt: new Date(),
-      },
-    });
-
-    // Create AuditLog entry
-    const totalVariance = countSession.lines.reduce(
-      (sum, line) => sum + Math.abs(line.variance),
-      0
+    // Complete stock count via service
+    const { adjustedItems } = await inventoryService.completeStockCount(
+      ctx,
+      sessionId,
+      applyAdjustments
     );
 
-    await tx.auditLog.create({
-      data: {
-        practiceId,
-        actorId: session.user.id,
-        entityType: 'StockCountSession',
-        entityId: sessionId,
-        action: 'COMPLETED',
-        changes: {
-          lineCount: countSession.lines.length,
-          adjustmentsApplied: applyAdjustments,
-          adjustedItemCount: adjustedItems,
-          totalVariance,
-          items: countSession.lines.map((line) => ({
-            itemId: line.itemId,
-            itemName: line.item.name,
-            systemQuantity: line.systemQuantity,
-            countedQuantity: line.countedQuantity,
-            variance: line.variance,
-          })),
-        },
-        metadata: {
-          locationId: countSession.locationId,
-        },
-      },
-    });
-  });
+    revalidatePath('/stock-count');
+    revalidatePath(`/stock-count/${sessionId}`);
+    revalidatePath('/inventory');
 
-  revalidatePath('/stock-count');
-  revalidatePath(`/stock-count/${sessionId}`);
-  revalidatePath('/inventory');
-
-  return { success: true, adjustedItems } as const;
+    return { success: true, adjustedItems } as const;
+  } catch (error) {
+    console.error('[Stock Count Actions] Error completing session:', error);
+    
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+    
+    throw new Error('Failed to complete stock count');
+  }
 }
 
 export async function cancelStockCountAction(sessionId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    // Cancel stock count via service
+    await inventoryService.cancelStockCount(ctx, sessionId);
+
+    revalidatePath('/stock-count');
+    revalidatePath(`/stock-count/${sessionId}`);
+  } catch (error) {
+    console.error('[Stock Count Actions] Error cancelling session:', error);
+    
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+    
+    throw new Error('Failed to cancel stock count');
   }
-
-  // Verify session exists and is IN_PROGRESS
-  const countSession = await prisma.stockCountSession.findUnique({
-    where: { id: sessionId, practiceId },
-  });
-
-  if (!countSession) {
-    throw new Error('Session not found');
-  }
-
-  if (countSession.status !== StockCountStatus.IN_PROGRESS) {
-    throw new Error('Can only cancel in-progress sessions');
-  }
-
-  await prisma.stockCountSession.update({
-    where: { id: sessionId },
-    data: {
-      status: StockCountStatus.CANCELLED,
-    },
-  });
-
-  revalidatePath('/stock-count');
-  revalidatePath(`/stock-count/${sessionId}`);
 }
 
 export async function deleteStockCountSessionAction(sessionId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.ADMIN,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    // Delete stock count session via service
+    await inventoryService.deleteStockCountSession(ctx, sessionId);
+
+    revalidatePath('/stock-count');
+    redirect('/stock-count');
+  } catch (error: any) {
+    console.error('[Stock Count Actions] Error deleting session:', error);
+    
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+    
+    throw new Error(error.message || 'Failed to delete stock count session');
   }
-
-  // Verify session exists and is not COMPLETED with adjustments
-  const countSession = await prisma.stockCountSession.findUnique({
-    where: { id: sessionId, practiceId },
-  });
-
-  if (!countSession) {
-    throw new Error('Session not found');
-  }
-
-  if (countSession.status === StockCountStatus.COMPLETED) {
-    throw new Error('Cannot delete completed session');
-  }
-
-  await prisma.stockCountSession.delete({
-    where: { id: sessionId },
-  });
-
-  revalidatePath('/stock-count');
-  redirect('/stock-count');
 }
 

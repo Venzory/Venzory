@@ -115,7 +115,7 @@ export function ExpectedCountItemsForm({
             <input type="hidden" name="itemId" value={currentItem.itemId} />
 
             {state?.error && (
-              <div className="rounded-lg border border-rose-800 bg-rose-900/20 p-4">
+              <div className="rounded-lg border border-rose-800 bg-rose-900/30 p-4">
                 <p className="text-sm text-rose-300">{state.error}</p>
               </div>
             )}
@@ -124,10 +124,10 @@ export function ExpectedCountItemsForm({
               <div
                 className={`rounded-lg border p-4 ${
                   state.variance === 0
-                    ? 'border-green-800 bg-green-900/20'
+                    ? 'border-green-800 bg-green-900/30'
                     : state.variance > 0
-                      ? 'border-amber-800 bg-amber-900/20'
-                      : 'border-rose-800 bg-rose-900/20'
+                      ? 'border-amber-800 bg-amber-900/30'
+                      : 'border-rose-800 bg-rose-900/30'
                 }`}
               >
                 <p
@@ -161,7 +161,7 @@ export function ExpectedCountItemsForm({
                   step="1"
                   defaultValue={currentItem.systemQuantity}
                   autoFocus
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-base text-slate-100 placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-32 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-base text-slate-100 placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
@@ -173,7 +173,7 @@ export function ExpectedCountItemsForm({
                   type="text"
                   name="notes"
                   placeholder="e.g. damaged items, expired stock"
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-base text-slate-100 placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full max-w-lg rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-base text-slate-100 placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
             </div>

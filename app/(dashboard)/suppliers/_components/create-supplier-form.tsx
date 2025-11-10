@@ -1,8 +1,10 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useEffect } from 'react';
+import { toast } from '@/lib/toast';
 
 import { upsertSupplierAction } from '../../inventory/actions';
+import { SubmitButton } from '@/components/ui/submit-button';
 
 type FormState = {
   success?: string;
@@ -12,7 +14,15 @@ type FormState = {
 const initialState: FormState = {};
 
 export function CreateSupplierForm() {
-  const [state, formAction] = useFormState(upsertSupplierAction, initialState);
+  const [state, formAction] = useActionState(upsertSupplierAction, initialState);
+
+  useEffect(() => {
+    if (state.success) {
+      toast.success(state.success);
+    } else if (state.error) {
+      toast.error(state.error);
+    }
+  }, [state]);
 
   return (
     <form action={formAction} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
@@ -88,21 +98,9 @@ export function CreateSupplierForm() {
       {state.error ? <p className="text-sm text-rose-600 dark:text-rose-400">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{state.success}</p> : null}
 
-      <SubmitButton />
+      <SubmitButton variant="primary" loadingText="Saving…">Create supplier</SubmitButton>
     </form>
   );
 }
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
-    >
-      {pending ? 'Saving…' : 'Create supplier'}
-    </button>
-  );
-}
 

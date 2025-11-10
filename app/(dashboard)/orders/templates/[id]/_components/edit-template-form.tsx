@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { updateTemplateAction } from '../../actions';
 
 interface EditTemplateFormProps {
@@ -30,9 +31,10 @@ export function EditTemplateForm({
 
     try {
       await updateTemplateAction(formData);
+      toast.success('Template updated');
       setIsEditing(false);
     } catch (error) {
-      alert('Failed to update template');
+      toast.error('Failed to update template');
     } finally {
       setIsSaving(false);
     }

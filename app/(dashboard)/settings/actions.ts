@@ -1,14 +1,20 @@
+/**
+ * Settings Actions (Refactored)
+ * Thin wrappers around SettingsService
+ */
+
 'use server';
 
-import { PracticeRole } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
-import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { canManageUsers, canManagePracticeSettings } from '@/lib/rbac';
-import { generateUniquePracticeSlug } from '@/lib/slug';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getSettingsService } from '@/src/services/settings';
+import { isDomainError } from '@/src/domain/errors';
 
+const settingsService = getSettingsService();
+
+// Validation schemas
 const updatePracticeSettingsSchema = z.object({
   name: z.string().min(1, 'Practice name is required').max(100),
   street: z.string().max(200).optional().transform((value) => value?.trim() || null),
@@ -34,201 +40,138 @@ const updatePracticeSettingsSchema = z.object({
 
 const updateUserRoleSchema = z.object({
   userId: z.string().cuid(),
-  role: z.nativeEnum(PracticeRole),
+  role: z.enum(['VIEWER', 'STAFF', 'ADMIN']),
 });
 
 export async function updatePracticeSettingsAction(
   _prevState: unknown,
   formData: FormData,
 ) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !canManagePracticeSettings({
-      memberships: session.user.memberships,
-      practiceId,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
+    // Parse and validate input
+    const parsed = updatePracticeSettingsSchema.safeParse({
+      name: formData.get('name'),
+      street: formData.get('street'),
+      city: formData.get('city'),
+      postalCode: formData.get('postalCode'),
+      country: formData.get('country'),
+      contactEmail: formData.get('contactEmail'),
+      contactPhone: formData.get('contactPhone'),
+      logoUrl: formData.get('logoUrl'),
+    });
+
+    if (!parsed.success) {
+      return { error: 'Invalid practice settings' } as const;
+    }
+
+    const { name, street, city, postalCode, country, contactEmail, contactPhone, logoUrl } = parsed.data;
+
+    // Update practice settings via service
+    await settingsService.updatePracticeSettings(ctx, {
+      name,
+      street,
+      city,
+      postalCode,
+      country,
+      contactEmail,
+      contactPhone,
+      logoUrl,
+    });
+
+    // Revalidate settings page and layout to update sidebar
+    revalidatePath('/settings');
+    revalidatePath('/(dashboard)', 'layout');
+    revalidatePath('/dashboard');
+    
+    return { success: 'Practice settings updated' } as const;
+  } catch (error) {
+    console.error('[Settings Actions] Error updating practice settings:', error);
+    
+    if (isDomainError(error)) {
+      return { error: error.message } as const;
+    }
+    
+    return { error: 'Failed to update practice settings' } as const;
   }
-
-  const parsed = updatePracticeSettingsSchema.safeParse({
-    name: formData.get('name'),
-    street: formData.get('street'),
-    city: formData.get('city'),
-    postalCode: formData.get('postalCode'),
-    country: formData.get('country'),
-    contactEmail: formData.get('contactEmail'),
-    contactPhone: formData.get('contactPhone'),
-    logoUrl: formData.get('logoUrl'),
-  });
-
-  if (!parsed.success) {
-    return { error: 'Invalid practice settings' } as const;
-  }
-
-  const { name, street, city, postalCode, country, contactEmail, contactPhone, logoUrl } = parsed.data;
-
-  // Generate new slug if name changed
-  const practice = await prisma.practice.findUnique({
-    where: { id: practiceId },
-    select: { name: true, slug: true },
-  });
-
-  if (!practice) {
-    return { error: 'Practice not found' } as const;
-  }
-
-  let slug = practice.slug;
-  if (practice.name !== name) {
-    slug = await generateUniquePracticeSlug(name);
-  }
-
-  await prisma.practice.update({
-    where: { id: practiceId },
-    data: { 
-      name, 
-      slug, 
-      street, 
-      city, 
-      postalCode, 
-      country, 
-      contactEmail, 
-      contactPhone, 
-      logoUrl 
-    },
-  });
-
-  revalidatePath('/settings');
-  return { success: 'Practice settings updated' } as const;
 }
 
 export async function updateUserRoleAction(
   _prevState: unknown,
   formData: FormData,
 ) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !canManageUsers({
-      memberships: session.user.memberships,
-      practiceId,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
+    // Parse and validate input
+    const parsed = updateUserRoleSchema.safeParse({
+      userId: formData.get('userId'),
+      role: formData.get('role'),
+    });
+
+    if (!parsed.success) {
+      return { error: 'Invalid input' } as const;
+    }
+
+    const { userId, role } = parsed.data;
+
+    // Update user role via service
+    await settingsService.updateUserRole(ctx, userId, role);
+
+    revalidatePath('/settings');
+    return { success: 'User role updated' } as const;
+  } catch (error) {
+    console.error('[Settings Actions] Error updating user role:', error);
+    
+    if (isDomainError(error)) {
+      return { error: error.message } as const;
+    }
+    
+    return { error: 'Failed to update user role' } as const;
   }
-
-  const parsed = updateUserRoleSchema.safeParse({
-    userId: formData.get('userId'),
-    role: formData.get('role'),
-  });
-
-  if (!parsed.success) {
-    return { error: 'Invalid input' } as const;
-  }
-
-  const { userId, role } = parsed.data;
-
-  // Find the membership
-  const membership = await prisma.practiceUser.findFirst({
-    where: {
-      practiceId,
-      userId,
-    },
-  });
-
-  if (!membership) {
-    return { error: 'User not found in practice' } as const;
-  }
-
-  // Prevent user from changing their own role
-  if (userId === session.user.id) {
-    return { error: 'Cannot change your own role' } as const;
-  }
-
-  await prisma.practiceUser.update({
-    where: { id: membership.id },
-    data: { role },
-  });
-
-  revalidatePath('/settings');
-  return { success: 'User role updated' } as const;
 }
 
 export async function removeUserAction(userId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !canManageUsers({
-      memberships: session.user.memberships,
-      practiceId,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    // Remove user via service
+    await settingsService.removeUser(ctx, userId);
+
+    revalidatePath('/settings');
+  } catch (error) {
+    console.error('[Settings Actions] Error removing user:', error);
+    
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+    
+    throw new Error('Failed to remove user');
   }
-
-  // Prevent user from removing themselves
-  if (userId === session.user.id) {
-    throw new Error('Cannot remove yourself from the practice');
-  }
-
-  // Find the membership
-  const membership = await prisma.practiceUser.findFirst({
-    where: {
-      practiceId,
-      userId,
-    },
-  });
-
-  if (!membership) {
-    throw new Error('User not found in practice');
-  }
-
-  // Check if this is the last admin
-  const adminCount = await prisma.practiceUser.count({
-    where: {
-      practiceId,
-      role: PracticeRole.ADMIN,
-    },
-  });
-
-  if (adminCount === 1 && membership.role === PracticeRole.ADMIN) {
-    throw new Error('Cannot remove the last admin from the practice');
-  }
-
-  await prisma.practiceUser.delete({
-    where: { id: membership.id },
-  });
-
-  revalidatePath('/settings');
 }
 
 export async function cancelInviteAction(inviteId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !canManageUsers({
-      memberships: session.user.memberships,
-      practiceId,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    // Cancel invite via service
+    await settingsService.cancelInvite(ctx, inviteId);
+
+    revalidatePath('/settings');
+  } catch (error) {
+    console.error('[Settings Actions] Error cancelling invite:', error);
+    
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+    
+    throw new Error('Failed to cancel invite');
   }
-
-  // Verify invite belongs to this practice
-  const invite = await prisma.userInvite.findUnique({
-    where: { id: inviteId },
-  });
-
-  if (!invite || invite.practiceId !== practiceId) {
-    throw new Error('Invite not found');
-  }
-
-  await prisma.userInvite.delete({
-    where: { id: inviteId },
-  });
-
-  revalidatePath('/settings');
 }
 
 // Wrapper functions for inline form usage (no return value expected)

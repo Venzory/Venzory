@@ -2,7 +2,8 @@ import { PracticeRole } from '@prisma/client';
 import { notFound } from 'next/navigation';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getOrderService, getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 
 import { TemplatePreviewClient } from './_components/template-preview-client';
@@ -14,6 +15,7 @@ interface TemplatePreviewPageProps {
 export default async function TemplatePreviewPage({ params }: TemplatePreviewPageProps) {
   const { id } = await params;
   const { session, practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
 
   const canManage = hasRole({
     memberships: session.user.memberships,
@@ -33,64 +35,30 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
     );
   }
 
-  const template = await prisma.orderTemplate.findUnique({
-    where: { id, practiceId },
-    include: {
-      items: {
-        include: {
-          item: {
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              unit: true,
-              defaultSupplierId: true,
-              supplierItems: {
-                select: {
-                  supplierId: true,
-                  unitPrice: true,
-                },
-              },
-            },
-          },
-          supplier: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!template) {
+  let template;
+  try {
+    template = await getOrderService().getTemplateById(ctx, id);
+  } catch (error) {
     notFound();
   }
 
-  const allSuppliers = await prisma.supplier.findMany({
-    where: { practiceId },
-    orderBy: { name: 'asc' },
-    select: { id: true, name: true },
-  });
+  const [allSuppliers, itemsList] = await Promise.all([
+    getInventoryService().getSuppliers(ctx),
+    getInventoryService().findItems(ctx, {}),
+  ]);
 
-  const allItems = await prisma.item.findMany({
-    where: { practiceId },
-    orderBy: { name: 'asc' },
-    select: {
-      id: true,
-      name: true,
-      sku: true,
-      unit: true,
-      defaultSupplierId: true,
-      supplierItems: {
-        select: {
-          supplierId: true,
-          unitPrice: true,
-        },
-      },
-    },
-  });
+  // Transform items to match expected format
+  const allItems = itemsList.map(item => ({
+    id: item.id,
+    name: item.name,
+    sku: item.sku,
+    unit: item.unit,
+    defaultSupplierId: item.defaultSupplierId,
+    supplierItems: item.supplierItems?.map((si: any) => ({
+      supplierId: si.supplierId,
+      unitPrice: si.unitPrice,
+    })) || [],
+  }));
 
   return (
     <TemplatePreviewClient

@@ -3,26 +3,17 @@ import Link from 'next/link';
 import { PracticeRole } from '@prisma/client';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getOrderService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 
 import { DeleteTemplateButton } from './_components/delete-template-button';
 
 export default async function TemplatesPage() {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
-  const templates = await prisma.orderTemplate.findMany({
-    where: { practiceId },
-    include: {
-      createdBy: {
-        select: { name: true, email: true },
-      },
-      items: {
-        select: { id: true },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  const templates = await getOrderService().findTemplates(ctx);
 
   const canManage = hasRole({
     memberships: session.user.memberships,
@@ -174,5 +165,6 @@ function TemplateCard({
     </div>
   );
 }
+
 
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { createGoodsReceiptAction } from '../../actions';
@@ -27,7 +27,7 @@ interface NewReceiptFormProps {
 
 export function NewReceiptForm({ locations, suppliers, order }: NewReceiptFormProps) {
   const router = useRouter();
-  const [state, formAction] = useFormState(createGoodsReceiptAction, null);
+  const [state, formAction] = useActionState(createGoodsReceiptAction, null);
 
   useEffect(() => {
     if (state && 'receiptId' in state && state.receiptId) {
@@ -38,7 +38,7 @@ export function NewReceiptForm({ locations, suppliers, order }: NewReceiptFormPr
   return (
     <form action={formAction} className="space-y-6 rounded-lg border border-card-border bg-card p-6">
       {state?.error && (
-        <div className="rounded-lg bg-rose-900/20 border border-rose-800 p-4">
+        <div className="rounded-lg border border-rose-800 bg-rose-900/30 p-4">
           <p className="text-sm text-rose-300">{state.error}</p>
         </div>
       )}
@@ -48,7 +48,7 @@ export function NewReceiptForm({ locations, suppliers, order }: NewReceiptFormPr
 
       {/* Order Info Banner */}
       {order && (
-        <div className="rounded-lg bg-sky-900/20 border border-sky-800 p-4">
+        <div className="rounded-lg border border-sky-800 bg-sky-900/30 p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-sky-300">

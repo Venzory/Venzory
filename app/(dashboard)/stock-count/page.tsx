@@ -1,62 +1,36 @@
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getInventoryService } from '@/src/services';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Plus, ClipboardCheck, Clipboard, MapPin } from 'lucide-react';
 import { StockCountStatus } from '@prisma/client';
+import { Card } from '@/components/ui/card';
+import { Badge, type BadgeVariant } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Button } from '@/components/ui/button';
 
 export const metadata = {
   title: 'Stock Count - Remcura',
 };
 
 export default async function StockCountPage() {
-  const { practiceId } = await requireActivePractice();
+  const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
-  // Fetch recent count sessions (last 30 days)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  // Fetch recent count sessions using InventoryService
+  const sessions = await getInventoryService().getStockCountSessions(ctx);
 
-  const sessions = await prisma.stockCountSession.findMany({
-    where: {
-      practiceId,
-      createdAt: {
-        gte: thirtyDaysAgo,
-      },
-    },
-    include: {
-      location: {
-        select: {
-          name: true,
-        },
-      },
-      lines: {
-        select: {
-          id: true,
-          variance: true,
-        },
-      },
-      createdBy: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
-
-  const getStatusColor = (status: StockCountStatus) => {
+  const getStatusVariant = (status: StockCountStatus): BadgeVariant => {
     switch (status) {
       case StockCountStatus.IN_PROGRESS:
-        return 'bg-amber-900/20 text-amber-300 border-amber-800';
+        return 'warning';
       case StockCountStatus.COMPLETED:
-        return 'bg-green-900/20 text-green-300 border-green-800';
+        return 'success';
       case StockCountStatus.CANCELLED:
-        return 'bg-slate-700/20 text-slate-400 border-slate-700';
+        return 'neutral';
       default:
-        return 'bg-slate-700/20 text-slate-400 border-slate-700';
+        return 'neutral';
     }
   };
 
@@ -74,22 +48,20 @@ export default async function StockCountPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Stock Count</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Stock Count</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Perform quick stock counts and adjust inventory
           </p>
         </div>
-        <Link
-          href="/stock-count/new"
-          className="flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-6 py-3 font-semibold text-white transition hover:bg-sky-700"
-          style={{ minHeight: '48px' }}
-        >
-          <Plus className="h-5 w-5" />
-          New Count
+        <Link href="/stock-count/new">
+          <Button variant="primary" className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            New Count
+          </Button>
         </Link>
       </div>
 
@@ -147,27 +119,15 @@ export default async function StockCountPage() {
         </div>
 
         {sessions.length === 0 ? (
-          <div className="p-12 text-center">
-            <Clipboard className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-600" />
-            <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-slate-100">
-              No count sessions yet
-            </h3>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Start your first stock count to track inventory
-            </p>
-            <Link
-              href="/stock-count/new"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-6 py-3 font-semibold text-white transition hover:bg-sky-700"
-              style={{ minHeight: '48px' }}
-            >
-              <Plus className="h-5 w-5" />
-              New Count
-            </Link>
-          </div>
+          <EmptyState
+            icon={Clipboard}
+            title="No count sessions yet"
+            description="Start your first stock count to track inventory"
+          />
         ) : (
           <div className="divide-y divide-card-border">
             {sessions.map((session) => {
-              const totalVariance = session.lines.reduce((sum, line) => sum + Math.abs(line.variance), 0);
+              const totalVariance = session.lines.reduce((sum: number, line: any) => sum + Math.abs(line.variance), 0);
 
               return (
                 <Link
@@ -178,11 +138,9 @@ export default async function StockCountPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex flex-wrap items-center gap-3">
-                        <span
-                          className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${getStatusColor(session.status)}`}
-                        >
+                        <Badge variant={getStatusVariant(session.status)}>
                           {getStatusLabel(session.status)}
-                        </span>
+                        </Badge>
                         <span className="text-sm text-slate-600 dark:text-slate-400">
                           #{session.id.slice(0, 8)}
                         </span>
@@ -229,4 +187,5 @@ export default async function StockCountPage() {
     </div>
   );
 }
+
 

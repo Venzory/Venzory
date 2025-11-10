@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { useEffect } from 'react';
 import { addReceiptLineAction } from '../../actions';
 
@@ -24,7 +24,7 @@ export function AddLineForm({
   onSuccess,
   onCancel,
 }: AddLineFormProps) {
-  const [state, formAction] = useFormState(addReceiptLineAction, null);
+  const [state, formAction] = useActionState(addReceiptLineAction, null);
 
   useEffect(() => {
     if (state?.success) {
@@ -78,7 +78,7 @@ export function AddLineForm({
           required
           min="1"
           defaultValue="1"
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+          className="w-32 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           style={{ minHeight: '48px' }}
         />
       </div>
@@ -94,7 +94,7 @@ export function AddLineForm({
           name="batchNumber"
           maxLength={128}
           placeholder="Optional"
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+          className="max-w-xs rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           style={{ minHeight: '48px' }}
         />
       </div>
@@ -108,7 +108,7 @@ export function AddLineForm({
           type="date"
           id="expiryDate"
           name="expiryDate"
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+          className="w-40 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           style={{ minHeight: '48px' }}
         />
       </div>

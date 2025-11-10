@@ -1,28 +1,20 @@
 import { PracticeRole } from '@prisma/client';
+import { MapPin } from 'lucide-react';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 
 import { CreateLocationForm } from './_components/create-location-form';
+import { EmptyState } from '@/components/ui/empty-state';
 import { deleteLocationAction, upsertLocationInlineAction } from '../inventory/actions';
 
 export default async function LocationsPage() {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
-  const locations = await prisma.location.findMany({
-    where: { practiceId },
-    orderBy: { name: 'asc' },
-    include: {
-      parent: { select: { id: true, name: true } },
-      children: { select: { id: true, name: true } },
-      inventory: {
-        include: {
-          item: { select: { id: true, name: true, sku: true } },
-        },
-      },
-    },
-  });
+  const locations = await getInventoryService().getLocationsWithInventory(ctx);
 
   const canManage = hasRole({
     memberships: session.user.memberships,
@@ -67,14 +59,15 @@ function LocationList({
 }) {
   if (locations.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
-        <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No locations yet</p>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          {canManage
+      <EmptyState
+        icon={MapPin}
+        title="No locations yet"
+        description={
+          canManage
             ? 'Add your first location to organize stock by storage area or room.'
-            : 'Locations will be set up by staff members to organize inventory.'}
-        </p>
-      </div>
+            : 'Locations will be set up by staff members to organize inventory.'
+        }
+      />
     );
   }
 
@@ -222,4 +215,5 @@ function LocationList({
     </div>
   );
 }
+
 

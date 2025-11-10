@@ -1,67 +1,40 @@
-import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { ReceivingRepository } from '@/src/repositories/receiving';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Plus, PackageCheck, Package, MapPin } from 'lucide-react';
 import { GoodsReceiptStatus } from '@prisma/client';
+import { Card } from '@/components/ui/card';
+import { Badge, type BadgeVariant } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Button } from '@/components/ui/button';
 
 export const metadata = {
   title: 'Receiving - Remcura',
 };
 
 export default async function ReceivingPage() {
-  const { practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
+  const receivingRepo = new ReceivingRepository();
 
   // Fetch recent receipts (last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const receipts = await prisma.goodsReceipt.findMany({
-    where: {
-      practiceId,
-      createdAt: {
-        gte: thirtyDaysAgo,
-      },
-    },
-    include: {
-      location: {
-        select: {
-          name: true,
-        },
-      },
-      supplier: {
-        select: {
-          name: true,
-        },
-      },
-      lines: {
-        select: {
-          id: true,
-          quantity: true,
-        },
-      },
-      createdBy: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
+  const receipts = await receivingRepo.findGoodsReceipts(ctx.practiceId, {
+    dateFrom: thirtyDaysAgo,
   });
 
-  const getStatusColor = (status: GoodsReceiptStatus) => {
+  const getStatusVariant = (status: GoodsReceiptStatus): BadgeVariant => {
     switch (status) {
       case GoodsReceiptStatus.DRAFT:
-        return 'bg-amber-900/20 text-amber-300 border-amber-800';
+        return 'warning';
       case GoodsReceiptStatus.CONFIRMED:
-        return 'bg-green-900/20 text-green-300 border-green-800';
+        return 'success';
       case GoodsReceiptStatus.CANCELLED:
-        return 'bg-slate-700/20 text-slate-400 border-slate-700';
+        return 'neutral';
       default:
-        return 'bg-slate-700/20 text-slate-400 border-slate-700';
+        return 'neutral';
     }
   };
 
@@ -79,22 +52,20 @@ export default async function ReceivingPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Receiving</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Receiving</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Receive deliveries and manage goods receipts
           </p>
         </div>
-        <Link
-          href="/receiving/new"
-          className="flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-6 py-3 font-semibold text-white transition hover:bg-sky-700"
-          style={{ minHeight: '48px' }}
-        >
-          <Plus className="h-5 w-5" />
-          New Receipt
+        <Link href="/receiving/new">
+          <Button variant="primary" className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            New Receipt
+          </Button>
         </Link>
       </div>
 
@@ -136,7 +107,7 @@ export default async function ReceivingPage() {
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Items</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {receipts.reduce((sum, r) => sum + r.lines.length, 0)}
+                {receipts.reduce((sum, r) => sum + (r.lines?.length || 0), 0)}
               </p>
             </div>
           </div>
@@ -152,27 +123,15 @@ export default async function ReceivingPage() {
         </div>
 
         {receipts.length === 0 ? (
-          <div className="p-12 text-center">
-            <Package className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-600" />
-            <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-slate-100">
-              No receipts yet
-            </h3>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Create your first goods receipt to get started
-            </p>
-            <Link
-              href="/receiving/new"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-sky-600 px-6 py-3 font-semibold text-white transition hover:bg-sky-700"
-              style={{ minHeight: '48px' }}
-            >
-              <Plus className="h-5 w-5" />
-              New Receipt
-            </Link>
-          </div>
+          <EmptyState
+            icon={Package}
+            title="No receipts yet"
+            description="Create your first goods receipt to get started"
+          />
         ) : (
           <div className="divide-y divide-card-border">
             {receipts.map((receipt) => {
-              const totalQuantity = receipt.lines.reduce((sum, line) => sum + line.quantity, 0);
+              const totalQuantity = receipt.lines?.reduce((sum, line) => sum + line.quantity, 0) || 0;
 
               return (
                 <Link
@@ -183,11 +142,9 @@ export default async function ReceivingPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex flex-wrap items-center gap-3">
-                        <span
-                          className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${getStatusColor(receipt.status)}`}
-                        >
+                        <Badge variant={getStatusVariant(receipt.status)}>
                           {getStatusLabel(receipt.status)}
-                        </span>
+                        </Badge>
                         <span className="text-sm text-slate-600 dark:text-slate-400">
                           #{receipt.id.slice(0, 8)}
                         </span>
@@ -197,7 +154,7 @@ export default async function ReceivingPage() {
                         <div className="flex items-center gap-2 text-sm">
                           <MapPin className="h-4 w-4 text-slate-400" />
                           <span className="font-medium text-slate-900 dark:text-slate-100">
-                            {receipt.location.name}
+                            {receipt.location?.name || 'Unknown'}
                           </span>
                         </div>
                         {receipt.supplier && (
@@ -208,7 +165,7 @@ export default async function ReceivingPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
-                        <span>{receipt.lines.length} items</span>
+                        <span>{receipt.lines?.length || 0} items</span>
                         <span>{totalQuantity} units</span>
                         <span>
                           {receipt.status === GoodsReceiptStatus.CONFIRMED && receipt.receivedAt
@@ -225,7 +182,7 @@ export default async function ReceivingPage() {
                     </div>
 
                     <div className="text-right text-sm text-slate-600 dark:text-slate-400">
-                      <div>{receipt.createdBy.name || receipt.createdBy.email}</div>
+                      <div>{receipt.createdBy?.name || receipt.createdBy?.email || 'Unknown'}</div>
                     </div>
                   </div>
                 </Link>
@@ -237,4 +194,5 @@ export default async function ReceivingPage() {
     </div>
   );
 }
+
 

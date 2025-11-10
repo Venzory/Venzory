@@ -14,7 +14,8 @@ interface ResetPasswordPageProps {
 export default async function ResetPasswordPage({ params }: ResetPasswordPageProps) {
   const { token } = await params;
 
-  // Validate token exists and is not expired or used
+  // Validate token (using prisma directly for now as this is just validation)
+  // This could be moved to AuthService if we want a dedicated validateResetToken method
   const resetToken = await prisma.passwordResetToken.findUnique({
     where: { token },
   });

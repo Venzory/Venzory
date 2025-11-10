@@ -4,7 +4,8 @@ import { PracticeRole } from '@prisma/client';
 import { notFound } from 'next/navigation';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getOrderService, getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 
 import { EditTemplateForm } from './_components/edit-template-form';
@@ -20,40 +21,20 @@ interface TemplateDetailPageProps {
 export default async function TemplateDetailPage({ params }: TemplateDetailPageProps) {
   const { id } = await params;
   const { session, practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
 
-  const template = await prisma.orderTemplate.findUnique({
-    where: { id, practiceId },
-    include: {
-      createdBy: {
-        select: { name: true, email: true },
-      },
-      items: {
-        include: {
-          item: {
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              unit: true,
-            },
-          },
-          supplier: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-        orderBy: {
-          item: { name: 'asc' },
-        },
-      },
-    },
-  });
-
-  if (!template) {
+  let template;
+  try {
+    template = await getOrderService().getTemplateById(ctx, id);
+  } catch (error) {
     notFound();
   }
+
+  // Fetch available items and suppliers for the add item form
+  const [availableItems, suppliers] = await Promise.all([
+    getInventoryService().findItems(ctx, {}),
+    getInventoryService().getSuppliers(ctx),
+  ]);
 
   const canManage = hasRole({
     memberships: session.user.memberships,
@@ -61,19 +42,13 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
     minimumRole: PracticeRole.STAFF,
   });
 
-  // Fetch all items and suppliers for adding/editing
-  const [allItems, allSuppliers] = await Promise.all([
-    prisma.item.findMany({
-      where: { practiceId },
-      orderBy: { name: 'asc' },
-      select: { id: true, name: true, sku: true, unit: true },
-    }),
-    prisma.supplier.findMany({
-      where: { practiceId },
-      orderBy: { name: 'asc' },
-      select: { id: true, name: true },
-    }),
-  ]);
+  // Transform items to match expected format
+  const allItems = availableItems.map(item => ({
+    id: item.id,
+    name: item.name,
+    sku: item.sku,
+    unit: item.unit,
+  }));
 
   return (
     <div className="space-y-6">
@@ -163,7 +138,7 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {template.items.map((templateItem) => (
+                {template.items?.map((templateItem: any) => (
                   <tr key={templateItem.id}>
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
@@ -181,7 +156,7 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
                           templateItemId={templateItem.id}
                           currentQuantity={templateItem.defaultQuantity}
                           currentSupplierId={templateItem.supplierId}
-                          suppliers={allSuppliers}
+                          suppliers={suppliers}
                           itemUnit={templateItem.item.unit}
                         />
                       ) : (
@@ -218,9 +193,9 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
             <AddTemplateItemForm
               templateId={template.id}
               items={allItems.filter(
-                (item) => !template.items.some((ti) => ti.itemId === item.id)
+                (item) => !template.items?.some((ti: any) => ti.itemId === item.id)
               )}
-              suppliers={allSuppliers}
+              suppliers={suppliers}
             />
           </div>
         ) : null}

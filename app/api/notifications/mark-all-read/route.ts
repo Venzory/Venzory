@@ -1,28 +1,17 @@
 import { NextResponse } from 'next/server';
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getNotificationService } from '@/src/services';
 
 export async function POST() {
   try {
     const { session, practiceId } = await requireActivePractice();
+    const ctx = buildRequestContextFromSession(session);
 
-    // Mark all notifications as read for current user's practice
-    // Only mark notifications that are for all users (userId = null) OR for the current user
-    await prisma.inAppNotification.updateMany({
-      where: {
-        practiceId,
-        read: false,
-        OR: [
-          { userId: null },
-          { userId: session.user.id },
-        ],
-      },
-      data: {
-        read: true,
-      },
-    });
+    // Mark all notifications as read using NotificationService
+    const result = await getNotificationService().markAllAsRead(ctx);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, count: result.count });
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
     return NextResponse.json(
@@ -31,4 +20,5 @@ export async function POST() {
     );
   }
 }
+
 

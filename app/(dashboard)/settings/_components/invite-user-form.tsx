@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PracticeRole } from '@prisma/client';
+import { toast } from '@/lib/toast';
 
 type FormState = {
   email: string;
@@ -25,6 +26,14 @@ export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (success) {
+      toast.success(success);
+    } else if (error) {
+      toast.error(error);
+    }
+  }, [success, error]);
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -164,7 +173,7 @@ export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps
       <button
         type="submit"
         disabled={disableForm}
-        className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
+        className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100"
       >
         {isSubmitting ? 'Sending invitation...' : 'Send invitation'}
       </button>

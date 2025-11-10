@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { prisma } from '@/lib/prisma';
+import { getAuthService } from '@/src/services';
 import { AcceptInviteForm } from '@/components/auth/accept-invite-form';
 
 export const metadata = {
@@ -14,20 +14,16 @@ interface AcceptInvitePageProps {
 export default async function AcceptInvitePage({ params }: AcceptInvitePageProps) {
   const { token } = await params;
 
-  // Validate token exists and is not expired or used
-  const invite = await prisma.userInvite.findUnique({
-    where: { token },
-    include: {
-      practice: {
-        select: { id: true, name: true },
-      },
-    },
-  });
-
-  const isValidInvite =
-    invite &&
-    !invite.used &&
-    new Date() <= invite.expiresAt;
+  // Validate token using AuthService
+  let invite;
+  let isValidInvite = false;
+  try {
+    invite = await getAuthService().validateInviteToken(token);
+    isValidInvite = true;
+  } catch (error) {
+    // Token is invalid or expired
+    invite = null;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12">
@@ -36,7 +32,7 @@ export default async function AcceptInvitePage({ params }: AcceptInvitePageProps
           <h1 className="text-2xl font-semibold text-white">Join {invite?.practice.name || 'Practice'}</h1>
           {isValidInvite ? (
             <p className="text-sm text-slate-300">
-              You&apos;ve been invited to join as a <span className="font-medium">{invite.role.toLowerCase()}</span>.
+              You&apos;ve been invited to join as a <span className="font-medium">{invite?.role.toLowerCase()}</span>.
               Set up your account below.
             </p>
           ) : (
@@ -46,11 +42,11 @@ export default async function AcceptInvitePage({ params }: AcceptInvitePageProps
           )}
         </header>
 
-        {isValidInvite ? (
+        {isValidInvite && invite ? (
           <AcceptInviteForm 
             token={token} 
             email={invite.email}
-            practiceName={invite.practice.name}
+            practiceName={invite.practice?.name || 'Practice'}
             role={invite.role}
             inviterName={invite.inviterName}
           />

@@ -1,14 +1,21 @@
+/**
+ * Products Actions (Refactored)
+ * Thin wrappers around ProductService
+ */
+
 'use server';
 
-import { PracticeRole } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
-import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { hasRole } from '@/lib/rbac';
-import { isValidGtin, enrichProductWithGs1Data } from '@/lib/integrations';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getProductService } from '@/src/services/products';
+import { isDomainError } from '@/src/domain/errors';
+import { enrichProductWithGs1Data, isValidGtin } from '@/lib/integrations';
 
+const productService = getProductService();
+
+// Validation schemas
 const createProductSchema = z.object({
   gtin: z
     .string()
@@ -48,56 +55,34 @@ const updateProductSchema = z.object({
 });
 
 export async function createProductAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.ADMIN,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
-
-  const parsed = createProductSchema.safeParse({
-    gtin: formData.get('gtin'),
-    brand: formData.get('brand'),
-    name: formData.get('name'),
-    description: formData.get('description'),
-  });
-
-  if (!parsed.success) {
-    const errors = parsed.error.flatten();
-    return { 
-      error: errors.fieldErrors.gtin?.[0] || errors.fieldErrors.name?.[0] || 'Invalid product details' 
-    } as const;
-  }
-
-  const { gtin, brand, name, description } = parsed.data;
-
-  // Check if a product with this GTIN already exists
-  if (gtin) {
-    const existing = await prisma.product.findUnique({
-      where: { gtin },
-      select: { id: true },
+    // Parse and validate input
+    const parsed = createProductSchema.safeParse({
+      gtin: formData.get('gtin'),
+      brand: formData.get('brand'),
+      name: formData.get('name'),
+      description: formData.get('description'),
     });
 
-    if (existing) {
-      return { error: 'A product with this GTIN already exists' } as const;
+    if (!parsed.success) {
+      const errors = parsed.error.flatten();
+      return {
+        error: errors.fieldErrors.gtin?.[0] || errors.fieldErrors.name?.[0] || 'Invalid product details',
+      } as const;
     }
-  }
 
-  try {
-    const product = await prisma.product.create({
-      data: {
-        gtin,
-        brand,
-        name,
-        description,
-        isGs1Product: Boolean(gtin),
-        gs1VerificationStatus: gtin ? 'UNVERIFIED' : 'UNVERIFIED',
-      },
+    const { gtin, brand, name, description } = parsed.data;
+
+    // Create product via service
+    const product = await productService.createProduct(ctx, {
+      gtin,
+      brand,
+      name,
+      description,
+      isGs1Product: Boolean(gtin),
     });
 
     // Attempt GS1 enrichment in background if GTIN provided
@@ -111,44 +96,39 @@ export async function createProductAction(_prevState: unknown, formData: FormDat
     return { success: 'Product created successfully', productId: product.id } as const;
   } catch (error) {
     console.error('[Product Actions] Error creating product:', error);
+    
+    if (isDomainError(error)) {
+      return { error: error.message } as const;
+    }
+    
     return { error: 'Failed to create product. Please try again.' } as const;
   }
 }
 
 export async function updateProductAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.ADMIN,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
-
-  const parsed = updateProductSchema.safeParse({
-    productId: formData.get('productId'),
-    brand: formData.get('brand'),
-    name: formData.get('name'),
-    description: formData.get('description'),
-  });
-
-  if (!parsed.success) {
-    return { error: 'Invalid product details' } as const;
-  }
-
-  const { productId, brand, name, description } = parsed.data;
-
   try {
-    await prisma.product.update({
-      where: { id: productId },
-      data: {
-        brand,
-        name,
-        description,
-      },
+    // Build request context
+    const ctx = await buildRequestContext();
+
+    // Parse and validate input
+    const parsed = updateProductSchema.safeParse({
+      productId: formData.get('productId'),
+      brand: formData.get('brand'),
+      name: formData.get('name'),
+      description: formData.get('description'),
+    });
+
+    if (!parsed.success) {
+      return { error: 'Invalid product details' } as const;
+    }
+
+    const { productId, brand, name, description } = parsed.data;
+
+    // Update product via service
+    await productService.updateProduct(ctx, productId, {
+      brand,
+      name,
+      description,
     });
 
     revalidatePath('/products');
@@ -156,63 +136,55 @@ export async function updateProductAction(_prevState: unknown, formData: FormDat
     return { success: 'Product updated successfully' } as const;
   } catch (error) {
     console.error('[Product Actions] Error updating product:', error);
+    
+    if (isDomainError(error)) {
+      return { error: error.message } as const;
+    }
+    
     return { error: 'Failed to update product. Please try again.' } as const;
   }
 }
 
 export async function triggerGs1LookupAction(productId: string) {
-  const { session, practiceId } = await requireActivePractice();
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.ADMIN,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
-  }
-
   try {
+    // Build request context
+    const ctx = await buildRequestContext();
+
+    // Trigger GS1 lookup via service
+    await productService.triggerGs1Lookup(ctx, productId);
+
+    // Perform actual lookup (in background, but we'll do it synchronously for now)
     await enrichProductWithGs1Data(productId);
+
     revalidatePath('/products');
     revalidatePath(`/products/${productId}`);
   } catch (error) {
     console.error('[Product Actions] Error triggering GS1 lookup:', error);
+    
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+    
     throw new Error('Failed to lookup GS1 data');
   }
 }
 
 export async function deleteProductAction(productId: string) {
-  const { session, practiceId } = await requireActivePractice();
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.ADMIN,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
-  }
-
   try {
-    // Check if product has any items
-    const itemCount = await prisma.item.count({
-      where: { productId },
-    });
+    // Build request context
+    const ctx = await buildRequestContext();
 
-    if (itemCount > 0) {
-      throw new Error('Cannot delete product that is used by inventory items');
-    }
-
-    await prisma.product.delete({
-      where: { id: productId },
-    });
+    // Delete product via service
+    await productService.deleteProduct(ctx, productId);
 
     revalidatePath('/products');
   } catch (error: any) {
     console.error('[Product Actions] Error deleting product:', error);
+    
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+    
     throw new Error(error.message || 'Failed to delete product');
   }
 }

@@ -1,13 +1,30 @@
 'use client';
 
+import { useConfirm } from '@/hooks/use-confirm';
+import { toast } from '@/lib/toast';
 import { deleteTemplateAction } from '../../actions';
 
 export function DeleteTemplateButton({ templateId }: { templateId: string }) {
+  const confirm = useConfirm();
+
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
+    const confirmed = await confirm({
+      title: 'Delete Template',
+      message: 'Are you sure you want to delete this template? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
+
+    if (!confirmed) {
       return;
     }
-    await deleteTemplateAction(templateId);
+
+    try {
+      await deleteTemplateAction(templateId);
+      toast.success('Template deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete template');
+    }
   };
 
   return (

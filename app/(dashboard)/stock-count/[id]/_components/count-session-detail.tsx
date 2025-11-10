@@ -17,6 +17,8 @@ import {
 import { StockCountStatus } from '@prisma/client';
 import { ScannerModal } from '@/components/scanner/scanner-modal';
 import { useScanner } from '@/hooks/use-scanner';
+import { useConfirm } from '@/hooks/use-confirm';
+import { toast } from '@/lib/toast';
 import {
   completeStockCountAction,
   cancelStockCountAction,
@@ -75,6 +77,7 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit }: C
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const confirm = useConfirm();
 
   const handleScanResult = async (code: string) => {
     try {
@@ -84,11 +87,11 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit }: C
         setSelectedItemId(result.item.id);
         setShowAddForm(true);
       } else {
-        alert(`No item found for barcode: ${code}`);
+        toast.error(`No item found for barcode: ${code}`);
       }
     } catch (error) {
       console.error('Search error:', error);
-      alert('Failed to search for item');
+      toast.error('Failed to search for item');
     }
   };
 
@@ -97,34 +100,50 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit }: C
       ? 'Complete this count and apply adjustments to inventory? This cannot be undone.'
       : 'Complete this count without applying adjustments?';
 
-    if (!confirm(message)) {
+    const confirmed = await confirm({
+      title: 'Complete Stock Count',
+      message,
+      confirmLabel: 'Complete',
+      variant: 'neutral',
+    });
+
+    if (!confirmed) {
       return;
     }
 
     setIsCompleting(true);
     try {
       await completeStockCountAction(session.id, applyAdjustments);
+      toast.success(applyAdjustments ? 'Count completed and inventory adjusted' : 'Count completed');
       router.refresh();
     } catch (error) {
       console.error('Complete error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to complete count');
+      toast.error(error instanceof Error ? error.message : 'Failed to complete count');
     } finally {
       setIsCompleting(false);
     }
   };
 
   const handleCancel = async () => {
-    if (!confirm('Cancel this count session? This action cannot be undone.')) {
+    const confirmed = await confirm({
+      title: 'Cancel Count Session',
+      message: 'Cancel this count session? This action cannot be undone.',
+      confirmLabel: 'Cancel Session',
+      variant: 'danger',
+    });
+
+    if (!confirmed) {
       return;
     }
 
     setIsCancelling(true);
     try {
       await cancelStockCountAction(session.id);
+      toast.success('Count session cancelled');
       router.refresh();
     } catch (error) {
       console.error('Cancel error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to cancel session');
+      toast.error(error instanceof Error ? error.message : 'Failed to cancel session');
     } finally {
       setIsCancelling(false);
     }
@@ -392,13 +411,21 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit }: C
                       {canEdit && (
                         <button
                           onClick={async () => {
-                            if (confirm('Remove this line?')) {
+                            const confirmed = await confirm({
+                              title: 'Remove Line',
+                              message: 'Remove this line from the count?',
+                              confirmLabel: 'Remove',
+                              variant: 'danger',
+                            });
+
+                            if (confirmed) {
                               const { removeCountLineAction } = await import('../../actions');
                               try {
                                 await removeCountLineAction(line.id);
+                                toast.success('Line removed');
                                 router.refresh();
                               } catch (error) {
-                                alert('Failed to remove line');
+                                toast.error('Failed to remove line');
                               }
                             }
                           }}

@@ -1,25 +1,20 @@
 import { PracticeRole } from '@prisma/client';
+import { Store } from 'lucide-react';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 
 import { CreateSupplierForm } from './_components/create-supplier-form';
+import { EmptyState } from '@/components/ui/empty-state';
 import { deleteSupplierAction, upsertSupplierInlineAction } from '../inventory/actions';
 
 export default async function SuppliersPage() {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
-  const suppliers = await prisma.supplier.findMany({
-    where: { practiceId },
-    orderBy: { name: 'asc' },
-    include: {
-      defaultItems: {
-        select: { id: true, name: true, sku: true },
-        orderBy: { name: 'asc' },
-      },
-    },
-  });
+  const suppliers = await getInventoryService().getSuppliersWithItems(ctx);
 
   const canManage = hasRole({
     memberships: session.user.memberships,
@@ -62,14 +57,15 @@ function SupplierList({
 }) {
   if (suppliers.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
-        <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No suppliers yet</p>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          {canManage
+      <EmptyState
+        icon={Store}
+        title="No suppliers yet"
+        description={
+          canManage
             ? 'Add your first supplier to start managing vendor relationships and orders.'
-            : 'Suppliers will be added by staff members to manage vendor information.'}
-        </p>
-      </div>
+            : 'Suppliers will be added by staff members to manage vendor information.'
+        }
+      />
     );
   }
 
@@ -219,4 +215,5 @@ function SupplierList({
     </div>
   );
 }
+
 

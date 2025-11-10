@@ -1,15 +1,21 @@
+/**
+ * Receiving Actions (Refactored)
+ * Thin wrappers around ReceivingService
+ */
+
 'use server';
 
-import { PracticeRole, GoodsReceiptStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
-import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { hasRole } from '@/lib/rbac';
-import { checkAndCreateLowStockNotification } from '@/lib/notifications';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getReceivingService } from '@/src/services/receiving';
+import { isDomainError } from '@/src/domain/errors';
 
+const receivingService = getReceivingService();
+
+// Validation schemas
 const createGoodsReceiptSchema = z.object({
   locationId: z.string().min(1, 'Location is required'),
   orderId: z.string().optional().nullable().transform((value) => value || null),
@@ -18,13 +24,13 @@ const createGoodsReceiptSchema = z.object({
 });
 
 const addReceiptLineSchema = z.object({
-  receiptId: z.string().min(1),
-  itemId: z.string().min(1),
-  quantity: z.coerce.number().int().positive(),
-  batchNumber: z.string().max(128).optional().or(z.literal('')).transform((value) => value?.trim() || null),
-  expiryDate: z.string().optional().or(z.literal('')).transform((value) => value && value.trim() ? new Date(value) : null),
-  scannedGtin: z.string().max(64).optional().or(z.literal('')).transform((value) => value?.trim() || null),
-  notes: z.string().max(256).optional().or(z.literal('')).transform((value) => value?.trim() || null),
+  receiptId: z.string().min(1, 'Receipt ID is required'),
+  itemId: z.string().min(1, 'Item ID is required'),
+  quantity: z.coerce.number().int('Quantity must be a whole number').positive('Quantity must be at least 1'),
+  batchNumber: z.string().max(128, 'Batch number is too long').optional().nullable().transform((value) => value && value.trim() ? value.trim() : null),
+  expiryDate: z.string().optional().nullable().transform((value) => value && value.trim() ? new Date(value) : null),
+  scannedGtin: z.string().max(64, 'GTIN is too long').optional().nullable().transform((value) => value && value.trim() ? value.trim() : null),
+  notes: z.string().max(256, 'Notes are too long').optional().nullable().transform((value) => value && value.trim() ? value.trim() : null),
 });
 
 const updateReceiptLineSchema = z.object({
@@ -39,509 +45,273 @@ const searchItemByGtinSchema = z.object({
   gtin: z.string().min(1).max(64),
 });
 
+/**
+ * Create a new goods receipt
+ */
 export async function createGoodsReceiptAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
-
-  const parsed = createGoodsReceiptSchema.safeParse({
-    locationId: formData.get('locationId'),
-    orderId: formData.get('orderId'),
-    supplierId: formData.get('supplierId'),
-    notes: formData.get('notes'),
-  });
-
-  if (!parsed.success) {
-    return { error: 'Invalid receipt details' } as const;
-  }
-
-  const { locationId, orderId, supplierId, notes } = parsed.data;
-
-  // Verify location belongs to practice
-  const location = await prisma.location.findUnique({
-    where: { id: locationId, practiceId },
-  });
-
-  if (!location) {
-    return { error: 'Location not found' } as const;
-  }
-
-  // Verify supplier belongs to practice if provided
-  if (supplierId) {
-    const supplier = await prisma.supplier.findUnique({
-      where: { id: supplierId, practiceId },
+    const parsed = createGoodsReceiptSchema.safeParse({
+      locationId: formData.get('locationId'),
+      orderId: formData.get('orderId'),
+      supplierId: formData.get('supplierId'),
+      notes: formData.get('notes'),
     });
 
-    if (!supplier) {
-      return { error: 'Supplier not found' } as const;
+    if (!parsed.success) {
+      return { error: 'Invalid receipt details' } as const;
     }
-  }
 
-  // Verify order belongs to practice if provided
-  if (orderId) {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId, practiceId },
-    });
+    const { locationId, orderId, supplierId, notes } = parsed.data;
 
-    if (!order) {
-      return { error: 'Order not found' } as const;
-    }
-  }
-
-  const receipt = await prisma.goodsReceipt.create({
-    data: {
-      practiceId,
+    // Create goods receipt using service
+    const result = await receivingService.createGoodsReceipt(ctx, {
       locationId,
       orderId,
       supplierId,
       notes,
-      status: GoodsReceiptStatus.DRAFT,
-      createdById: session.user.id,
-    },
-  });
-
-  revalidatePath('/receiving');
-  return { success: true, receiptId: receipt.id } as const;
-}
-
-export async function addReceiptLineAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
-
-  const parsed = addReceiptLineSchema.safeParse({
-    receiptId: formData.get('receiptId'),
-    itemId: formData.get('itemId'),
-    quantity: formData.get('quantity'),
-    batchNumber: formData.get('batchNumber'),
-    expiryDate: formData.get('expiryDate'),
-    scannedGtin: formData.get('scannedGtin'),
-    notes: formData.get('notes'),
-  });
-
-  if (!parsed.success) {
-    return { error: 'Invalid line details' } as const;
-  }
-
-  const { receiptId, itemId, quantity, batchNumber, expiryDate, scannedGtin, notes } = parsed.data;
-
-  // Verify receipt exists and is DRAFT
-  const receipt = await prisma.goodsReceipt.findUnique({
-    where: { id: receiptId, practiceId },
-  });
-
-  if (!receipt) {
-    return { error: 'Receipt not found' } as const;
-  }
-
-  if (receipt.status !== GoodsReceiptStatus.DRAFT) {
-    return { error: 'Cannot edit confirmed receipt' } as const;
-  }
-
-  // Verify item belongs to practice
-  const item = await prisma.item.findUnique({
-    where: { id: itemId, practiceId },
-  });
-
-  if (!item) {
-    return { error: 'Item not found' } as const;
-  }
-
-  // Check if line already exists for this item
-  const existingLine = await prisma.goodsReceiptLine.findFirst({
-    where: {
-      receiptId,
-      itemId,
-    },
-  });
-
-  if (existingLine) {
-    // Update existing line
-    const line = await prisma.goodsReceiptLine.update({
-      where: { id: existingLine.id },
-      data: {
-        quantity: existingLine.quantity + quantity,
-        batchNumber: batchNumber || existingLine.batchNumber,
-        expiryDate: expiryDate || existingLine.expiryDate,
-        notes: notes || existingLine.notes,
-      },
     });
 
-    revalidatePath(`/receiving/${receiptId}`);
-    return { success: true, lineId: line.id } as const;
-  }
+    if (isDomainError(result)) {
+      return { error: result.message } as const;
+    }
 
-  // Create new line
-  const line = await prisma.goodsReceiptLine.create({
-    data: {
-      receiptId,
+    revalidatePath('/receiving');
+    redirect(`/receiving/${result.id}`);
+  } catch (error: any) {
+    console.error('Failed to create goods receipt:', error);
+    return { error: error.message || 'Failed to create receipt' } as const;
+  }
+}
+
+/**
+ * Add a line item to a goods receipt
+ */
+export async function addReceiptLineAction(_prevState: unknown, formData: FormData) {
+  try {
+    const ctx = await buildRequestContext();
+
+    // Preprocess form data to convert empty strings to null
+    const rawData = {
+      receiptId: formData.get('receiptId') as string,
+      itemId: formData.get('itemId') as string,
+      quantity: formData.get('quantity') as string,
+      batchNumber: (formData.get('batchNumber') as string) || null,
+      expiryDate: (formData.get('expiryDate') as string) || null,
+      scannedGtin: (formData.get('scannedGtin') as string) || null,
+      notes: (formData.get('notes') as string) || null,
+    };
+
+    const parsed = addReceiptLineSchema.safeParse(rawData);
+
+    if (!parsed.success) {
+      // Return the first validation error with specific message
+      const firstError = parsed.error.issues[0];
+      const errorMessage = firstError?.message || 'Invalid input';
+      console.error('[addReceiptLineAction] Validation failed:', errorMessage, firstError);
+      return { error: errorMessage } as const;
+    }
+
+    const { receiptId, itemId, quantity, batchNumber, expiryDate, scannedGtin, notes } = parsed.data;
+
+    // Add receipt line using service
+    const result = await receivingService.addReceiptLine(ctx, receiptId, {
       itemId,
       quantity,
       batchNumber,
       expiryDate,
       scannedGtin,
       notes,
-    },
-  });
+    });
 
-  revalidatePath(`/receiving/${receiptId}`);
-  return { success: true, lineId: line.id } as const;
+    if (isDomainError(result)) {
+      return { error: result.message } as const;
+    }
+
+    revalidatePath(`/receiving/${receiptId}`);
+    return { success: 'Item added to receipt' } as const;
+  } catch (error: any) {
+    console.error('[addReceiptLineAction] Error:', error.message);
+    return { error: error.message || 'Failed to add item' } as const;
+  }
 }
 
+/**
+ * Update a receipt line (quantity, batch, expiry)
+ */
 export async function updateReceiptLineAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
+    const parsed = updateReceiptLineSchema.safeParse({
+      lineId: formData.get('lineId'),
+      quantity: formData.get('quantity'),
+      batchNumber: formData.get('batchNumber'),
+      expiryDate: formData.get('expiryDate'),
+      notes: formData.get('notes'),
+    });
 
-  const parsed = updateReceiptLineSchema.safeParse({
-    lineId: formData.get('lineId'),
-    quantity: formData.get('quantity'),
-    batchNumber: formData.get('batchNumber'),
-    expiryDate: formData.get('expiryDate'),
-    notes: formData.get('notes'),
-  });
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message || 'Invalid line data' } as const;
+    }
 
-  if (!parsed.success) {
-    return { error: 'Invalid line details' } as const;
-  }
+    const { lineId, quantity, batchNumber, expiryDate, notes } = parsed.data;
 
-  const { lineId, quantity, batchNumber, expiryDate, notes } = parsed.data;
-
-  // Verify line exists and receipt is DRAFT
-  const line = await prisma.goodsReceiptLine.findUnique({
-    where: { id: lineId },
-    include: {
-      receipt: true,
-    },
-  });
-
-  if (!line || line.receipt.practiceId !== practiceId) {
-    return { error: 'Line not found' } as const;
-  }
-
-  if (line.receipt.status !== GoodsReceiptStatus.DRAFT) {
-    return { error: 'Cannot edit confirmed receipt' } as const;
-  }
-
-  await prisma.goodsReceiptLine.update({
-    where: { id: lineId },
-    data: {
+    // Update receipt line using service
+    const result = await receivingService.updateReceiptLine(ctx, lineId, {
       quantity,
       batchNumber,
       expiryDate,
       notes,
-    },
-  });
+    });
 
-  revalidatePath(`/receiving/${line.receiptId}`);
-  return { success: true } as const;
-}
-
-export async function removeReceiptLineAction(lineId: string) {
-  const { session, practiceId } = await requireActivePractice();
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
-  }
-
-  // Verify line exists and receipt is DRAFT
-  const line = await prisma.goodsReceiptLine.findUnique({
-    where: { id: lineId },
-    include: {
-      receipt: true,
-    },
-  });
-
-  if (!line || line.receipt.practiceId !== practiceId) {
-    throw new Error('Line not found');
-  }
-
-  if (line.receipt.status !== GoodsReceiptStatus.DRAFT) {
-    throw new Error('Cannot edit confirmed receipt');
-  }
-
-  await prisma.goodsReceiptLine.delete({
-    where: { id: lineId },
-  });
-
-  revalidatePath(`/receiving/${line.receiptId}`);
-}
-
-export async function confirmGoodsReceiptAction(receiptId: string) {
-  const { session, practiceId } = await requireActivePractice();
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
-  }
-
-  // Fetch receipt with lines
-  const receipt = await prisma.goodsReceipt.findUnique({
-    where: { id: receiptId, practiceId },
-    include: {
-      lines: {
-        include: {
-          item: true,
-        },
-      },
-    },
-  });
-
-  if (!receipt) {
-    throw new Error('Receipt not found');
-  }
-
-  if (receipt.status !== GoodsReceiptStatus.DRAFT) {
-    throw new Error('Receipt is not in draft status');
-  }
-
-  if (receipt.lines.length === 0) {
-    throw new Error('Receipt must have at least one line');
-  }
-
-  // Validate all lines have positive quantities
-  const invalidLines = receipt.lines.filter((line) => line.quantity <= 0);
-  if (invalidLines.length > 0) {
-    throw new Error('All lines must have positive quantities');
-  }
-
-  // Process receipt in a transaction
-  await prisma.$transaction(async (tx) => {
-    // Update inventory and create stock adjustments for each line
-    for (const line of receipt.lines) {
-      // Update LocationInventory
-      const existingInventory = await tx.locationInventory.findUnique({
-        where: {
-          locationId_itemId: {
-            locationId: receipt.locationId,
-            itemId: line.itemId,
-          },
-        },
-      });
-
-      const newQuantity = (existingInventory?.quantity ?? 0) + line.quantity;
-      const reorderPoint = existingInventory?.reorderPoint ?? null;
-
-      await tx.locationInventory.upsert({
-        where: {
-          locationId_itemId: {
-            locationId: receipt.locationId,
-            itemId: line.itemId,
-          },
-        },
-        create: {
-          locationId: receipt.locationId,
-          itemId: line.itemId,
-          quantity: newQuantity,
-        },
-        update: {
-          quantity: newQuantity,
-        },
-      });
-
-      // Create StockAdjustment
-      await tx.stockAdjustment.create({
-        data: {
-          itemId: line.itemId,
-          locationId: receipt.locationId,
-          practiceId,
-          quantity: line.quantity,
-          reason: 'Goods Receipt',
-          note: `Receipt #${receiptId.slice(0, 8)}${line.batchNumber ? ` - Batch: ${line.batchNumber}` : ''}`,
-          createdById: session.user.id,
-        },
-      });
-
-      // Check for low stock after receiving
-      await checkAndCreateLowStockNotification(
-        {
-          practiceId,
-          itemId: line.itemId,
-          locationId: receipt.locationId,
-          newQuantity,
-          reorderPoint,
-        },
-        tx
-      );
+    if (isDomainError(result)) {
+      return { error: result.message } as const;
     }
 
-    // Mark receipt as CONFIRMED
-    await tx.goodsReceipt.update({
-      where: { id: receiptId },
-      data: {
-        status: GoodsReceiptStatus.CONFIRMED,
-        receivedAt: new Date(),
-      },
-    });
-
-    // Create AuditLog entry
-    await tx.auditLog.create({
-      data: {
-        practiceId,
-        actorId: session.user.id,
-        entityType: 'GoodsReceipt',
-        entityId: receiptId,
-        action: 'CONFIRMED',
-        changes: {
-          lineCount: receipt.lines.length,
-          totalQuantity: receipt.lines.reduce((sum, line) => sum + line.quantity, 0),
-          items: receipt.lines.map((line) => ({
-            itemId: line.itemId,
-            itemName: line.item.name,
-            quantity: line.quantity,
-            batchNumber: line.batchNumber,
-            expiryDate: line.expiryDate,
-          })),
-        },
-        metadata: {
-          locationId: receipt.locationId,
-          orderId: receipt.orderId,
-          supplierId: receipt.supplierId,
-        },
-      },
-    });
-  });
-
-  revalidatePath('/receiving');
-  revalidatePath(`/receiving/${receiptId}`);
-  revalidatePath('/inventory');
+    revalidatePath(`/receiving/${result.id}`);
+    return { success: 'Line updated' } as const;
+  } catch (error: any) {
+    console.error('Failed to update receipt line:', error);
+    return { error: error.message || 'Failed to update line' } as const;
+  }
 }
 
+/**
+ * Remove a line from a goods receipt
+ */
+export async function removeReceiptLineAction(lineId: string) {
+  const ctx = await buildRequestContext();
+
+  const result = await receivingService.removeReceiptLine(ctx, lineId);
+
+  if (isDomainError(result)) {
+    throw new Error(result.message);
+  }
+
+  revalidatePath(`/receiving/${result.id}`);
+  revalidatePath('/receiving');
+}
+
+/**
+ * Confirm a goods receipt (updates inventory)
+ */
+export async function confirmGoodsReceiptAction(receiptId: string) {
+  let redirectPath = '/receiving';
+  
+  try {
+    const ctx = await buildRequestContext();
+
+    // Get receipt first to check if it's linked to an order
+    const { ReceivingRepository } = await import('@/src/repositories/receiving');
+    const receivingRepo = new ReceivingRepository();
+    const receipt = await receivingRepo.findGoodsReceiptById(receiptId, ctx.practiceId);
+
+    // Confirm goods receipt using service
+    const result = await receivingService.confirmGoodsReceipt(ctx, receiptId);
+
+    if (isDomainError(result)) {
+      throw new Error(result.message);
+    }
+
+    // Low stock notifications are already logged in the service
+    // The lowStockNotifications array can be used to display warnings to the user
+    if (result.lowStockNotifications && result.lowStockNotifications.length > 0) {
+      console.log('Low stock items detected:', result.lowStockNotifications);
+    }
+
+    // Revalidate paths
+    revalidatePath(`/receiving/${receiptId}`);
+    revalidatePath('/receiving');
+    
+    // If linked to an order, redirect to that order page
+    if (receipt.orderId) {
+      redirectPath = `/orders/${receipt.orderId}`;
+      revalidatePath(redirectPath);
+    }
+  } catch (error: any) {
+    console.error('Failed to confirm goods receipt:', error);
+    throw error;
+  }
+  
+  // Redirect outside try-catch so it can throw properly
+  redirect(redirectPath);
+}
+
+/**
+ * Cancel a goods receipt
+ */
 export async function cancelGoodsReceiptAction(receiptId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+  const result = await receivingService.cancelGoodsReceipt(ctx, receiptId);
+
+  if (isDomainError(result)) {
+    throw new Error(result.message);
   }
 
-  // Verify receipt exists and is DRAFT
-  const receipt = await prisma.goodsReceipt.findUnique({
-    where: { id: receiptId, practiceId },
-  });
-
-  if (!receipt) {
-    throw new Error('Receipt not found');
-  }
-
-  if (receipt.status !== GoodsReceiptStatus.DRAFT) {
-    throw new Error('Can only cancel draft receipts');
-  }
-
-  await prisma.goodsReceipt.update({
-    where: { id: receiptId },
-    data: {
-      status: GoodsReceiptStatus.CANCELLED,
-    },
-  });
-
-  revalidatePath('/receiving');
   revalidatePath(`/receiving/${receiptId}`);
+  revalidatePath('/receiving');
 }
 
-export async function searchItemByGtinAction(gtin: string) {
-  const { practiceId } = await requireActivePractice();
-
-  const parsed = searchItemByGtinSchema.safeParse({ gtin });
-
-  if (!parsed.success) {
-    return { item: null, product: null } as const;
-  }
-
-  // Find product by GTIN
-  const product = await prisma.product.findUnique({
-    where: { gtin: parsed.data.gtin },
-  });
-
-  if (!product) {
-    return { item: null, product: null } as const;
-  }
-
-  // Find item in practice linked to this product
-  const item = await prisma.item.findFirst({
-    where: {
-      practiceId,
-      productId: product.id,
-    },
-    include: {
-      product: true,
-    },
-  });
-
-  return { item, product } as const;
-}
-
+/**
+ * Delete a goods receipt (draft only)
+ */
 export async function deleteGoodsReceiptAction(receiptId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.ADMIN,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+  const result = await receivingService.deleteGoodsReceipt(ctx, receiptId);
+
+  if (isDomainError(result)) {
+    throw new Error(result.message);
   }
-
-  // Verify receipt exists and is not CONFIRMED
-  const receipt = await prisma.goodsReceipt.findUnique({
-    where: { id: receiptId, practiceId },
-  });
-
-  if (!receipt) {
-    throw new Error('Receipt not found');
-  }
-
-  if (receipt.status === GoodsReceiptStatus.CONFIRMED) {
-    throw new Error('Cannot delete confirmed receipt');
-  }
-
-  await prisma.goodsReceipt.delete({
-    where: { id: receiptId },
-  });
 
   revalidatePath('/receiving');
   redirect('/receiving');
 }
+
+/**
+ * Search for an item by GTIN (for barcode scanning)
+ */
+export async function searchItemByGtinAction(gtin: string) {
+  try {
+    const ctx = await buildRequestContext();
+
+    const parsed = searchItemByGtinSchema.safeParse({ gtin });
+
+    if (!parsed.success) {
+      return { error: 'Invalid GTIN' } as const;
+    }
+
+    // Search using inventory repository through service
+    // Note: This is a read operation, so we'll use the repository directly
+    const { InventoryRepository } = await import('@/src/repositories/inventory');
+    const inventoryRepo = new InventoryRepository();
+
+    const items = await inventoryRepo.findItems(ctx.practiceId, {
+      search: parsed.data.gtin,
+    });
+
+    if (items.length === 0) {
+      return { error: 'Item not found' } as const;
+    }
+
+    // Return the first matching item
+    const item = items[0];
+    return {
+      success: true,
+      item: {
+        id: item.id,
+        name: item.name,
+        sku: item.sku,
+        unit: item.unit,
+      },
+    } as const;
+  } catch (error: any) {
+    console.error('Failed to search item by GTIN:', error);
+    return { error: error.message || 'Failed to search item' } as const;
+  }
+}
+
 

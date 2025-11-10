@@ -1,12 +1,13 @@
 import 'next-auth';
 import 'next-auth/jwt';
 
-import type { PracticeRole } from '@prisma/client';
+import type { PracticeRole, MembershipStatus } from '@prisma/client';
 
 export type SessionPractice = {
   id: string;
   practiceId: string;
   role: PracticeRole;
+  status: MembershipStatus;
   practice: {
     id: string;
     name: string;

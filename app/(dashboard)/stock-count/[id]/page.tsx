@@ -1,5 +1,6 @@
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getInventoryService } from '@/src/services';
 import { notFound } from 'next/navigation';
 import { CountSessionDetail } from './_components/count-session-detail';
 import { StockCountStatus } from '@prisma/client';
@@ -9,101 +10,56 @@ interface CountSessionPageProps {
 }
 
 export default async function CountSessionPage({ params }: CountSessionPageProps) {
-  const { practiceId } = await requireActivePractice();
+  const { session: userSession, practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
   const { id } = await params;
 
-  const session = await prisma.stockCountSession.findUnique({
-    where: {
-      id,
-      practiceId,
-    },
-    include: {
-      location: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      lines: {
-        include: {
-          item: {
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              unit: true,
-              product: {
-                select: {
-                  gtin: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      },
-      createdBy: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-    },
-  });
-
-  if (!session) {
+  // Fetch session using InventoryService
+  let session;
+  try {
+    session = await getInventoryService().getStockCountSession(ctx, id);
+  } catch (error) {
     notFound();
   }
 
-  // Fetch all items for adding manually
-  const items = await prisma.item.findMany({
-    where: { practiceId },
-    select: {
-      id: true,
-      name: true,
-      sku: true,
-      unit: true,
-      product: {
-        select: {
-          gtin: true,
-        },
-      },
-    },
-    orderBy: {
-      name: 'asc',
-    },
-  });
+  // Fetch all items for adding manually using InventoryService
+  const allItems = await getInventoryService().findItems(ctx, {});
+  const items = allItems.map(item => ({
+    id: item.id,
+    name: item.name,
+    sku: item.sku,
+    unit: item.unit,
+    product: item.product ? {
+      gtin: item.product?.gtin || null,
+    } : null,
+  }));
 
-  // Fetch inventory at this location for quick counting
-  const locationInventory = await prisma.locationInventory.findMany({
-    where: {
-      locationId: session.location.id,
-      quantity: { gt: 0 }, // Only items with stock
-    },
-    include: {
-      item: {
-        select: {
-          id: true,
-          name: true,
-          sku: true,
-          unit: true,
-          product: {
-            select: {
-              gtin: true,
-            },
-          },
+  // Get location inventory for this session's location
+  const locationItems = allItems.filter(item => 
+    item.inventory?.some(inv => 
+      inv.locationId === session.location.id && inv.quantity > 0
+    )
+  );
+
+  const locationInventory = locationItems.flatMap(item => 
+    item.inventory
+      ?.filter(inv => inv.locationId === session.location.id && inv.quantity > 0)
+      .map(inv => ({
+        item: {
+          id: item.id,
+          name: item.name,
+          sku: item.sku,
+          unit: item.unit,
+          product: item.product ? {
+            gtin: item.product?.gtin || null,
+          } : null,
         },
-      },
-    },
-    orderBy: {
-      item: { name: 'asc' },
-    },
-  });
+        quantity: inv.quantity,
+      })) || []
+  );
 
   // Map to expected items format
-  const countedItemIds = new Set(session.lines.map((line) => line.item.id));
+  const countedItemIds = new Set(session.lines.map((line: any) => line.item.id));
   const expectedItems = locationInventory
     .filter((inv) => !countedItemIds.has(inv.item.id))
     .map((inv) => ({
@@ -120,7 +76,7 @@ export default async function CountSessionPage({ params }: CountSessionPageProps
     <div className="space-y-6 p-4 sm:p-6">
       <CountSessionDetail
         session={session}
-        items={items}
+        items={items as any}
         expectedItems={expectedItems}
         canEdit={canEdit}
       />

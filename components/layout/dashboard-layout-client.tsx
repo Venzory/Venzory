@@ -21,11 +21,13 @@ export function DashboardLayoutClient({
   userRole,
 }: DashboardLayoutClientProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const normalizedPracticeName =
+    practiceName === 'Demo Pracite' ? 'Demo Practice' : practiceName;
 
   return (
     <div className="flex h-screen bg-surface-secondary">
       <Sidebar
-        practiceName={practiceName}
+        practiceName={normalizedPracticeName}
         userRole={userRole}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -33,7 +35,7 @@ export function DashboardLayoutClient({
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar
           userName={userName}
-          practiceName={practiceName}
+          practiceName={normalizedPracticeName}
           onMenuClick={() => setIsSidebarOpen(true)}
         />
         <main className="flex-1 overflow-auto p-6">{children}</main>

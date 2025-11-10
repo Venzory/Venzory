@@ -1,5 +1,6 @@
-import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { UserRepository } from '@/src/repositories/users';
+import { OrderRepository } from '@/src/repositories/orders';
 import { NewReceiptForm } from './_components/new-receipt-form';
 
 export const metadata = {
@@ -11,51 +12,19 @@ interface NewReceiptPageProps {
 }
 
 export default async function NewReceiptPage({ searchParams }: NewReceiptPageProps) {
-  const { practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
   const { orderId } = await searchParams;
+
+  const userRepo = new UserRepository();
+  const orderRepo = new OrderRepository();
 
   // Fetch locations and suppliers for form dropdowns
   const [locations, suppliers, order] = await Promise.all([
-    prisma.location.findMany({
-      where: { practiceId },
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
-    prisma.supplier.findMany({
-      where: { practiceId },
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        name: true,
-      },
-    }),
+    userRepo.findLocations(ctx.practiceId),
+    userRepo.findSuppliers(ctx.practiceId),
     // Fetch order details if orderId is provided
     orderId
-      ? prisma.order.findUnique({
-          where: { id: orderId, practiceId },
-          include: {
-            supplier: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            items: {
-              include: {
-                item: {
-                  select: {
-                    id: true,
-                    name: true,
-                    sku: true,
-                  },
-                },
-              },
-            },
-          },
-        })
+      ? orderRepo.findOrderById(orderId, ctx.practiceId).catch(() => null)
       : null,
   ]);
 
@@ -67,7 +36,7 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
         </h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           {order
-            ? `Receiving order ${order.reference || `#${order.id.slice(0, 8)}`} from ${order.supplier.name}`
+            ? `Receiving order ${order.reference || `#${order.id.slice(0, 8)}`} from ${order.supplier?.name || 'Unknown'}`
             : 'Start a new receipt to track incoming deliveries'}
         </p>
       </div>
@@ -79,12 +48,12 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
           id: order.id,
           reference: order.reference,
           supplierId: order.supplierId,
-          supplierName: order.supplier.name,
-          items: order.items.map(item => ({
+          supplierName: order.supplier?.name || 'Unknown',
+          items: (order.items || []).map(item => ({
             id: item.id,
-            itemId: item.item.id,
-            itemName: item.item.name,
-            itemSku: item.item.sku,
+            itemId: item.itemId,
+            itemName: item.item?.name || 'Unknown',
+            itemSku: item.item?.sku || null,
             quantity: item.quantity,
           })),
         } : undefined}
@@ -92,4 +61,5 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
     </div>
   );
 }
+
 

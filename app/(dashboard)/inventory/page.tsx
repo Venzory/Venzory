@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { PracticeRole } from '@prisma/client';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 import { CreateItemForm } from './_components/create-item-form';
 import { StockAdjustmentForm } from './_components/stock-adjustment-form';
@@ -23,61 +25,32 @@ interface InventoryPageProps {
 
 export default async function InventoryPage({ searchParams }: InventoryPageProps) {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
   const params = searchParams ? await searchParams : {};
   
   const { q, location, supplier } = params;
-  
-  // Build filter conditions
-  const filterConditions: any[] = [];
-  
-  // Text search on name and SKU
-  if (q && q.trim()) {
-    filterConditions.push({
-      OR: [
-        { name: { contains: q.trim(), mode: 'insensitive' } },
-        { sku: { contains: q.trim(), mode: 'insensitive' } },
-      ],
-    });
-  }
-  
-  // Location filter - items with stock in selected location
-  if (location) {
-    filterConditions.push({
-      inventory: {
-        some: { locationId: location },
-      },
-    });
-  }
-  
-  // Supplier filter
-  if (supplier) {
-    filterConditions.push({
-      defaultSupplierId: supplier,
-    });
-  }
 
-  const items = await prisma.item.findMany({
-    where: {
-      practiceId,
-      ...(filterConditions.length > 0 ? { AND: filterConditions } : {}),
-    },
-    include: {
-      defaultSupplier: { select: { id: true, name: true } },
-      inventory: {
-        include: {
-          location: { select: { id: true, name: true, code: true } },
-        },
-        orderBy: { location: { name: 'asc' } },
-      },
-    },
-    orderBy: { name: 'asc' },
+  // Fetch items using InventoryService with filters
+  const items = await getInventoryService().findItems(ctx, {
+    search: q?.trim(),
+    locationId: location,
+    supplierId: supplier,
   });
+
+  // Transform items to convert Prisma Decimal to number for client component serialization
+  const transformedItems = items.map(item => ({
+    ...item,
+    supplierItems: item.supplierItems?.map(si => ({
+      ...si,
+      unitPrice: si.unitPrice ? Number(si.unitPrice) : null,
+    })) || [],
+  }));
 
   // Calculate low-stock information for each item
   const lowStockInfo: Record<string, { isLowStock: boolean; suggestedQuantity: number; lowStockLocations: string[] }> = {};
   
-  for (const item of items) {
-    const lowStockLocations = item.inventory.filter(
+  for (const item of transformedItems) {
+    const lowStockLocations = (item.inventory || []).filter(
       (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
     );
     
@@ -95,26 +68,9 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   }
 
   const [suppliers, locations, adjustments] = await Promise.all([
-    prisma.supplier.findMany({
-      where: { practiceId },
-      orderBy: { name: 'asc' },
-      select: { id: true, name: true },
-    }),
-    prisma.location.findMany({
-      where: { practiceId },
-      orderBy: { name: 'asc' },
-      select: { id: true, name: true, code: true },
-    }),
-    prisma.stockAdjustment.findMany({
-      where: { practiceId },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-      include: {
-        item: { select: { id: true, name: true, sku: true } },
-        location: { select: { id: true, name: true, code: true } },
-        createdBy: { select: { id: true, name: true, email: true } },
-      },
-    }),
+    getInventoryService().getSuppliers(ctx),
+    getInventoryService().getLocations(ctx),
+    getInventoryService().getRecentAdjustments(ctx, 10),
   ]);
 
   const canManage = hasRole({
@@ -135,14 +91,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
               Manage catalog items, default suppliers, and on-hand balances per location.
             </p>
           </div>
-          {canManage ? (
-            <Link
-              href="/orders/new"
-              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
-            >
-              Create Order
+          {canManage && (
+            <Link href="/orders/new">
+              <Button variant="primary">Create Order</Button>
             </Link>
-          ) : null}
+          )}
         </div>
 
         <SearchFilters
@@ -155,7 +108,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
 
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           <LowStockItemList
-            items={items}
+            items={transformedItems as any}
             suppliers={suppliers}
             canManage={canManage}
             hasActiveFilters={hasActiveFilters}
@@ -170,7 +123,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
       <section className="grid gap-6 lg:grid-cols-[1fr_1fr] mt-8">
         {canManage ? (
           <StockAdjustmentForm
-            items={items.map((item) => ({ id: item.id, name: item.name, sku: item.sku }))}
+            items={transformedItems.map((item) => ({ id: item.id, name: item.name, sku: item.sku }))}
             locations={locations}
           />
         ) : (
@@ -241,4 +194,5 @@ function RecentAdjustments({
     </Card>
   );
 }
+
 

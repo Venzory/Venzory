@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { createStockCountSessionAction } from '../../actions';
@@ -11,7 +11,7 @@ interface NewCountFormProps {
 
 export function NewCountForm({ locations }: NewCountFormProps) {
   const router = useRouter();
-  const [state, formAction] = useFormState(createStockCountSessionAction, null);
+  const [state, formAction] = useActionState(createStockCountSessionAction, null);
 
   useEffect(() => {
     if (state && 'sessionId' in state && state.sessionId) {

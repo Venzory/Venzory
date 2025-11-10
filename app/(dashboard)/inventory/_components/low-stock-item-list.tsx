@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
+import { Package } from 'lucide-react';
 import { createOrdersFromLowStockAction } from '../actions';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface InventoryItem {
   id: string;
@@ -94,23 +96,17 @@ export function LowStockItemList({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
-        {hasActiveFilters ? (
-          <>
-            <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No items match your filters</p>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Try adjusting your search or filter criteria to see more results.</p>
-          </>
-        ) : (
-          <>
-            <p className="text-base font-semibold text-slate-900 dark:text-slate-200">No items yet</p>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              {canManage
-                ? 'Add your first inventory item using the form on the right.'
-                : 'An administrator needs to add items before they appear here.'}
-            </p>
-          </>
-        )}
-      </div>
+      <EmptyState
+        icon={Package}
+        title={hasActiveFilters ? 'No items match your filters' : 'No items yet'}
+        description={
+          hasActiveFilters
+            ? 'Try adjusting your search or filter criteria to see more results.'
+            : canManage
+            ? 'Add your first inventory item using the form on the right.'
+            : 'An administrator needs to add items before they appear here.'
+        }
+      />
     );
   }
 
@@ -141,6 +137,18 @@ export function LowStockItemList({
       {errorMessage && (
         <div className="rounded-xl border border-rose-800 bg-rose-900/20 p-4">
           <p className="text-sm text-rose-300">{errorMessage}</p>
+        </div>
+      )}
+      
+      {selectableLowStockItems.length < lowStockItems.length && lowStockItems.length > 0 && (
+        <div className="rounded-xl border border-amber-700 bg-amber-900/20 p-4">
+          <p className="text-sm font-semibold text-amber-300">
+            ⚠ {lowStockItems.length - selectableLowStockItems.length} low-stock item
+            {lowStockItems.length - selectableLowStockItems.length !== 1 ? 's' : ''} cannot be auto-ordered
+          </p>
+          <p className="mt-1 text-xs text-amber-400">
+            These items don&apos;t have a default supplier assigned. Set a default supplier to include them in auto-ordering.
+          </p>
         </div>
       )}
 

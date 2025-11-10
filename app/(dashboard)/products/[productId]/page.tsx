@@ -4,7 +4,8 @@ import { PracticeRole } from '@prisma/client';
 import { format } from 'date-fns';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getProductService } from '@/src/services';
 import { canManageProducts, canViewProductPricing } from '@/lib/rbac';
 
 import { Gs1StatusBadge } from '../_components/gs1-status-badge';
@@ -18,41 +19,13 @@ interface ProductDetailPageProps {
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { productId } = await params;
   const { session, practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
 
-  // Fetch product with supplier catalogs and items for this practice
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    include: {
-      supplierCatalogs: {
-        where: {
-          supplier: { practiceId },
-        },
-        include: {
-          supplier: {
-            select: { id: true, name: true },
-          },
-        },
-        orderBy: { supplier: { name: 'asc' } },
-      },
-      items: {
-        where: { practiceId },
-        include: {
-          inventory: {
-            select: {
-              quantity: true,
-              reorderPoint: true,
-              location: {
-                select: { name: true },
-              },
-            },
-          },
-        },
-        orderBy: { name: 'asc' },
-      },
-    },
-  });
-
-  if (!product) {
+  // Fetch product using ProductService
+  let product;
+  try {
+    product = await getProductService().getProductById(ctx, productId);
+  } catch (error) {
     notFound();
   }
 
@@ -95,7 +68,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </button>
             </form>
           ) : null}
-          {canManage && product.items.length === 0 ? (
+          {canManage && (product.items?.length || 0) === 0 ? (
             <form action={deleteProductAction.bind(null, product.id)}>
               <button
                 type="submit"
@@ -170,7 +143,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </p>
         </div>
 
-        {product.supplierCatalogs.length === 0 ? (
+        {(product.supplierCatalogs?.length || 0) === 0 ? (
           <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-400">
             <p className="font-medium text-slate-900 dark:text-slate-200">No supplier offers yet</p>
             <p className="mt-2">
@@ -207,7 +180,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {product.supplierCatalogs.map((catalog) => {
+                {product.supplierCatalogs?.map((catalog: any) => {
                   const unitPrice = catalog.unitPrice
                     ? parseFloat(catalog.unitPrice.toString())
                     : null;
@@ -269,7 +242,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </p>
         </div>
 
-        {product.items.length === 0 ? (
+        {(product.items?.length || 0) === 0 ? (
           <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-400">
             <p className="font-medium text-slate-900 dark:text-slate-200">No items yet</p>
             <p className="mt-2">
@@ -297,13 +270,13 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {product.items.map((item) => {
+                {product.items?.map((item: any) => {
                   const totalStock = item.inventory.reduce(
-                    (sum, inv) => sum + inv.quantity,
+                    (sum: number, inv: any) => sum + inv.quantity,
                     0
                   );
                   const lowStockLocations = item.inventory.filter(
-                    (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
+                    (inv: any) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
                   );
                   const isLowStock = lowStockLocations.length > 0;
 

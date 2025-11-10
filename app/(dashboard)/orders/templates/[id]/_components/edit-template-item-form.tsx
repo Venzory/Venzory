@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from '@/lib/toast';
 import { updateTemplateItemAction } from '../../actions';
 
 interface EditTemplateItemFormProps {
@@ -40,11 +41,12 @@ export function EditTemplateItemForm({
     try {
       await updateTemplateItemAction(formData);
       setHasChanges(false);
+      toast.success('Item updated');
     } catch (error) {
       // Revert on error
       setQuantity(currentQuantity);
       setSupplierId(currentSupplierId || '');
-      alert('Failed to update item');
+      toast.error('Failed to update item');
     }
   };
 

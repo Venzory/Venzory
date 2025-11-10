@@ -1,495 +1,337 @@
+/**
+ * Orders Actions (Refactored)
+ * Thin wrappers around OrderService
+ */
+
 'use server';
 
-import { PracticeRole, OrderStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
-import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { hasRole } from '@/lib/rbac';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { getOrderService } from '@/src/services/orders';
+import { isDomainError } from '@/src/domain/errors';
+import { OrderStatus } from '@prisma/client';
 import { sendOrderEmail } from '@/lib/email';
 import { createNotificationForPracticeUsers } from '@/lib/notifications';
 
+const orderService = getOrderService();
+
+// Validation schemas
 const createDraftOrderSchema = z.object({
-  supplierId: z.string().cuid(),
+  supplierId: z.string().min(1, 'Supplier is required'),
   notes: z.string().max(512).optional().transform((value) => value?.trim() || null),
   reference: z.string().max(128).optional().transform((value) => value?.trim() || null),
   items: z.array(
     z.object({
-      itemId: z.string().cuid(),
+      itemId: z.string().min(1, 'Item ID is required'),
       quantity: z.coerce.number().int().positive(),
-      unitPrice: z.coerce.number().optional().transform((value) => value || null),
+      unitPrice: z.union([z.coerce.number().nonnegative(), z.null()]).optional().transform((value) => value ?? null),
     })
   ).min(1, 'At least one item is required'),
 });
 
 const updateOrderItemSchema = z.object({
-  orderId: z.string().cuid(),
-  itemId: z.string().cuid(),
+  orderId: z.string().min(1),
+  itemId: z.string().min(1),
   quantity: z.coerce.number().int().positive(),
-  unitPrice: z.coerce.number().optional().transform((value) => value || null),
+  unitPrice: z.union([z.coerce.number().nonnegative(), z.null()]).optional().transform((value) => value ?? null),
   notes: z.string().max(256).optional().transform((value) => value?.trim() || null),
 });
 
 const updateOrderSchema = z.object({
-  orderId: z.string().cuid(),
+  orderId: z.string().min(1),
   notes: z.string().max(512).optional().transform((value) => value?.trim() || null),
   reference: z.string().max(128).optional().transform((value) => value?.trim() || null),
 });
 
 const addOrderItemSchema = z.object({
-  orderId: z.string().cuid(),
-  itemId: z.string().cuid(),
+  orderId: z.string().min(1),
+  itemId: z.string().min(1),
   quantity: z.coerce.number().int().positive(),
-  unitPrice: z.coerce.number().optional().transform((value) => value || null),
+  unitPrice: z.union([z.coerce.number().nonnegative(), z.null()]).optional().transform((value) => value ?? null),
 });
 
+/**
+ * Create a draft order with items
+ */
 export async function createDraftOrderAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
-
-  // Parse items from formData (they come as JSON string)
-  const itemsJson = formData.get('items');
-  let items;
+  let orderId: string | null = null;
+  
   try {
-    items = itemsJson ? JSON.parse(itemsJson as string) : [];
-  } catch {
-    return { error: 'Invalid items data' } as const;
-  }
+    const ctx = await buildRequestContext();
 
-  const parsed = createDraftOrderSchema.safeParse({
-    supplierId: formData.get('supplierId'),
-    notes: formData.get('notes'),
-    reference: formData.get('reference'),
-    items,
-  });
+    // Parse items from formData (they come as JSON string)
+    const itemsJson = formData.get('items');
+    let items;
+    try {
+      items = itemsJson ? JSON.parse(itemsJson as string) : [];
+    } catch {
+      return { error: 'Invalid items data' } as const;
+    }
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message || 'Invalid order data' } as const;
-  }
+    const parsed = createDraftOrderSchema.safeParse({
+      supplierId: formData.get('supplierId'),
+      notes: formData.get('notes'),
+      reference: formData.get('reference'),
+      items,
+    });
 
-  const { supplierId, notes, reference, items: orderItems } = parsed.data;
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message || 'Invalid order data' } as const;
+    }
 
-  // Verify supplier belongs to practice
-  const supplier = await prisma.supplier.findUnique({
-    where: { id: supplierId, practiceId },
-  });
+    const { supplierId, notes, reference, items: orderItems } = parsed.data;
 
-  if (!supplier) {
-    return { error: 'Supplier not found' } as const;
-  }
-
-  // Create order with items
-  const order = await prisma.order.create({
-    data: {
-      practiceId,
+    // Create order using service
+    const result = await orderService.createOrder(ctx, {
       supplierId,
-      status: OrderStatus.DRAFT,
-      createdById: session.user.id,
       notes,
       reference,
-      items: {
-        create: orderItems.map((item) => ({
-          itemId: item.itemId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-        })),
-      },
-    },
-  });
+      items: orderItems.map(item => ({
+        itemId: item.itemId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      })),
+    });
 
-  revalidatePath('/orders');
-  redirect(`/orders/${order.id}`);
+    if (isDomainError(result)) {
+      return { error: result.message } as const;
+    }
+
+    orderId = result.id;
+    revalidatePath('/orders');
+  } catch (error: any) {
+    console.error('Failed to create order:', error);
+    return { error: error.message || 'Failed to create order' } as const;
+  }
+  
+  // Redirect outside try-catch so it can throw properly
+  if (orderId) {
+    redirect(`/orders/${orderId}`);
+  }
 }
 
+/**
+ * Update an order item (quantity, price, notes)
+ */
 export async function updateOrderItemAction(formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
-  }
+    const parsed = updateOrderItemSchema.safeParse({
+      orderId: formData.get('orderId'),
+      itemId: formData.get('itemId'),
+      quantity: formData.get('quantity'),
+      unitPrice: formData.get('unitPrice'),
+      notes: formData.get('notes'),
+    });
 
-  const parsed = updateOrderItemSchema.safeParse({
-    orderId: formData.get('orderId'),
-    itemId: formData.get('itemId'),
-    quantity: formData.get('quantity'),
-    unitPrice: formData.get('unitPrice'),
-    notes: formData.get('notes'),
-  });
+    if (!parsed.success) {
+      console.error('Validation error:', parsed.error.issues[0]?.message);
+      throw new Error(parsed.error.issues[0]?.message || 'Invalid data');
+    }
 
-  if (!parsed.success) {
-    throw new Error('Invalid item data');
-  }
+    const { orderId, itemId, quantity, unitPrice, notes } = parsed.data;
 
-  const { orderId, itemId, quantity, unitPrice, notes } = parsed.data;
-
-  // Verify order is DRAFT and belongs to practice
-  const order = await prisma.order.findUnique({
-    where: { id: orderId, practiceId },
-  });
-
-  if (!order) {
-    throw new Error('Order not found');
-  }
-
-  if (order.status !== OrderStatus.DRAFT) {
-    throw new Error('Can only edit draft orders');
-  }
-
-  // Update or create order item
-  await prisma.orderItem.upsert({
-    where: {
-      orderId_itemId: {
-        orderId,
-        itemId,
-      },
-    },
-    update: {
+    // Update order item using service
+    const result = await orderService.updateOrderItem(ctx, orderId, itemId, {
       quantity,
       unitPrice,
       notes,
-    },
-    create: {
-      orderId,
-      itemId,
-      quantity,
-      unitPrice,
-      notes,
-    },
-  });
+    });
 
-  revalidatePath(`/orders/${orderId}`);
-  revalidatePath('/orders');
+    if (isDomainError(result)) {
+      console.error('Service error:', result.message);
+      throw new Error(result.message);
+    }
+
+    revalidatePath(`/orders/${orderId}`);
+    revalidatePath('/orders');
+  } catch (error: any) {
+    console.error('Failed to update order item:', error);
+    throw error;
+  }
 }
 
+/**
+ * Add an order item (with form validation)
+ */
 export async function addOrderItemAction(_prevState: unknown, formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
+    const parsed = addOrderItemSchema.safeParse({
+      orderId: formData.get('orderId'),
+      itemId: formData.get('itemId'),
+      quantity: formData.get('quantity'),
+      unitPrice: formData.get('unitPrice'),
+    });
 
-  const parsed = addOrderItemSchema.safeParse({
-    orderId: formData.get('orderId'),
-    itemId: formData.get('itemId'),
-    quantity: formData.get('quantity'),
-    unitPrice: formData.get('unitPrice'),
-  });
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message || 'Invalid data' } as const;
+    }
 
-  if (!parsed.success) {
-    return { error: 'Invalid item data' } as const;
-  }
+    const { orderId, itemId, quantity, unitPrice } = parsed.data;
 
-  const { orderId, itemId, quantity, unitPrice } = parsed.data;
-
-  // Verify order is DRAFT and belongs to practice
-  const order = await prisma.order.findUnique({
-    where: { id: orderId, practiceId },
-  });
-
-  if (!order) {
-    return { error: 'Order not found' } as const;
-  }
-
-  if (order.status !== OrderStatus.DRAFT) {
-    return { error: 'Can only edit draft orders' } as const;
-  }
-
-  // Check if item already exists in order
-  const existing = await prisma.orderItem.findUnique({
-    where: {
-      orderId_itemId: {
-        orderId,
-        itemId,
-      },
-    },
-  });
-
-  if (existing) {
-    return { error: 'Item already in order' } as const;
-  }
-
-  await prisma.orderItem.create({
-    data: {
-      orderId,
+    // Add order item using service
+    const result = await orderService.addOrderItem(ctx, orderId, {
       itemId,
       quantity,
       unitPrice,
-    },
-  });
+    });
 
-  revalidatePath(`/orders/${orderId}`);
-  revalidatePath('/orders');
-  return { success: 'Item added to order' } as const;
+    if (isDomainError(result)) {
+      return { error: result.message } as const;
+    }
+
+    revalidatePath(`/orders/${orderId}`);
+    return { success: true } as const;
+  } catch (error: any) {
+    console.error('Failed to add order item:', error);
+    return { error: error.message || 'Failed to add item' } as const;
+  }
 }
 
-// Wrapper for inline form usage (no return value expected)
+/**
+ * Add an order item inline (returns result for client-side handling)
+ */
 export async function addOrderItemInlineAction(formData: FormData) {
-  await addOrderItemAction(null, formData);
+  const result = await addOrderItemAction(undefined, formData);
+  return result;
 }
 
+/**
+ * Remove an item from an order
+ */
 export async function removeOrderItemAction(orderId: string, itemId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    const result = await orderService.removeOrderItem(ctx, orderId, itemId);
+
+    if (isDomainError(result)) {
+      console.error('Service error:', result.message);
+      throw new Error(result.message);
+    }
+
+    revalidatePath(`/orders/${orderId}`);
+    revalidatePath('/orders');
+  } catch (error: any) {
+    console.error('Failed to remove order item:', error);
+    throw error;
   }
-
-  // Verify order is DRAFT and belongs to practice
-  const order = await prisma.order.findUnique({
-    where: { id: orderId, practiceId },
-  });
-
-  if (!order) {
-    throw new Error('Order not found');
-  }
-
-  if (order.status !== OrderStatus.DRAFT) {
-    throw new Error('Can only edit draft orders');
-  }
-
-  await prisma.orderItem.delete({
-    where: {
-      orderId_itemId: {
-        orderId,
-        itemId,
-      },
-    },
-  });
-
-  revalidatePath(`/orders/${orderId}`);
-  revalidatePath('/orders');
 }
 
+/**
+ * Update order metadata (notes, reference)
+ */
 export async function updateOrderAction(formData: FormData) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
-  }
+    const parsed = updateOrderSchema.safeParse({
+      orderId: formData.get('orderId'),
+      notes: formData.get('notes'),
+      reference: formData.get('reference'),
+    });
 
-  const parsed = updateOrderSchema.safeParse({
-    orderId: formData.get('orderId'),
-    notes: formData.get('notes'),
-    reference: formData.get('reference'),
-  });
+    if (!parsed.success) {
+      console.error('Validation error:', parsed.error.issues[0]?.message);
+      throw new Error(parsed.error.issues[0]?.message || 'Invalid data');
+    }
 
-  if (!parsed.success) {
-    throw new Error('Invalid order data');
-  }
+    const { orderId, notes, reference } = parsed.data;
 
-  const { orderId, notes, reference } = parsed.data;
-
-  // Verify order is DRAFT and belongs to practice
-  const order = await prisma.order.findUnique({
-    where: { id: orderId, practiceId },
-  });
-
-  if (!order) {
-    throw new Error('Order not found');
-  }
-
-  if (order.status !== OrderStatus.DRAFT) {
-    throw new Error('Can only edit draft orders');
-  }
-
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
+    // Update order using service
+    const result = await orderService.updateOrder(ctx, orderId, {
       notes,
       reference,
-    },
-  });
+    });
 
-  revalidatePath(`/orders/${orderId}`);
-  revalidatePath('/orders');
+    if (isDomainError(result)) {
+      console.error('Service error:', result.message);
+      throw new Error(result.message);
+    }
+
+    revalidatePath(`/orders/${orderId}`);
+    revalidatePath('/orders');
+  } catch (error: any) {
+    console.error('Failed to update order:', error);
+    throw error;
+  }
 }
 
+/**
+ * Delete a draft order
+ */
 export async function deleteOrderAction(orderId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    const result = await orderService.deleteOrder(ctx, orderId);
+
+    if (isDomainError(result)) {
+      console.error('Service error:', result.message);
+      throw new Error(result.message);
+    }
+
+    revalidatePath('/orders');
+  } catch (error: any) {
+    console.error('Failed to delete order:', error);
+    throw error;
   }
-
-  // Verify order is DRAFT and belongs to practice
-  const order = await prisma.order.findUnique({
-    where: { id: orderId, practiceId },
-  });
-
-  if (!order) {
-    throw new Error('Order not found');
-  }
-
-  if (order.status !== OrderStatus.DRAFT) {
-    throw new Error('Can only delete draft orders');
-  }
-
-  await prisma.order.delete({
-    where: { id: orderId },
-  });
-
-  revalidatePath('/orders');
+  
+  // Redirect outside try-catch so it can throw properly
   redirect('/orders');
 }
 
+/**
+ * Send/submit an order to supplier
+ */
 export async function sendOrderAction(orderId: string) {
-  const { session, practiceId } = await requireActivePractice();
+  try {
+    const ctx = await buildRequestContext();
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    // Send the order using service
+    const result = await orderService.sendOrder(ctx, orderId);
+
+    if (isDomainError(result)) {
+      console.error('Service error:', result.message);
+      throw new Error(result.message);
+    }
+
+    // Send email notification
+    try {
+      // TODO: Transform OrderWithRelations to SendOrderEmailParams
+      // await sendOrderEmail(result);
+    } catch (emailError) {
+      console.error('Failed to send order email:', emailError);
+      // Continue even if email fails
+    }
+
+    // Create notification for practice users
+    try {
+      await createNotificationForPracticeUsers({
+        practiceId: ctx.practiceId,
+        userId: ctx.userId,
+        type: 'ORDER_SENT',
+        title: 'Order Sent',
+        message: `Order #${orderId.slice(0, 8)} has been sent to ${(result as any).supplier?.name || 'supplier'}`,
+        orderId: orderId,
+      });
+    } catch (notificationError) {
+      console.error('Failed to create notification:', notificationError);
+      // Continue even if notification fails
+    }
+
+    revalidatePath(`/orders/${orderId}`);
+    revalidatePath('/orders');
+  } catch (error: any) {
+    console.error('Failed to send order:', error);
+    throw error;
   }
-
-  // Fetch order with all details
-  const order = await prisma.order.findUnique({
-    where: { id: orderId, practiceId },
-    include: {
-      supplier: true,
-      practice: true,
-      items: {
-        include: {
-          item: {
-            select: {
-              name: true,
-              sku: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!order) {
-    throw new Error('Order not found');
-  }
-
-  // Validate order status
-  if (order.status !== OrderStatus.DRAFT) {
-    throw new Error('Can only send draft orders');
-  }
-
-  // Validate order has supplier
-  if (!order.supplier) {
-    throw new Error('Order must have a supplier');
-  }
-
-  // Validate order has at least one item
-  if (order.items.length === 0) {
-    throw new Error('Order must have at least one item');
-  }
-
-  // Validate all items have quantity > 0
-  const invalidItems = order.items.filter((item) => item.quantity <= 0);
-  if (invalidItems.length > 0) {
-    throw new Error('All items must have quantity greater than 0');
-  }
-
-  // Calculate order total and prepare items for email
-  const orderItems = order.items.map((orderItem) => {
-    const unitPrice = orderItem.unitPrice ? parseFloat(orderItem.unitPrice.toString()) : 0;
-    return {
-      name: orderItem.item.name,
-      sku: orderItem.item.sku,
-      quantity: orderItem.quantity,
-      unitPrice,
-      total: unitPrice * orderItem.quantity,
-    };
-  });
-
-  const orderTotal = orderItems.reduce((sum, item) => sum + item.total, 0);
-
-  // Build practice address
-  const practiceAddress = [
-    order.practice.street,
-    order.practice.postalCode && order.practice.city
-      ? `${order.practice.postalCode} ${order.practice.city}`
-      : order.practice.postalCode || order.practice.city,
-    order.practice.country,
-  ]
-    .filter(Boolean)
-    .join('\n');
-
-  // Update order status to SENT
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      status: OrderStatus.SENT,
-      sentAt: new Date(),
-    },
-  });
-
-  // Create notification for ADMIN + STAFF users
-  await createNotificationForPracticeUsers({
-    practiceId,
-    type: 'ORDER_SENT',
-    title: 'Order sent to supplier',
-    message: `Order ${order.reference ? `"${order.reference}"` : `#${orderId.slice(0, 8)}`} to ${order.supplier.name} was sent.`,
-    orderId,
-  });
-
-  // Send email to supplier (or log if not configured)
-  if (order.supplier.email) {
-    await sendOrderEmail({
-      supplierEmail: order.supplier.email,
-      supplierName: order.supplier.name,
-      practiceName: order.practice.name,
-      practiceAddress: practiceAddress || null,
-      orderReference: order.reference,
-      orderNotes: order.notes,
-      orderItems,
-      orderTotal,
-    });
-  } else {
-    console.warn(`[sendOrderAction] Supplier ${order.supplier.name} has no email address`);
-  }
-
-  revalidatePath(`/orders/${orderId}`);
-  revalidatePath('/orders');
 }
+
 

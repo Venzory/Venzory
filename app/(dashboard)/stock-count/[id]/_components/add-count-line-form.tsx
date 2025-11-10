@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { useEffect, useState } from 'react';
 import { addCountLineAction } from '../../actions';
 
@@ -26,7 +26,7 @@ export function AddCountLineForm({
   onSuccess,
   onCancel,
 }: AddCountLineFormProps) {
-  const [state, formAction] = useFormState(addCountLineAction, null);
+  const [state, formAction] = useActionState(addCountLineAction, null);
   const [systemQty, setSystemQty] = useState<number | null>(null);
 
   useEffect(() => {
@@ -59,13 +59,13 @@ export function AddCountLineForm({
       <input type="hidden" name="sessionId" value={sessionId} />
 
       {state?.error && (
-        <div className="rounded-lg bg-rose-900/20 border border-rose-800 p-4">
+        <div className="rounded-lg border border-rose-800 bg-rose-900/30 p-4">
           <p className="text-sm text-rose-300">{state.error}</p>
         </div>
       )}
 
       {state && 'variance' in state && state.variance !== undefined && (
-        <div className="rounded-lg bg-sky-900/20 border border-sky-800 p-4">
+        <div className="rounded-lg border border-sky-800 bg-sky-900/30 p-4">
           <p className="text-sm text-sky-300">
             Variance: {state.variance > 0 ? '+' : ''}
             {state.variance}
@@ -121,7 +121,7 @@ export function AddCountLineForm({
           required
           min="0"
           defaultValue="0"
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+          className="w-32 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           style={{ minHeight: '48px' }}
         />
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import { BarcodeScanner } from './barcode-scanner';
 
 interface ScannerModalProps {
@@ -29,8 +30,7 @@ export function ScannerModal({
 
   const handleError = (error: string) => {
     console.error('Scanner error:', error);
-    // Show error to user - for now just log it
-    // TODO: Add toast notification
+    toast.error(error);
   };
 
   return (

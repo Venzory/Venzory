@@ -1,8 +1,10 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState, useEffect } from 'react';
+import { toast } from '@/lib/toast';
 
 import { upsertLocationAction } from '../../inventory/actions';
+import { SubmitButton } from '@/components/ui/submit-button';
 
 type LocationOption = {
   id: string;
@@ -17,7 +19,15 @@ type FormState = {
 const initialState: FormState = {};
 
 export function CreateLocationForm({ locations }: { locations: LocationOption[] }) {
-  const [state, formAction] = useFormState(upsertLocationAction, initialState);
+  const [state, formAction] = useActionState(upsertLocationAction, initialState);
+
+  useEffect(() => {
+    if (state.success) {
+      toast.success(state.success);
+    } else if (state.error) {
+      toast.error(state.error);
+    }
+  }, [state]);
 
   return (
     <form action={formAction} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
@@ -38,7 +48,7 @@ export function CreateLocationForm({ locations }: { locations: LocationOption[] 
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="location-code" className="text-sm font-medium text-slate-700 dark:text-slate-200">
             Code
@@ -47,7 +57,7 @@ export function CreateLocationForm({ locations }: { locations: LocationOption[] 
             id="location-code"
             name="code"
             placeholder="Optional short code"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+            className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
         <div className="space-y-2">
@@ -58,7 +68,7 @@ export function CreateLocationForm({ locations }: { locations: LocationOption[] 
             id="location-parent"
             name="parentId"
             defaultValue="none"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full max-w-sm rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           >
             <option value="none">Top level</option>
             {locations.map((location) => (
@@ -86,22 +96,9 @@ export function CreateLocationForm({ locations }: { locations: LocationOption[] 
       {state.error ? <p className="text-sm text-rose-600 dark:text-rose-400">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{state.success}</p> : null}
 
-      <SubmitButton />
+      <SubmitButton variant="primary" loadingText="Saving…">Create location</SubmitButton>
     </form>
   );
 }
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-70"
-    >
-      {pending ? 'Saving…' : 'Create location'}
-    </button>
-  );
-}
 

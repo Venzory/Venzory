@@ -1,14 +1,17 @@
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { PracticeRole, Gs1VerificationStatus } from '@prisma/client';
+import { Package } from 'lucide-react';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getProductService } from '@/src/services';
 import { hasRole, canManageProducts } from '@/lib/rbac';
 
 import { ProductFilters } from './_components/product-filters';
 import { CreateProductForm } from './_components/create-product-form';
 import { Gs1StatusBadge } from './_components/gs1-status-badge';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface ProductsPageProps {
   searchParams?: Promise<{
@@ -19,59 +22,15 @@ interface ProductsPageProps {
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
   const params = searchParams ? await searchParams : {};
   
   const { q, status } = params;
-  
-  // Build filter conditions
-  const filterConditions: any[] = [];
-  
-  // Text search on name, brand, and GTIN
-  if (q && q.trim()) {
-    filterConditions.push({
-      OR: [
-        { name: { contains: q.trim(), mode: 'insensitive' } },
-        { brand: { contains: q.trim(), mode: 'insensitive' } },
-        { gtin: { contains: q.trim(), mode: 'insensitive' } },
-      ],
-    });
-  }
-  
-  // GS1 status filter
-  if (status && status !== 'all') {
-    filterConditions.push({
-      gs1VerificationStatus: status as Gs1VerificationStatus,
-    });
-  }
 
-  // Query products that are offered by suppliers in the current practice
-  const products = await prisma.product.findMany({
-    where: {
-      supplierCatalogs: {
-        some: {
-          supplier: { practiceId },
-        },
-      },
-      ...(filterConditions.length > 0 ? { AND: filterConditions } : {}),
-    },
-    include: {
-      supplierCatalogs: {
-        where: {
-          supplier: { practiceId },
-        },
-        select: {
-          id: true,
-          supplier: {
-            select: { id: true, name: true },
-          },
-        },
-      },
-      items: {
-        where: { practiceId },
-        select: { id: true },
-      },
-    },
-    orderBy: { name: 'asc' },
+  // Query products using ProductService with filters
+  const products = await getProductService().findProducts(ctx, {
+    search: q?.trim(),
+    gs1VerificationStatus: status && status !== 'all' ? status as Gs1VerificationStatus : undefined,
   });
 
   const canManage = canManageProducts({
@@ -128,16 +87,15 @@ function ProductList({
 }) {
   if (products.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
-        <p className="text-base font-semibold text-slate-900 dark:text-slate-200">
-          {hasActiveFilters ? 'No products match your filters' : 'No products yet'}
-        </p>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          {hasActiveFilters
+      <EmptyState
+        icon={Package}
+        title={hasActiveFilters ? 'No products match your filters' : 'No products yet'}
+        description={
+          hasActiveFilters
             ? 'Try adjusting your search or filter criteria.'
-            : 'Products will appear here when suppliers offer items with GTINs or when you create them manually.'}
-        </p>
-      </div>
+            : 'Products will appear here when suppliers offer items with GTINs or when you create them manually.'
+        }
+      />
     );
   }
 
@@ -177,8 +135,8 @@ function ProductList({
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {products.map((product) => {
-                const supplierCount = product.supplierCatalogs.length;
-                const itemCount = product.items.length;
+                const supplierCount = product.supplierCatalogs?.length || 0;
+                const itemCount = product.items?.length || 0;
 
                 return (
                   <tr
@@ -240,4 +198,5 @@ function ProductList({
     </div>
   );
 }
+
 

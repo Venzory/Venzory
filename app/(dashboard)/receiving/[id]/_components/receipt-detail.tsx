@@ -13,10 +13,13 @@ import {
   Trash2,
   Check,
   X,
+  CheckCircle2,
 } from 'lucide-react';
 import { GoodsReceiptStatus } from '@prisma/client';
 import { ScannerModal } from '@/components/scanner/scanner-modal';
 import { useScanner } from '@/hooks/use-scanner';
+import { useConfirm } from '@/hooks/use-confirm';
+import { toast } from '@/lib/toast';
 import {
   confirmGoodsReceiptAction,
   cancelGoodsReceiptAction,
@@ -77,6 +80,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const confirm = useConfirm();
 
   const handleScanResult = async (code: string) => {
     try {
@@ -86,43 +90,61 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
         setSelectedItemId(result.item.id);
         setShowAddForm(true);
       } else {
-        alert(`No item found for barcode: ${code}`);
+        toast.error(`No item found for barcode: ${code}`);
       }
     } catch (error) {
       console.error('Search error:', error);
-      alert('Failed to search for item');
+      toast.error('Failed to search for item');
     }
   };
 
   const handleConfirm = async () => {
-    if (!confirm('Confirm this receipt? This will update inventory and cannot be undone.')) {
+    const confirmed = await confirm({
+      title: 'Confirm Receipt',
+      message: 'Confirm this receipt? This will update inventory and cannot be undone.',
+      confirmLabel: 'Confirm',
+      variant: 'neutral',
+    });
+
+    if (!confirmed) {
       return;
     }
 
     setIsConfirming(true);
     try {
+      // The action now handles the redirect automatically
+      // If linked to an order, redirects to /orders/{orderId}
+      // Otherwise redirects to /receiving
       await confirmGoodsReceiptAction(receipt.id);
-      router.refresh();
+      toast.success('Receipt confirmed and inventory updated');
     } catch (error) {
       console.error('Confirm error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to confirm receipt');
-    } finally {
+      toast.error(error instanceof Error ? error.message : 'Failed to confirm receipt');
       setIsConfirming(false);
     }
+    // Don't set isConfirming to false here - the redirect will happen
   };
 
   const handleCancel = async () => {
-    if (!confirm('Cancel this receipt? This action cannot be undone.')) {
+    const confirmed = await confirm({
+      title: 'Cancel Receipt',
+      message: 'Cancel this receipt? This action cannot be undone.',
+      confirmLabel: 'Cancel Receipt',
+      variant: 'danger',
+    });
+
+    if (!confirmed) {
       return;
     }
 
     setIsCancelling(true);
     try {
       await cancelGoodsReceiptAction(receipt.id);
+      toast.success('Receipt cancelled');
       router.refresh();
     } catch (error) {
       console.error('Cancel error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to cancel receipt');
+      toast.error(error instanceof Error ? error.message : 'Failed to cancel receipt');
     } finally {
       setIsCancelling(false);
     }
@@ -251,23 +273,42 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
         )}
 
         {/* Expected Items Quick Entry (when receiving an order) */}
-        {canEdit && expectedItems && expectedItems.length > 0 && (
-          <div className="rounded-lg border border-card-border bg-card p-4">
-            <div className="mb-3">
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                Receive Order Items
-              </h2>
-              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-                Quickly enter batch numbers and expiry dates for expected items
-              </p>
-            </div>
-            <ExpectedItemsForm
-              receiptId={receipt.id}
-              expectedItems={expectedItems}
-              receivedItemIds={new Set(receipt.lines.map((l) => l.item.id))}
-              onSuccess={() => router.refresh()}
-            />
-          </div>
+        {canEdit && expectedItems && receipt.order && (
+          <>
+            {expectedItems.length > 0 ? (
+              <div className="rounded-lg border border-card-border bg-card p-4">
+                <div className="mb-3">
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                    Receive Order Items
+                  </h2>
+                  <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
+                    Quickly enter batch numbers and expiry dates for expected items
+                  </p>
+                </div>
+                <ExpectedItemsForm
+                  receiptId={receipt.id}
+                  expectedItems={expectedItems}
+                  receivedItemIds={new Set(receipt.lines.map((l) => l.item.id))}
+                  onSuccess={() => router.refresh()}
+                />
+              </div>
+            ) : receipt.lines.length > 0 && (
+              <div className="rounded-lg border border-green-600 bg-green-950/30 p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-base font-semibold text-green-100">
+                      All Order Items Received
+                    </h3>
+                    <p className="mt-1 text-sm text-green-300">
+                      You&apos;ve received all {receipt.lines.length} items from this order. 
+                      Review the receipt lines below and click &quot;Confirm Receipt&quot; when ready to update inventory.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Manual Entry (when not receiving an order, or after finishing expected items) */}
@@ -386,13 +427,21 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
                     {canEdit && (
                       <button
                         onClick={async () => {
-                          if (confirm('Remove this line?')) {
+                          const confirmed = await confirm({
+                            title: 'Remove Line',
+                            message: 'Remove this line from the receipt?',
+                            confirmLabel: 'Remove',
+                            variant: 'danger',
+                          });
+
+                          if (confirmed) {
                             const { removeReceiptLineAction } = await import('../../actions');
                             try {
                               await removeReceiptLineAction(line.id);
+                              toast.success('Line removed');
                               router.refresh();
                             } catch (error) {
-                              alert('Failed to remove line');
+                              toast.error('Failed to remove line');
                             }
                           }
                         }}

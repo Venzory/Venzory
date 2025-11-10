@@ -1,5 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  output        = "../node_modules/.prisma/client"
+  binaryTargets = ["native"]
 }
 
 datasource db {
@@ -22,6 +24,7 @@ enum MembershipStatus {
 enum OrderStatus {
   DRAFT
   SENT
+  PARTIALLY_RECEIVED
   RECEIVED
   CANCELLED
 }
@@ -250,6 +253,8 @@ model Item {
   @@index([practiceId])
   @@index([productId])
   @@index([defaultSupplierId])
+  @@index([practiceId, name])
+  @@index([practiceId, sku])
 }
 
 model LocationInventory {
@@ -258,6 +263,7 @@ model LocationInventory {
   quantity        Int      @default(0)
   reorderPoint    Int?
   reorderQuantity Int?
+  createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -306,6 +312,7 @@ model Order {
 
   @@index([practiceId])
   @@index([supplierId])
+  @@index([practiceId, status, createdAt])
 }
 
 model OrderItem {

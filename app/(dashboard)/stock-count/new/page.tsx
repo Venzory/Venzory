@@ -1,5 +1,6 @@
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getInventoryService } from '@/src/services';
 import { NewCountForm } from './_components/new-count-form';
 
 export const metadata = {
@@ -7,17 +8,11 @@ export const metadata = {
 };
 
 export default async function NewCountPage() {
-  const { practiceId } = await requireActivePractice();
+  const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
-  // Fetch locations for form dropdown
-  const locations = await prisma.location.findMany({
-    where: { practiceId },
-    orderBy: { name: 'asc' },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
+  // Fetch locations using InventoryService
+  const locations = await getInventoryService().getLocations(ctx);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
@@ -34,4 +29,5 @@ export default async function NewCountPage() {
     </div>
   );
 }
+
 

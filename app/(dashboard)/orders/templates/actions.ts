@@ -6,7 +6,8 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getOrderService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 
 const createTemplateSchema = z.object({
@@ -42,6 +43,7 @@ const updateTemplateItemSchema = z.object({
 
 export async function createTemplateAction(_prevState: unknown, formData: FormData) {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
   if (
     !hasRole({
@@ -74,42 +76,23 @@ export async function createTemplateAction(_prevState: unknown, formData: FormDa
 
   const { name, description, items: templateItems } = parsed.data;
 
-  // Verify all items belong to practice
-  const itemIds = templateItems.map((i) => i.itemId);
-  const itemsCount = await prisma.item.count({
-    where: {
-      id: { in: itemIds },
-      practiceId,
-    },
-  });
-
-  if (itemsCount !== itemIds.length) {
-    return { error: 'Some items do not belong to this practice' } as const;
-  }
-
-  // Create template with items
-  const template = await prisma.orderTemplate.create({
-    data: {
-      practiceId,
+  try {
+    const template = await getOrderService().createTemplate(ctx, {
       name,
       description,
-      createdById: session.user.id,
-      items: {
-        create: templateItems.map((item) => ({
-          itemId: item.itemId,
-          defaultQuantity: item.defaultQuantity,
-          supplierId: item.supplierId,
-        })),
-      },
-    },
-  });
+      items: templateItems,
+    });
 
-  revalidatePath('/orders/templates');
-  redirect(`/orders/templates/${template.id}`);
+    revalidatePath('/orders/templates');
+    redirect(`/orders/templates/${template.id}`);
+  } catch (error: any) {
+    return { error: error.message || 'Failed to create template' } as const;
+  }
 }
 
 export async function updateTemplateAction(formData: FormData) {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
   if (
     !hasRole({
@@ -133,21 +116,9 @@ export async function updateTemplateAction(formData: FormData) {
 
   const { templateId, name, description } = parsed.data;
 
-  // Verify template belongs to practice
-  const template = await prisma.orderTemplate.findUnique({
-    where: { id: templateId, practiceId },
-  });
-
-  if (!template) {
-    throw new Error('Template not found');
-  }
-
-  await prisma.orderTemplate.update({
-    where: { id: templateId },
-    data: {
-      name,
-      description,
-    },
+  await getOrderService().updateTemplate(ctx, templateId, {
+    name,
+    description,
   });
 
   revalidatePath(`/orders/templates/${templateId}`);
@@ -156,6 +127,7 @@ export async function updateTemplateAction(formData: FormData) {
 
 export async function deleteTemplateAction(templateId: string) {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
   if (
     !hasRole({
@@ -167,18 +139,7 @@ export async function deleteTemplateAction(templateId: string) {
     throw new Error('Insufficient permissions');
   }
 
-  // Verify template belongs to practice
-  const template = await prisma.orderTemplate.findUnique({
-    where: { id: templateId, practiceId },
-  });
-
-  if (!template) {
-    throw new Error('Template not found');
-  }
-
-  await prisma.orderTemplate.delete({
-    where: { id: templateId },
-  });
+  await getOrderService().deleteTemplate(ctx, templateId);
 
   revalidatePath('/orders/templates');
   redirect('/orders/templates');
@@ -186,6 +147,7 @@ export async function deleteTemplateAction(templateId: string) {
 
 export async function addTemplateItemAction(_prevState: unknown, formData: FormData) {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
   if (
     !hasRole({
@@ -210,53 +172,23 @@ export async function addTemplateItemAction(_prevState: unknown, formData: FormD
 
   const { templateId, itemId, defaultQuantity, supplierId } = parsed.data;
 
-  // Verify template belongs to practice
-  const template = await prisma.orderTemplate.findUnique({
-    where: { id: templateId, practiceId },
-  });
-
-  if (!template) {
-    return { error: 'Template not found' } as const;
-  }
-
-  // Verify item belongs to practice
-  const item = await prisma.item.findUnique({
-    where: { id: itemId, practiceId },
-  });
-
-  if (!item) {
-    return { error: 'Item not found' } as const;
-  }
-
-  // Check if item already exists in template
-  const existing = await prisma.orderTemplateItem.findUnique({
-    where: {
-      templateId_itemId: {
-        templateId,
-        itemId,
-      },
-    },
-  });
-
-  if (existing) {
-    return { error: 'Item already in template' } as const;
-  }
-
-  await prisma.orderTemplateItem.create({
-    data: {
-      templateId,
+  try {
+    await getOrderService().addTemplateItem(ctx, templateId, {
       itemId,
       defaultQuantity,
       supplierId,
-    },
-  });
+    });
 
-  revalidatePath(`/orders/templates/${templateId}`);
-  return { success: 'Item added to template' } as const;
+    revalidatePath(`/orders/templates/${templateId}`);
+    return { success: 'Item added to template' } as const;
+  } catch (error: any) {
+    return { error: error.message || 'Failed to add item' } as const;
+  }
 }
 
 export async function updateTemplateItemAction(formData: FormData) {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
   if (
     !hasRole({
@@ -280,33 +212,17 @@ export async function updateTemplateItemAction(formData: FormData) {
 
   const { templateItemId, defaultQuantity, supplierId } = parsed.data;
 
-  // Verify template item exists and belongs to practice
-  const templateItem = await prisma.orderTemplateItem.findUnique({
-    where: { id: templateItemId },
-    include: {
-      template: {
-        select: { practiceId: true },
-      },
-    },
+  const result = await getOrderService().updateTemplateItem(ctx, templateItemId, {
+    defaultQuantity,
+    supplierId,
   });
 
-  if (!templateItem || templateItem.template.practiceId !== practiceId) {
-    throw new Error('Template item not found');
-  }
-
-  await prisma.orderTemplateItem.update({
-    where: { id: templateItemId },
-    data: {
-      defaultQuantity,
-      supplierId,
-    },
-  });
-
-  revalidatePath(`/orders/templates/${templateItem.templateId}`);
+  revalidatePath(`/orders/templates/${result.templateId}`);
 }
 
 export async function removeTemplateItemAction(templateItemId: string) {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
   if (
     !hasRole({
@@ -318,25 +234,9 @@ export async function removeTemplateItemAction(templateItemId: string) {
     throw new Error('Insufficient permissions');
   }
 
-  // Verify template item exists and belongs to practice
-  const templateItem = await prisma.orderTemplateItem.findUnique({
-    where: { id: templateItemId },
-    include: {
-      template: {
-        select: { practiceId: true, id: true },
-      },
-    },
-  });
+  await getOrderService().removeTemplateItem(ctx, templateItemId);
 
-  if (!templateItem || templateItem.template.practiceId !== practiceId) {
-    throw new Error('Template item not found');
-  }
-
-  await prisma.orderTemplateItem.delete({
-    where: { id: templateItemId },
-  });
-
-  revalidatePath(`/orders/templates/${templateItem.templateId}`);
+  revalidatePath(`/orders/templates`);
 }
 
 export async function createOrdersFromTemplateAction(
@@ -347,6 +247,7 @@ export async function createOrdersFromTemplateAction(
   }[]
 ) {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
   if (
     !hasRole({
@@ -358,80 +259,21 @@ export async function createOrdersFromTemplateAction(
     return { error: 'Insufficient permissions' } as const;
   }
 
-  // Verify template belongs to practice
-  const template = await prisma.orderTemplate.findUnique({
-    where: { id: templateId, practiceId },
-  });
-
-  if (!template) {
-    return { error: 'Template not found' } as const;
-  }
-
   if (orderData.length === 0) {
     return { error: 'No orders to create' } as const;
   }
 
-  // Create one draft order per supplier
-  const createdOrders: { id: string; supplierName: string }[] = [];
-
   try {
-    for (const supplierGroup of orderData) {
-      if (supplierGroup.items.length === 0) {
-        continue;
-      }
+    const result = await getOrderService().createOrdersFromTemplate(ctx, templateId, orderData);
 
-      // Verify supplier belongs to practice
-      const supplier = await prisma.supplier.findUnique({
-        where: { id: supplierGroup.supplierId, practiceId },
-      });
+    revalidatePath('/orders');
+    revalidatePath('/orders/templates');
 
-      if (!supplier) {
-        continue; // Skip invalid suppliers
-      }
-
-      const order = await prisma.order.create({
-        data: {
-          practiceId,
-          supplierId: supplierGroup.supplierId,
-          status: 'DRAFT',
-          createdById: session.user.id,
-          notes: `Created from template: ${template.name}`,
-          items: {
-            create: supplierGroup.items.map((item) => ({
-              itemId: item.itemId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-            })),
-          },
-        },
-      });
-
-      createdOrders.push({
-        id: order.id,
-        supplierName: supplier.name,
-      });
-    }
-  } catch (error) {
+    return result;
+  } catch (error: any) {
     console.error('Error creating orders:', error);
-    return { error: 'Failed to create orders. Please try again.' } as const;
+    return { error: error.message || 'Failed to create orders. Please try again.' } as const;
   }
-
-  if (createdOrders.length === 0) {
-    return { error: 'No valid orders could be created' } as const;
-  }
-
-  revalidatePath('/orders');
-  revalidatePath('/orders/templates');
-
-  const message =
-    createdOrders.length === 1
-      ? `Created 1 draft order for ${createdOrders[0].supplierName}`
-      : `Created ${createdOrders.length} draft orders for ${createdOrders.length} suppliers`;
-
-  return {
-    success: true,
-    message,
-    orders: createdOrders,
-  } as const;
 }
+
 

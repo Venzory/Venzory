@@ -1,13 +1,15 @@
 import { PracticeRole } from '@prisma/client';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 
 import { NewTemplateFormClient } from './_components/new-template-form-client';
 
 export default async function NewTemplatePage() {
   const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
 
   const canManage = hasRole({
     memberships: session.user.memberships,
@@ -27,25 +29,21 @@ export default async function NewTemplatePage() {
     );
   }
 
-  const [items, suppliers] = await Promise.all([
-    prisma.item.findMany({
-      where: { practiceId },
-      orderBy: { name: 'asc' },
-      select: {
-        id: true,
-        name: true,
-        sku: true,
-        unit: true,
-        defaultSupplierId: true,
-      },
-    }),
-    prisma.supplier.findMany({
-      where: { practiceId },
-      orderBy: { name: 'asc' },
-      select: { id: true, name: true },
-    }),
+  const [allItems, suppliers] = await Promise.all([
+    getInventoryService().findItems(ctx, {}),
+    getInventoryService().getSuppliers(ctx),
   ]);
+
+  // Transform items to match expected format
+  const items = allItems.map(item => ({
+    id: item.id,
+    name: item.name,
+    sku: item.sku,
+    unit: item.unit,
+    defaultSupplierId: item.defaultSupplierId,
+  }));
 
   return <NewTemplateFormClient items={items} suppliers={suppliers} />;
 }
+
 

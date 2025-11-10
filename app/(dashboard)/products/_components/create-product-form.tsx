@@ -1,8 +1,9 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
 
 import { createProductAction } from '../actions';
+import { SubmitButton } from '@/components/ui/submit-button';
 
 type FormState = {
   success?: string;
@@ -13,7 +14,7 @@ type FormState = {
 const initialState: FormState = {};
 
 export function CreateProductForm() {
-  const [state, formAction] = useFormState(createProductAction, initialState);
+  const [state, formAction] = useActionState(createProductAction, initialState);
 
   return (
     <form action={formAction} className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
@@ -45,7 +46,7 @@ export function CreateProductForm() {
             name="gtin"
             placeholder="e.g. 08712345678906"
             maxLength={14}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+            className="max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Optional. Must be 8, 12, 13, or 14 digits. GS1 lookup will be attempted automatically.
@@ -95,22 +96,9 @@ export function CreateProductForm() {
         </div>
       ) : null}
 
-      <SubmitButton />
+      <SubmitButton variant="primary" loadingText="Creating...">Create Product</SubmitButton>
     </form>
   );
 }
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100"
-    >
-      {pending ? 'Creating...' : 'Create Product'}
-    </button>
-  );
-}
 

@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import { hash } from 'bcryptjs';
 import { z } from 'zod';
-import { MembershipStatus } from '@prisma/client';
 
 import { signIn } from '@/auth';
-import { prisma } from '@/lib/prisma';
+import { getAuthService } from '@/src/services';
 import { inviteAcceptRateLimiter, getClientIp } from '@/lib/rate-limit';
 
 const acceptInviteSchema = z.object({
@@ -51,122 +49,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find and validate invite
-    const invite = await prisma.userInvite.findUnique({
-      where: { token },
-      include: {
-        practice: {
-          select: { id: true, name: true },
-        },
-      },
-    });
+    // Accept invite using AuthService
+    const result = await getAuthService().acceptInvite(token, name, password);
 
-    if (!invite) {
-      return NextResponse.json(
-        { error: 'Invalid invitation token' },
-        { status: 404 },
-      );
-    }
-
-    if (invite.used) {
-      return NextResponse.json(
-        { error: 'This invitation has already been used' },
-        { status: 409 },
-      );
-    }
-
-    if (new Date() > invite.expiresAt) {
-      return NextResponse.json(
-        { error: 'This invitation has expired' },
-        { status: 410 },
-      );
-    }
-
-    const normalizedEmail = invite.email.toLowerCase();
-
-    // Hash password
-    const passwordHash = await hash(password, 12);
-
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-      include: {
-        memberships: {
-          where: { practiceId: invite.practiceId },
-        },
-      },
-    });
-
-    let userId: string;
-
-    if (existingUser) {
-      // User exists - check if already a member
-      if (existingUser.memberships.length > 0) {
-        return NextResponse.json(
-          { error: 'You are already a member of this practice' },
-          { status: 409 },
-        );
-      }
-
-      // User exists but not a member - create membership
-      await prisma.$transaction(async (tx) => {
-        // Create membership
-        await tx.practiceUser.create({
-          data: {
-            userId: existingUser.id,
-            practiceId: invite.practiceId,
-            role: invite.role,
-            status: MembershipStatus.ACTIVE,
-            invitedAt: invite.createdAt,
-            acceptedAt: new Date(),
-          },
-        });
-
-        // Mark invite as used
-        await tx.userInvite.update({
-          where: { id: invite.id },
-          data: { used: true },
-        });
-      });
-
-      userId = existingUser.id;
-    } else {
-      // New user - create user and membership
-      const result = await prisma.$transaction(async (tx) => {
-        // Create user
-        const newUser = await tx.user.create({
-          data: {
-            name,
-            email: normalizedEmail,
-            passwordHash,
-            memberships: {
-              create: {
-                practiceId: invite.practiceId,
-                role: invite.role,
-                status: MembershipStatus.ACTIVE,
-                invitedAt: invite.createdAt,
-                acceptedAt: new Date(),
-              },
-            },
-          },
-        });
-
-        // Mark invite as used
-        await tx.userInvite.update({
-          where: { id: invite.id },
-          data: { used: true },
-        });
-
-        return { user: newUser };
-      });
-
-      userId = result.user.id;
-    }
+    // Get the email from the accepted invite for sign-in
+    const invite = await getAuthService().validateInviteToken(token);
 
     // Sign the user in
     try {
       await signIn('credentials', {
-        email: normalizedEmail,
+        email: invite.email,
         password,
         redirect: false,
       });
@@ -187,12 +79,41 @@ export async function POST(request: Request) {
       {
         success: true,
         message: 'Invitation accepted successfully',
-        redirectTo: '/dashboard',
+        redirectTo: result.redirectTo,
       },
       { status: 200 },
     );
   } catch (error) {
     console.error('[accept-invite]', error);
+    
+    // Handle specific errors
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid invitation')) {
+        return NextResponse.json(
+          { error: 'Invalid invitation token' },
+          { status: 404 },
+        );
+      }
+      if (error.message.includes('already been used')) {
+        return NextResponse.json(
+          { error: 'This invitation has already been used' },
+          { status: 409 },
+        );
+      }
+      if (error.message.includes('expired')) {
+        return NextResponse.json(
+          { error: 'This invitation has expired' },
+          { status: 410 },
+        );
+      }
+      if (error.message.includes('already a member')) {
+        return NextResponse.json(
+          { error: 'You are already a member of this practice' },
+          { status: 409 },
+        );
+      }
+    }
+    
     return NextResponse.json(
       { error: 'An unexpected error occurred while accepting the invitation' },
       { status: 500 },

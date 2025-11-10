@@ -1,5 +1,7 @@
-import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { ReceivingRepository } from '@/src/repositories/receiving';
+import { InventoryRepository } from '@/src/repositories/inventory';
+import { OrderRepository } from '@/src/repositories/orders';
 import { notFound } from 'next/navigation';
 import { ReceiptDetail } from './_components/receipt-detail';
 import { GoodsReceiptStatus } from '@prisma/client';
@@ -9,84 +11,22 @@ interface ReceiptPageProps {
 }
 
 export default async function ReceiptPage({ params }: ReceiptPageProps) {
-  const { practiceId } = await requireActivePractice();
+  const ctx = await buildRequestContext();
   const { id } = await params;
 
-  const receipt = await prisma.goodsReceipt.findUnique({
-    where: {
-      id,
-      practiceId,
-    },
-    include: {
-      location: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      supplier: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      order: {
-        select: {
-          id: true,
-          reference: true,
-        },
-      },
-      lines: {
-        include: {
-          item: {
-            select: {
-              id: true,
-              name: true,
-              sku: true,
-              unit: true,
-              product: {
-                select: {
-                  gtin: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      },
-      createdBy: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-    },
-  });
+  const receivingRepo = new ReceivingRepository();
+  const inventoryRepo = new InventoryRepository();
+  const orderRepo = new OrderRepository();
+
+  // Fetch the receipt
+  const receipt = await receivingRepo.findGoodsReceiptById(id, ctx.practiceId);
 
   if (!receipt) {
     notFound();
   }
 
   // Fetch all items for adding manually
-  const items = await prisma.item.findMany({
-    where: { practiceId },
-    select: {
-      id: true,
-      name: true,
-      sku: true,
-      unit: true,
-      product: {
-        select: {
-          gtin: true,
-        },
-      },
-    },
-    orderBy: {
-      name: 'asc',
-    },
-  });
+  const items = await inventoryRepo.findItems(ctx.practiceId);
 
   // If linked to an order, fetch expected items and calculate what's already been received
   let expectedItems: Array<{
@@ -99,66 +39,51 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
     unit: string | null;
   }> | null = null;
 
-  if (receipt.order) {
-    const orderItems = await prisma.orderItem.findMany({
-      where: {
-        orderId: receipt.order.id,
-      },
-      include: {
-        item: {
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            unit: true,
-          },
-        },
-      },
+  if (receipt.orderId) {
+    // Fetch the order with its items
+    const order = await orderRepo.findOrderById(receipt.orderId, ctx.practiceId);
+    const orderItems = order.items || [];
+
+    // Get all confirmed receipts for this order
+    const confirmedReceipts = await receivingRepo.findGoodsReceipts(ctx.practiceId, {
+      orderId: receipt.orderId,
+      status: 'CONFIRMED',
     });
 
-    // Get all OTHER confirmed receipts for this order (not including the current draft)
-    const previousReceipts = await prisma.goodsReceipt.findMany({
-      where: {
-        orderId: receipt.order.id,
-        status: 'CONFIRMED',
-        id: { not: receipt.id },
-      },
-      include: {
-        lines: {
-          select: {
-            itemId: true,
-            quantity: true,
-          },
-        },
-      },
-    });
-
-    // Calculate total received per item from previous receipts
+    // Calculate what's already been received from confirmed receipts
     const receivedByItem = new Map<string, number>();
-    for (const prevReceipt of previousReceipts) {
-      for (const line of prevReceipt.lines) {
+    for (const prevReceipt of confirmedReceipts) {
+      for (const line of prevReceipt.lines || []) {
+        const current = receivedByItem.get(line.itemId) || 0;
+        receivedByItem.set(line.itemId, current + line.quantity);
+      }
+    }
+
+    // Also include items from the current draft receipt
+    if (receipt.status === 'DRAFT') {
+      for (const line of receipt.lines || []) {
         const current = receivedByItem.get(line.itemId) || 0;
         receivedByItem.set(line.itemId, current + line.quantity);
       }
     }
 
     expectedItems = orderItems.map((oi) => {
-      const alreadyReceived = receivedByItem.get(oi.item.id) || 0;
+      const alreadyReceived = receivedByItem.get(oi.itemId) || 0;
       const remainingQuantity = Math.max(0, oi.quantity - alreadyReceived);
       
       return {
-        itemId: oi.item.id,
-        itemName: oi.item.name,
-        itemSku: oi.item.sku,
+        itemId: oi.itemId,
+        itemName: oi.item?.name || 'Unknown',
+        itemSku: oi.item?.sku || null,
         orderedQuantity: oi.quantity,
         alreadyReceived,
         remainingQuantity,
-        unit: oi.item.unit,
+        unit: oi.item?.unit || null,
       };
     });
 
-    // Filter out items that are fully received (optional - you might want to show them as "Already Received")
-    // expectedItems = expectedItems.filter(item => item.remainingQuantity > 0);
+    // Filter out items that are fully received to avoid showing ghost forms
+    expectedItems = expectedItems.filter(item => item.remainingQuantity > 0);
   }
 
   const canEdit = receipt.status === GoodsReceiptStatus.DRAFT;
@@ -166,8 +91,8 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <ReceiptDetail 
-        receipt={receipt} 
-        items={items} 
+        receipt={receipt as any} 
+        items={items as any} 
         canEdit={canEdit}
         expectedItems={expectedItems}
       />
