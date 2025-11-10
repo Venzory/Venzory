@@ -14,7 +14,7 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
     <Card className="border-dashed p-12 text-center">
       {Icon && (
         <div className="flex justify-center mb-4">
-          <Icon className="h-12 w-12 text-slate-400 dark:text-slate-500" />
+          <Icon className="h-12 w-12 text-slate-500 dark:text-slate-500" />
         </div>
       )}
       <p className="text-base font-semibold text-slate-900 dark:text-slate-200">{title}</p>

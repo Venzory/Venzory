@@ -69,8 +69,8 @@ export default async function StockCountPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-card-border bg-card p-6">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-amber-900/20 p-3">
-              <Clipboard className="h-6 w-6 text-amber-300" />
+            <div className="rounded-lg bg-amber-100 p-3 dark:bg-amber-900/20">
+              <Clipboard className="h-6 w-6 text-amber-600 dark:text-amber-300" />
             </div>
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">In Progress</p>
@@ -83,8 +83,8 @@ export default async function StockCountPage() {
 
         <div className="rounded-lg border border-card-border bg-card p-6">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-green-900/20 p-3">
-              <ClipboardCheck className="h-6 w-6 text-green-300" />
+            <div className="rounded-lg bg-green-100 p-3 dark:bg-green-900/20">
+              <ClipboardCheck className="h-6 w-6 text-green-600 dark:text-green-300" />
             </div>
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Completed (30d)</p>
@@ -97,8 +97,8 @@ export default async function StockCountPage() {
 
         <div className="rounded-lg border border-card-border bg-card p-6">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-sky-900/20 p-3">
-              <MapPin className="h-6 w-6 text-sky-300" />
+            <div className="rounded-lg bg-sky-100 p-3 dark:bg-sky-900/20">
+              <MapPin className="h-6 w-6 text-sky-600 dark:text-sky-300" />
             </div>
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Items Counted</p>

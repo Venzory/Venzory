@@ -247,7 +247,7 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-slate-900 dark:text-white">{item.name}</h3>
                     {item.sku ? (
-                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                         {item.sku}
                       </span>
                     ) : null}
@@ -307,7 +307,7 @@ export default async function DashboardPage() {
                   <span>
                     {formatDistanceToNow(adjustment.createdAt, { addSuffix: true })}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800">
+                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                     {adjustment.reason ?? 'Adjustment'}
                   </span>
                 </div>

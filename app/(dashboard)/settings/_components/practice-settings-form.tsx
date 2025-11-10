@@ -40,7 +40,7 @@ export function PracticeSettingsForm({ practice }: PracticeSettingsFormProps) {
   return (
     <form action={formAction} className="space-y-6">
       {/* Practice Name */}
-      <div className="space-y-2">
+      <div className="space-y-2 max-w-lg">
         <label htmlFor="practice-name" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Practice Name
         </label>
@@ -97,7 +97,7 @@ export function PracticeSettingsForm({ practice }: PracticeSettingsFormProps) {
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
-          <div className="space-y-2 sm:col-span-2">
+          <div className="space-y-2">
             <label htmlFor="country" className="text-sm font-medium text-slate-700 dark:text-slate-200">
               Country
             </label>
@@ -144,7 +144,7 @@ export function PracticeSettingsForm({ practice }: PracticeSettingsFormProps) {
       </div>
 
       {/* Logo */}
-      <div className="space-y-2">
+      <div className="space-y-2 max-w-lg">
         <label htmlFor="logoUrl" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Logo URL
         </label>
@@ -160,9 +160,6 @@ export function PracticeSettingsForm({ practice }: PracticeSettingsFormProps) {
           Enter the URL of your practice logo image.
         </p>
       </div>
-
-      {state.error ? <p className="text-sm text-rose-600 dark:text-rose-400">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{state.success}</p> : null}
 
       <SubmitButton variant="primary" loadingText="Saving…">Save Practice Settings</SubmitButton>
     </form>

@@ -211,17 +211,17 @@ export function TemplatePreviewClient({
   if (successMessage && createdOrders.length > 0) {
     return (
       <div className="space-y-6">
-        <div className="rounded-xl border border-emerald-700 bg-emerald-900/20 p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-emerald-300">Orders Created Successfully!</h2>
-          <p className="text-sm text-emerald-200">{successMessage}</p>
+        <div className="rounded-xl border border-emerald-300 bg-emerald-100 p-6 space-y-4 dark:border-emerald-700 dark:bg-emerald-900/20">
+          <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-300">Orders Created Successfully!</h2>
+          <p className="text-sm text-emerald-700 dark:text-emerald-200">{successMessage}</p>
           <div className="space-y-2">
-            <p className="text-sm font-medium text-emerald-300">Created orders:</p>
+            <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Created orders:</p>
             <ul className="space-y-2">
               {createdOrders.map((order) => (
                 <li key={order.id}>
                   <Link
                     href={`/orders/${order.id}`}
-                    className="text-sm text-sky-400 transition hover:text-sky-300"
+                    className="text-sm text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                   >
                     Order for {order.supplierName} →
                   </Link>
@@ -229,7 +229,7 @@ export function TemplatePreviewClient({
               ))}
             </ul>
           </div>
-          <p className="text-xs text-emerald-400">Redirecting...</p>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400">Redirecting...</p>
         </div>
       </div>
     );
@@ -242,36 +242,36 @@ export function TemplatePreviewClient({
           <div className="flex items-center gap-3">
             <Link
               href={`/orders/templates/${template.id}`}
-              className="text-sm text-slate-400 transition hover:text-slate-200"
+              className="text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             >
               ← Back to Template
             </Link>
           </div>
-          <h1 className="text-2xl font-semibold text-white">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">
             Create Orders from Template: {template.name}
           </h1>
-          <p className="text-sm text-slate-300">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Review and adjust quantities before creating draft orders
           </p>
         </div>
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-900/20 p-4 text-sm text-rose-300">
+        <div className="rounded-lg border border-rose-300 bg-rose-100 p-4 text-sm text-rose-800 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300">
           {error}
         </div>
       ) : null}
 
       {supplierGroups.size === 0 ? (
-        <div className="rounded-xl border border-amber-700 bg-amber-900/20 p-6 text-center">
-          <p className="text-lg font-medium text-amber-200">No items with suppliers</p>
-          <p className="mt-2 text-sm text-amber-300">
+        <div className="rounded-xl border border-amber-300 bg-amber-100 p-6 text-center dark:border-amber-700 dark:bg-amber-900/20">
+          <p className="text-lg font-medium text-amber-900 dark:text-amber-200">No items with suppliers</p>
+          <p className="mt-2 text-sm text-amber-800 dark:text-amber-300">
             All items in this template need a supplier assigned. Go back and edit the template to
             add suppliers to items.
           </p>
           <Link
             href={`/orders/templates/${template.id}`}
-            className="mt-4 inline-block rounded-lg border border-amber-600 px-4 py-2 text-sm font-medium text-amber-200 transition hover:bg-amber-900/30"
+            className="mt-4 inline-block rounded-lg border border-amber-400 px-4 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200 dark:border-amber-600 dark:text-amber-200 dark:hover:bg-amber-900/30"
           >
             Edit Template
           </Link>
@@ -289,37 +289,37 @@ export function TemplatePreviewClient({
             return (
               <div
                 key={supplierId}
-                className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden"
+                className="rounded-xl border border-slate-200 bg-white overflow-hidden dark:border-slate-800 dark:bg-slate-900/60"
               >
-                <div className="border-b border-slate-800 bg-slate-950/40 p-4">
-                  <h2 className="text-lg font-semibold text-white">{supplier.name}</h2>
-                  <p className="text-sm text-slate-400 mt-1">
+                <div className="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{supplier.name}</h2>
+                  <p className="text-sm text-slate-600 mt-1 dark:text-slate-400">
                     {items.length} {items.length === 1 ? 'item' : 'items'}
                   </p>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="border-b border-slate-800 bg-slate-950/40">
+                    <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                           Item
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                           Quantity
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                           Unit Price
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                           Total
                         </th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                       {items.map((orderItem) => {
                         const item = allItems.find((i) => i.id === orderItem.itemId);
                         if (!item) return null;
@@ -330,9 +330,9 @@ export function TemplatePreviewClient({
                           <tr key={orderItem.itemId}>
                             <td className="px-4 py-3">
                               <div className="flex flex-col">
-                                <span className="font-medium text-slate-200">{item.name}</span>
+                                <span className="font-medium text-slate-900 dark:text-slate-200">{item.name}</span>
                                 {item.sku ? (
-                                  <span className="text-xs text-slate-500">{item.sku}</span>
+                                  <span className="text-xs text-slate-500 dark:text-slate-500">{item.sku}</span>
                                 ) : null}
                               </div>
                             </td>
@@ -348,15 +348,15 @@ export function TemplatePreviewClient({
                                     parseInt(e.target.value) || 1
                                   )
                                 }
-                                className="w-20 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-center text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
+                                className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-center text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                               />
                               {item.unit ? (
-                                <span className="ml-2 text-slate-500">{item.unit}</span>
+                                <span className="ml-2 text-slate-500 dark:text-slate-500">{item.unit}</span>
                               ) : null}
                             </td>
                             <td className="px-4 py-3 text-right">
                               <div className="inline-flex items-center gap-1">
-                                <span className="text-slate-400">€</span>
+                                <span className="text-slate-600 dark:text-slate-400">€</span>
                                 <input
                                   type="number"
                                   min="0"
@@ -369,18 +369,18 @@ export function TemplatePreviewClient({
                                       parseFloat(e.target.value) || 0
                                     )
                                   }
-                                  className="w-24 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-right text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
+                                  className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                                 />
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-right font-medium text-slate-200">
+                            <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-200">
                               €{lineTotal.toFixed(2)}
                             </td>
                             <td className="px-4 py-3 text-right">
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItem(supplierId, orderItem.itemId)}
-                                className="text-sm text-rose-400 transition hover:text-rose-300"
+                                className="text-sm text-rose-600 transition hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
                               >
                                 Remove
                               </button>
@@ -389,12 +389,12 @@ export function TemplatePreviewClient({
                         );
                       })}
                     </tbody>
-                    <tfoot className="border-t border-slate-800 bg-slate-950/40">
+                    <tfoot className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                       <tr>
-                        <td colSpan={3} className="px-4 py-3 text-right font-semibold text-slate-200">
+                        <td colSpan={3} className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-200">
                           Subtotal for {supplier.name}
                         </td>
-                        <td className="px-4 py-3 text-right text-lg font-bold text-white">
+                        <td className="px-4 py-3 text-right text-lg font-bold text-slate-900 dark:text-white">
                           €{total.toFixed(2)}
                         </td>
                         <td></td>
@@ -404,9 +404,9 @@ export function TemplatePreviewClient({
                 </div>
 
                 {/* Add Item to Supplier Group */}
-                <div className="border-t border-slate-800 bg-slate-950/40 p-4">
+                <div className="border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
                   <div className="space-y-2">
-                    <label className="text-sm text-slate-400">
+                    <label className="text-sm text-slate-700 dark:text-slate-400">
                       Add another item for {supplier.name}
                     </label>
                     <select
@@ -417,7 +417,7 @@ export function TemplatePreviewClient({
                           e.target.value = '';
                         }
                       }}
-                      className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                     >
                       <option value="">Select an item to add...</option>
                       {allItems
@@ -444,7 +444,7 @@ export function TemplatePreviewClient({
           <div className="flex gap-3 justify-end">
             <Link
               href={`/orders/templates/${template.id}`}
-              className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Cancel
             </Link>

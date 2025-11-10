@@ -28,13 +28,13 @@ export default async function TemplatesPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/orders"
-              className="text-sm text-slate-400 transition hover:text-slate-200"
+              className="text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             >
               ← Back to Orders
             </Link>
           </div>
-          <h1 className="text-2xl font-semibold text-white">Order Templates</h1>
-          <p className="text-sm text-slate-300">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Order Templates</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Create reusable order templates for quick ordering.
           </p>
         </div>
@@ -49,7 +49,7 @@ export default async function TemplatesPage() {
       </div>
 
       {!canManage ? (
-        <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4 text-sm text-slate-300">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
           You can view templates but need staff permissions to create or edit them.
         </div>
       ) : null}
@@ -68,10 +68,10 @@ function TemplatesList({
 }) {
   if (templates.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-12 text-center">
+      <div className="rounded-xl border border-slate-200 bg-white p-12 text-center dark:border-slate-800 dark:bg-slate-900/60">
         <div className="space-y-3">
-          <p className="text-lg font-medium text-slate-200">No templates yet</p>
-          <p className="text-sm text-slate-400">
+          <p className="text-lg font-medium text-slate-900 dark:text-slate-200">No templates yet</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Create your first order template to streamline ordering.
           </p>
           {canManage ? (
@@ -108,29 +108,29 @@ function TemplateCard({
   canManage: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4 transition hover:border-slate-700">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700">
       <div className="space-y-2">
         <Link
           href={`/orders/templates/${template.id}`}
-          className="block text-lg font-semibold text-white transition hover:text-sky-400"
+          className="block text-lg font-semibold text-slate-900 transition hover:text-sky-600 dark:text-white dark:hover:text-sky-400"
         >
           {template.name}
         </Link>
         {template.description ? (
-          <p className="text-sm text-slate-400 line-clamp-2">
+          <p className="text-sm text-slate-600 line-clamp-2 dark:text-slate-400">
             {template.description}
           </p>
         ) : null}
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-slate-500">
+      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-500">
         <div className="flex items-center gap-1">
-          <span className="font-medium text-slate-300">
+          <span className="font-medium text-slate-900 dark:text-slate-300">
             {template.items.length}
           </span>
           <span>{template.items.length === 1 ? 'item' : 'items'}</span>
         </div>
-        <div className="h-1 w-1 rounded-full bg-slate-600" />
+        <div className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
         <div>
           Created {formatDistanceToNow(new Date(template.createdAt), { addSuffix: true })}
         </div>
@@ -139,7 +139,7 @@ function TemplateCard({
       <div className="flex items-center gap-2 pt-2">
         <Link
           href={`/orders/templates/${template.id}`}
-          className="flex-1 rounded-lg border border-slate-700 px-3 py-2 text-center text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           View
         </Link>

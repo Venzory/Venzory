@@ -98,31 +98,31 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
           <div className="flex items-center gap-3">
             <Link
               href="/orders/templates"
-              className="text-sm text-slate-400 transition hover:text-slate-200"
+              className="text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             >
               ← Back to Templates
             </Link>
           </div>
-          <h1 className="text-2xl font-semibold text-white">New Order Template</h1>
-          <p className="text-sm text-slate-300">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">New Order Template</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Create a reusable template for frequently ordered items
           </p>
         </div>
       </div>
 
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-900/20 p-4 text-sm text-rose-300">
+        <div className="rounded-lg border border-rose-300 bg-rose-100 p-4 text-sm text-rose-800 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300">
           {error}
         </div>
       ) : null}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Template Details */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white">Template Details</h2>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-800 dark:bg-slate-900/60">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Template Details</h2>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="name" className="text-sm text-slate-400">
+              <label htmlFor="name" className="text-sm text-slate-700 dark:text-slate-400">
                 Template Name *
               </label>
               <input
@@ -132,11 +132,11 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Monthly Supplies"
                 required
-                className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="description" className="text-sm text-slate-400">
+              <label htmlFor="description" className="text-sm text-slate-700 dark:text-slate-400">
                 Description (optional)
               </label>
               <textarea
@@ -145,43 +145,43 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="Add notes about this template..."
-                className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
               />
             </div>
           </div>
         </div>
 
         {/* Items Selection */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-          <div className="border-b border-slate-800 bg-slate-950/40 p-4">
-            <h2 className="text-lg font-semibold text-white">Template Items</h2>
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Template Items</h2>
           </div>
 
           {selectedItems.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-400">
-              <p className="font-medium text-slate-200">No items added yet</p>
+            <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-400">
+              <p className="font-medium text-slate-900 dark:text-slate-200">No items added yet</p>
               <p className="mt-2">Add items to this template using the dropdown below</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="border-b border-slate-800 bg-slate-950/40">
+                <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                       Item
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                       Default Quantity
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                       Supplier
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                   {selectedItems.map((selectedItem) => {
                     const item = items.find((i) => i.id === selectedItem.itemId);
 
@@ -189,9 +189,9 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
                       <tr key={selectedItem.itemId}>
                         <td className="px-4 py-3">
                           <div className="flex flex-col">
-                            <span className="font-medium text-slate-200">{item?.name}</span>
+                            <span className="font-medium text-slate-900 dark:text-slate-200">{item?.name}</span>
                             {item?.sku ? (
-                              <span className="text-xs text-slate-500">{item.sku}</span>
+                              <span className="text-xs text-slate-500 dark:text-slate-500">{item.sku}</span>
                             ) : null}
                           </div>
                         </td>
@@ -206,10 +206,10 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
                                 parseInt(e.target.value) || 1
                               )
                             }
-                            className="w-20 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-center text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
+                            className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-center text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                           />
                           {item?.unit ? (
-                            <span className="ml-2 text-slate-500">{item.unit}</span>
+                            <span className="ml-2 text-slate-500 dark:text-slate-500">{item.unit}</span>
                           ) : null}
                         </td>
                         <td className="px-4 py-3">
@@ -221,7 +221,7 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
                                 e.target.value || null
                               )
                             }
-                            className="w-full max-w-xs rounded border border-slate-700 bg-slate-800 px-2 py-1 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
+                            className="w-full max-w-xs rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                           >
                             <option value="">No supplier</option>
                             {suppliers.map((supplier) => (
@@ -235,7 +235,7 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(selectedItem.itemId)}
-                            className="text-sm text-rose-400 transition hover:text-rose-300"
+                            className="text-sm text-rose-600 transition hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
                           >
                             Remove
                           </button>
@@ -249,9 +249,9 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
           )}
 
           {/* Add Item Dropdown */}
-          <div className="border-t border-slate-800 bg-slate-950/40 p-4">
+          <div className="border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
             <div className="space-y-2">
-              <label className="text-sm text-slate-400">Add Item</label>
+              <label className="text-sm text-slate-700 dark:text-slate-400">Add Item</label>
               <select
                 value=""
                 onChange={(e) => {
@@ -260,7 +260,7 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
                     e.target.value = '';
                   }
                 }}
-                className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
               >
                 <option value="">Select an item to add...</option>
                 {items
@@ -273,7 +273,7 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
               </select>
               {items.filter((item) => !selectedItems.some((si) => si.itemId === item.id))
                 .length === 0 && selectedItems.length > 0 ? (
-                <p className="text-xs text-slate-500">All available items have been added</p>
+                <p className="text-xs text-slate-500 dark:text-slate-500">All available items have been added</p>
               ) : null}
             </div>
           </div>
@@ -283,7 +283,7 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
         <div className="flex gap-3 justify-end">
           <Link
             href="/orders/templates"
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             Cancel
           </Link>

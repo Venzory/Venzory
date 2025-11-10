@@ -153,10 +153,10 @@ export default async function SettingsPage() {
                         <span
                           className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                             membership.role === 'ADMIN'
-                              ? 'bg-purple-900/30 text-purple-300'
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
                               : membership.role === 'STAFF'
-                                ? 'bg-blue-900/30 text-blue-300'
-                                : 'bg-slate-800/30 text-slate-300'
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                : 'bg-slate-200 text-slate-700 dark:bg-slate-800/30 dark:text-slate-300'
                           }`}
                         >
                           {membership.role.charAt(0) + membership.role.slice(1).toLowerCase()}
@@ -167,10 +167,10 @@ export default async function SettingsPage() {
                       <span
                         className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                           membership.status === 'ACTIVE'
-                            ? 'bg-green-900/30 text-green-300'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                             : membership.status === 'INVITED'
-                              ? 'bg-yellow-900/30 text-yellow-300'
-                              : 'bg-slate-800/30 text-slate-400'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                              : 'bg-slate-200 text-slate-700 dark:bg-slate-800/30 dark:text-slate-400'
                         }`}
                       >
                         {membership.status.charAt(0) + membership.status.slice(1).toLowerCase()}
@@ -228,7 +228,7 @@ export default async function SettingsPage() {
                         {invite.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className="inline-flex rounded-full bg-blue-900/30 px-2 py-1 text-xs font-medium text-blue-300">
+                        <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                           {invite.role.charAt(0) + invite.role.slice(1).toLowerCase()}
                         </span>
                       </td>
