@@ -968,7 +968,7 @@ async function createSuppliersAndCatalog(practiceId: string) {
           globalSupplierId: globalSupplier.id,
           migratedFromSupplierId: supplier.id,
           accountNumber: suppData.accountNumber || null,
-          customLabel: suppData.customLabel || null,
+          customLabel: (suppData as any).customLabel || null,
           isPreferred: suppData.isPreferred || false,
           isBlocked: false,
         },

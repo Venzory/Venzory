@@ -27,6 +27,24 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   
   const { q, status } = params;
 
+  // Check if user is ADMIN (Product Master Data is admin-only)
+  const isAdmin = hasRole({
+    memberships: session.user.memberships,
+    practiceId,
+    minimumRole: PracticeRole.ADMIN,
+  });
+
+  if (!isAdmin) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Access Denied</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Only administrators can access product master data management.
+        </p>
+      </div>
+    );
+  }
+
   // Query products using ProductService with filters
   const products = await getProductService().findProducts(ctx, {
     search: q?.trim(),
@@ -45,9 +63,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <section className="space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Product Catalog</h1>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Product Master Data</h1>
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              View canonical product information from supplier catalogs and GS1 data.
+              Manage global product records and GS1 data (admin only).
             </p>
           </div>
         </div>

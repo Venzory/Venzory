@@ -26,13 +26,13 @@ export function ProductFilters() {
     }
 
     startTransition(() => {
-      router.push(`/products?${params.toString()}`);
+      router.push(`/settings/products?${params.toString()}`);
     });
   };
 
   const handleClear = () => {
     startTransition(() => {
-      router.push('/products');
+      router.push('/settings/products');
     });
   };
 

@@ -12,12 +12,13 @@ import { SupplierStatusBadges } from '../_components/supplier-status-badges';
 import { unlinkPracticeSupplierAction } from '../actions';
 
 interface SupplierDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function SupplierDetailPage({ params }: SupplierDetailPageProps) {
+  const { id } = await params;
   const { session, practiceId } = await requireActivePractice();
 
   // Fetch practice supplier with global supplier info
@@ -25,7 +26,7 @@ export default async function SupplierDetailPage({ params }: SupplierDetailPageP
   let practiceSupplier;
   
   try {
-    practiceSupplier = await repository.findPracticeSupplierById(params.id, practiceId);
+    practiceSupplier = await repository.findPracticeSupplierById(id, practiceId);
   } catch (error) {
     notFound();
   }

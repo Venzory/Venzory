@@ -16,6 +16,8 @@ import {
   ChevronRight,
   PackageCheck,
   ClipboardCheck,
+  BookOpen,
+  FolderOpen,
 } from 'lucide-react';
 
 type NavItem = {
@@ -27,14 +29,16 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/my-items', label: 'My Items', icon: FolderOpen },
+  { href: '/supplier-catalog', label: 'Supplier Catalog', icon: BookOpen },
   { href: '/inventory', label: 'Inventory', icon: Package },
-  { href: '/products', label: 'Products', icon: Package2 },
   { href: '/locations', label: 'Locations', icon: MapPin },
   { href: '/suppliers', label: 'Suppliers', icon: Building2 },
   { href: '/orders', label: 'Orders', icon: ShoppingCart },
   { href: '/receiving', label: 'Receiving', icon: PackageCheck, minRole: 'STAFF' },
   { href: '/stock-count', label: 'Stock Count', icon: ClipboardCheck, minRole: 'STAFF' },
   { href: '/settings', label: 'Settings', icon: Settings, minRole: 'STAFF' },
+  { href: '/settings/products', label: 'Product Master Data', icon: Package2, minRole: 'ADMIN' },
 ];
 
 type SidebarProps = {

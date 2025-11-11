@@ -149,6 +149,7 @@ export interface InventoryFilters {
   locationId?: string;
   supplierId?: string;
   practiceSupplierId?: string; // Phase 2: filter by PracticeSupplier
+  productId?: string; // Phase 2: filter by Product (for catalog management)
   lowStockOnly?: boolean;
 }
 

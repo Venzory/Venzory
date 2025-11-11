@@ -62,6 +62,11 @@ export class InventoryRepository extends BaseRepository {
       where.defaultPracticeSupplierId = filters.practiceSupplierId;
     }
 
+    // Filter by product (Phase 2: Catalog management)
+    if (filters?.productId) {
+      where.productId = filters.productId;
+    }
+
     const items = await client.item.findMany({
       where,
       include: {

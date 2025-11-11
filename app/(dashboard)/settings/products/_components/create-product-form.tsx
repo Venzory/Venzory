@@ -87,7 +87,7 @@ export function CreateProductForm() {
           <p className="text-sm text-emerald-600 dark:text-emerald-400">{state.success}</p>
           {state.productId ? (
             <a
-              href={`/products/${state.productId}`}
+              href={`/settings/products/${state.productId}`}
               className="inline-block text-sm text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
             >
               View product →

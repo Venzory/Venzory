@@ -214,9 +214,10 @@ model PracticeSupplier {
   globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
   
   // Reverse relations (Phase 2)
-  orders         Order[]
-  supplierItems  SupplierItem[]
-  defaultItems   Item[]
+  orders           Order[]
+  supplierItems    SupplierItem[]
+  defaultItems     Item[]
+  supplierCatalogs SupplierCatalog[]
 
   @@unique([practiceId, globalSupplierId])
   @@index([practiceId])
@@ -250,7 +251,8 @@ model Supplier {
 // This enables multiple suppliers to offer the same GS1 product with different terms
 model SupplierCatalog {
   id                String          @id @default(cuid())
-  supplierId        String
+  supplierId        String // Legacy reference (backward compatibility)
+  practiceSupplierId String?        // Phase 2: New architecture reference
   productId         String
   supplierSku       String? // Supplier's own SKU for this product
   unitPrice         Decimal?        @db.Decimal(12, 2)
@@ -263,11 +265,13 @@ model SupplierCatalog {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
-  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supplier         Supplier          @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id], onDelete: Cascade)
+  product          Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([supplierId, productId])
   @@index([supplierId])
+  @@index([practiceSupplierId])
   @@index([productId])
   @@index([isActive])
 }

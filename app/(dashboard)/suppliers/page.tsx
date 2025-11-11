@@ -35,7 +35,7 @@ export default async function SuppliersPage() {
           Suppliers
         </h1>
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Manage your practice's supplier relationships, account details, and ordering preferences.
+          Manage your practice&apos;s supplier relationships, account details, and ordering preferences.
         </p>
       </div>
 

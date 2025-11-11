@@ -274,6 +274,58 @@ export class ProductService {
       return catalog;
     });
   }
+
+  /**
+   * Find products available to a practice (via their PracticeSuppliers)
+   * Phase 2: Catalog browsing
+   */
+  async findProductsForPractice(
+    ctx: RequestContext,
+    filters?: Partial<ProductFilters>
+  ): Promise<Product[]> {
+    // Add practice filter to only show products from linked suppliers
+    const practiceFilters = {
+      ...filters,
+      practiceId: ctx.practiceId,
+    };
+
+    return this.productRepository.findProducts(practiceFilters);
+  }
+
+  /**
+   * Get supplier offers for a product (filtered by practice)
+   * Phase 2: Returns all SupplierCatalog entries from practice's linked suppliers
+   */
+  async getSupplierOffersForProduct(
+    ctx: RequestContext,
+    productId: string
+  ): Promise<SupplierCatalog[]> {
+    // Verify product exists
+    await this.productRepository.findProductById(productId);
+
+    // Get all catalog entries from practice's suppliers
+    return this.productRepository.findCatalogsByProductForPractice(
+      productId,
+      ctx.practiceId
+    );
+  }
+
+  /**
+   * Find catalog entries for a practice supplier
+   * Phase 2: Get all products offered by a specific supplier
+   */
+  async findCatalogForPracticeSupplier(
+    ctx: RequestContext,
+    practiceSupplierId: string,
+    activeOnly: boolean = true
+  ): Promise<SupplierCatalog[]> {
+    // Note: We don't verify the supplier belongs to the practice here
+    // That check should be done at the controller/action layer
+    return this.productRepository.findCatalogsByPracticeSupplier(
+      practiceSupplierId,
+      activeOnly
+    );
+  }
 }
 
 // Singleton instance

@@ -22,10 +22,11 @@ interface NewOrderFormClientProps {
       unitPrice: any;
     }[];
   }[];
+  preSelectedSupplierId?: string;
 }
 
-export function NewOrderFormClient({ practiceSuppliers, items }: NewOrderFormClientProps) {
-  const [selectedPracticeSupplierId, setSelectedPracticeSupplierId] = useState('');
+export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSupplierId }: NewOrderFormClientProps) {
+  const [selectedPracticeSupplierId, setSelectedPracticeSupplierId] = useState(preSelectedSupplierId || '');
   const [selectedItems, setSelectedItems] = useState<
     { itemId: string; quantity: number; unitPrice: number }[]
   >([]);

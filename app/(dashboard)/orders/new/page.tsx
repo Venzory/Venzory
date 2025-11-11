@@ -8,8 +8,13 @@ import { hasRole } from '@/lib/rbac';
 
 import { NewOrderFormClient } from './_components/new-order-form-client';
 
-export default async function NewOrderPage() {
+interface NewOrderPageProps {
+  searchParams: Promise<{ supplierId?: string }>;
+}
+
+export default async function NewOrderPage({ searchParams }: NewOrderPageProps) {
   const { session, practiceId } = await requireActivePractice();
+  const { supplierId } = await searchParams;
   const ctx = buildRequestContextFromSession(session);
 
   const canManage = hasRole({
@@ -53,6 +58,15 @@ export default async function NewOrderPage() {
     })) || [],
   }));
 
-  return <NewOrderFormClient practiceSuppliers={practiceSuppliers} items={items} />;
+  // Validate pre-selected supplier ID if provided
+  const preSelectedSupplierId = supplierId 
+    ? practiceSuppliers.find(ps => ps.id === supplierId)?.id 
+    : undefined;
+
+  return <NewOrderFormClient 
+    practiceSuppliers={practiceSuppliers} 
+    items={items} 
+    preSelectedSupplierId={preSelectedSupplierId}
+  />;
 }
 

@@ -116,6 +116,91 @@ export class InventoryService {
   }
 
   /**
+   * Add item from catalog (Phase 2: Catalog management)
+   * Creates an Item from a Product that exists in the practice's SupplierCatalog
+   */
+  async addItemFromCatalog(
+    ctx: RequestContext,
+    input: {
+      productId: string;
+      practiceSupplierId: string;
+      name: string;
+      sku?: string | null;
+      unit?: string | null;
+      description?: string | null;
+    }
+  ): Promise<ItemWithRelations> {
+    // Check permissions
+    requireRole(ctx, 'STAFF');
+
+    // Validate input
+    validateStringLength(input.name, 'Item name', 1, 255);
+    if (input.sku) {
+      validateStringLength(input.sku, 'SKU', 1, 64);
+    }
+
+    return withTransaction(async (tx) => {
+      // Verify product exists
+      await this.productRepository.findProductById(input.productId, { tx });
+
+      // Verify the product is available from this practice supplier
+      const catalogEntry = await this.productRepository.findCatalogByPracticeSupplierProduct(
+        input.practiceSupplierId,
+        input.productId,
+        { tx }
+      );
+
+      if (!catalogEntry) {
+        throw new BusinessRuleViolationError(
+          'This product is not available from the selected supplier'
+        );
+      }
+
+      // Check if item already exists for this product in the practice
+      const existingItems = await this.inventoryRepository.findItems(
+        ctx.practiceId,
+        { productId: input.productId },
+        { tx }
+      );
+
+      if (existingItems.length > 0) {
+        throw new BusinessRuleViolationError(
+          'An item for this product already exists in your catalog'
+        );
+      }
+
+      // Create item
+      const item = await this.inventoryRepository.createItem(
+        {
+          practiceId: ctx.practiceId,
+          productId: input.productId,
+          name: input.name,
+          sku: input.sku ?? null,
+          unit: input.unit ?? null,
+          description: input.description ?? null,
+          defaultPracticeSupplierId: input.practiceSupplierId,
+        },
+        { tx }
+      );
+
+      // Log audit event
+      await this.auditService.logItemCreated(
+        ctx,
+        item.id,
+        {
+          name: item.name,
+          sku: item.sku,
+          productId: item.productId,
+        },
+        tx
+      );
+
+      // Return item with relations
+      return this.inventoryRepository.findItemById(item.id, ctx.practiceId, { tx });
+    });
+  }
+
+  /**
    * Update existing item
    */
   async updateItem(

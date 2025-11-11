@@ -29,7 +29,8 @@ export interface Product extends BaseEntity {
  * Supplier catalog entry linking supplier to product
  */
 export interface SupplierCatalog extends BaseEntity {
-  supplierId: string;
+  supplierId: string; // Legacy reference (backward compatibility)
+  practiceSupplierId: string | null; // Phase 2: New architecture reference
   productId: string;
   supplierSku: string | null;
   unitPrice: number | null;
@@ -39,6 +40,15 @@ export interface SupplierCatalog extends BaseEntity {
   integrationConfig: Record<string, any> | null;
   lastSyncAt: Date | null;
   isActive: boolean;
+}
+
+/**
+ * Supplier catalog with related entities
+ */
+export interface SupplierCatalogWithRelations extends SupplierCatalog {
+  supplier?: any; // Legacy Supplier
+  practiceSupplier?: any; // PracticeSupplier (Phase 2)
+  product?: Product;
 }
 
 /**
@@ -69,7 +79,8 @@ export interface UpdateProductInput {
  * Input type for creating/updating supplier catalog
  */
 export interface UpsertSupplierCatalogInput {
-  supplierId: string;
+  supplierId: string; // Legacy reference (backward compatibility)
+  practiceSupplierId?: string | null; // Phase 2: New architecture reference
   productId: string;
   supplierSku?: string | null;
   unitPrice?: number | null;
@@ -87,7 +98,9 @@ export interface ProductFilters {
   search?: string;
   isGs1Product?: boolean;
   gs1VerificationStatus?: Gs1VerificationStatus;
-  supplierId?: string;
+  supplierId?: string; // Legacy filter
+  practiceSupplierId?: string; // Phase 2: Filter by PracticeSupplier
+  practiceId?: string; // Filter products available to a specific practice
 }
 
 /**

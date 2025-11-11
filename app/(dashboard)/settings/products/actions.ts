@@ -92,7 +92,7 @@ export async function createProductAction(_prevState: unknown, formData: FormDat
       });
     }
 
-    revalidatePath('/products');
+    revalidatePath('/settings/products');
     return { success: 'Product created successfully', productId: product.id } as const;
   } catch (error) {
     console.error('[Product Actions] Error creating product:', error);
@@ -131,8 +131,8 @@ export async function updateProductAction(_prevState: unknown, formData: FormDat
       description,
     });
 
-    revalidatePath('/products');
-    revalidatePath(`/products/${productId}`);
+    revalidatePath('/settings/products');
+    revalidatePath(`/settings/products/${productId}`);
     return { success: 'Product updated successfully' } as const;
   } catch (error) {
     console.error('[Product Actions] Error updating product:', error);
@@ -156,8 +156,8 @@ export async function triggerGs1LookupAction(productId: string) {
     // Perform actual lookup (in background, but we'll do it synchronously for now)
     await enrichProductWithGs1Data(productId);
 
-    revalidatePath('/products');
-    revalidatePath(`/products/${productId}`);
+    revalidatePath('/settings/products');
+    revalidatePath(`/settings/products/${productId}`);
   } catch (error) {
     console.error('[Product Actions] Error triggering GS1 lookup:', error);
     
@@ -177,7 +177,7 @@ export async function deleteProductAction(productId: string) {
     // Delete product via service
     await productService.deleteProduct(ctx, productId);
 
-    revalidatePath('/products');
+    revalidatePath('/settings/products');
   } catch (error: any) {
     console.error('[Product Actions] Error deleting product:', error);
     

@@ -56,6 +56,29 @@ export class ProductRepository extends BaseRepository {
       };
     }
 
+    // Filter by practice supplier (Phase 2)
+    if (filters?.practiceSupplierId) {
+      where.supplierCatalogs = {
+        some: {
+          practiceSupplierId: filters.practiceSupplierId,
+          isActive: true,
+        },
+      };
+    }
+
+    // Filter by practice (products available to practice via their PracticeSuppliers)
+    if (filters?.practiceId) {
+      where.supplierCatalogs = {
+        some: {
+          practiceSupplier: {
+            practiceId: filters.practiceId,
+            isBlocked: false,
+          },
+          isActive: true,
+        },
+      };
+    }
+
     const products = await client.product.findMany({
       where,
       orderBy: options?.orderBy ?? { name: 'asc' },
@@ -242,6 +265,7 @@ export class ProductRepository extends BaseRepository {
       },
       create: {
         supplierId: input.supplierId,
+        practiceSupplierId: input.practiceSupplierId ?? null,
         productId: input.productId,
         supplierSku: input.supplierSku ?? null,
         unitPrice: input.unitPrice ?? null,
@@ -253,6 +277,7 @@ export class ProductRepository extends BaseRepository {
         lastSyncAt: new Date(),
       },
       update: {
+        practiceSupplierId: input.practiceSupplierId,
         supplierSku: input.supplierSku,
         unitPrice: input.unitPrice,
         currency: input.currency,
@@ -361,6 +386,92 @@ export class ProductRepository extends BaseRepository {
     await client.product.delete({
       where: { id: productId },
     });
+  }
+
+  /**
+   * Find all catalog entries for a practice supplier (Phase 2)
+   */
+  async findCatalogsByPracticeSupplier(
+    practiceSupplierId: string,
+    activeOnly: boolean = true,
+    options?: FindOptions
+  ): Promise<SupplierCatalog[]> {
+    const client = this.getClient(options?.tx);
+
+    const where: Prisma.SupplierCatalogWhereInput = { practiceSupplierId };
+    if (activeOnly) {
+      where.isActive = true;
+    }
+
+    const catalogs = await client.supplierCatalog.findMany({
+      where,
+      include: {
+        product: true,
+        practiceSupplier: {
+          include: {
+            globalSupplier: true,
+          },
+        },
+      },
+      orderBy: { product: { name: 'asc' } },
+    });
+
+    return catalogs as SupplierCatalog[];
+  }
+
+  /**
+   * Find catalog entries for a product, filtered by practice (Phase 2)
+   * Returns all supplier offers for this product from the practice's linked suppliers
+   */
+  async findCatalogsByProductForPractice(
+    productId: string,
+    practiceId: string,
+    options?: FindOptions
+  ): Promise<SupplierCatalog[]> {
+    const client = this.getClient(options?.tx);
+
+    const catalogs = await client.supplierCatalog.findMany({
+      where: {
+        productId,
+        practiceSupplier: {
+          practiceId,
+          isBlocked: false,
+        },
+        isActive: true,
+      },
+      include: {
+        product: true,
+        practiceSupplier: {
+          include: {
+            globalSupplier: true,
+          },
+        },
+      },
+      orderBy: { unitPrice: 'asc' }, // Order by price, lowest first
+    });
+
+    return catalogs as SupplierCatalog[];
+  }
+
+  /**
+   * Find catalog entry by practice supplier and product (Phase 2)
+   */
+  async findCatalogByPracticeSupplierProduct(
+    practiceSupplierId: string,
+    productId: string,
+    options?: FindOptions
+  ): Promise<SupplierCatalog | null> {
+    const client = this.getClient(options?.tx);
+
+    const catalog = await client.supplierCatalog.findFirst({
+      where: {
+        practiceSupplierId,
+        productId,
+      },
+      include: options?.include ?? undefined,
+    });
+
+    return catalog as SupplierCatalog | null;
   }
 }
 
