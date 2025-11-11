@@ -1,60 +1,82 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { Package } from 'lucide-react';
-import { createOrdersFromLowStockAction } from '../actions';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Package, AlertTriangle, ChevronDown, ChevronRight, ArrowUp, ArrowDown, ChevronLeft, ChevronRight as ChevronRightPagination } from 'lucide-react';
+
 import { EmptyState } from '@/components/ui/empty-state';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+
+interface InventoryLocation {
+  locationId: string;
+  quantity: number;
+  reorderPoint: number | null;
+  reorderQuantity: number | null;
+  location: { id: string; name: string; code: string | null };
+}
 
 interface InventoryItem {
   id: string;
   name: string;
   sku: string | null;
-  description: string | null;
-  unit: string | null;
-  defaultSupplier: { id: string; name: string } | null;
-  inventory: {
-    locationId: string;
-    quantity: number;
-    reorderPoint: number | null;
-    reorderQuantity: number | null;
-    location: { id: string; name: string; code: string | null };
-  }[];
-}
-
-interface LowStockInfo {
+  totalStock: number;
+  locationCount: number;
   isLowStock: boolean;
-  suggestedQuantity: number;
   lowStockLocations: string[];
+  inventory: InventoryLocation[];
 }
 
 interface LowStockItemListProps {
   items: InventoryItem[];
-  suppliers: { id: string; name: string }[];
+  locations: { id: string; name: string; code: string | null }[];
   canManage: boolean;
   hasActiveFilters: boolean;
-  lowStockInfo: Record<string, LowStockInfo>;
-  deleteItemAction: (itemId: string) => Promise<void>;
-  upsertItemInlineAction: (formData: FormData) => Promise<void>;
+  currentSort: string;
+  currentSortOrder: string;
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
 }
 
 export function LowStockItemList({
   items,
-  suppliers,
+  locations,
   canManage,
   hasActiveFilters,
-  lowStockInfo,
-  deleteItemAction,
-  upsertItemInlineAction,
+  currentSort,
+  currentSortOrder,
+  currentPage,
+  totalPages,
+  totalItems,
 }: LowStockItemListProps) {
-  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
-  const [isPending, startTransition] = useTransition();
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [createdOrders, setCreatedOrders] = useState<{ id: string; supplierName: string }[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const handleToggleItem = (itemId: string) => {
-    setSelectedItemIds((prev) => {
+  const handleSort = (column: string) => {
+    const params = new URLSearchParams(searchParams);
+    
+    if (currentSort === column) {
+      params.set('sortOrder', currentSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      params.set('sortBy', column);
+      params.set('sortOrder', 'asc');
+    }
+    
+    params.delete('page');
+    router.push(`/inventory?${params.toString()}`);
+  };
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', page.toString());
+    router.push(`/inventory?${params.toString()}`);
+  };
+
+  const toggleRow = (itemId: string) => {
+    setExpandedRows(prev => {
       const newSet = new Set(prev);
       if (newSet.has(itemId)) {
         newSet.delete(itemId);
@@ -65,353 +87,306 @@ export function LowStockItemList({
     });
   };
 
-  const handleSelectAllLowStock = () => {
-    const lowStockItemIds = items
-      .filter((item) => lowStockInfo[item.id]?.isLowStock && item.defaultSupplier)
-      .map((item) => item.id);
-    setSelectedItemIds(new Set(lowStockItemIds));
-  };
+  const SortableHeader = ({ column, label }: { column: string; label: string }) => {
+    const isActive = currentSort === column;
+    const isAsc = currentSortOrder === 'asc';
 
-  const handleDeselectAll = () => {
-    setSelectedItemIds(new Set());
-  };
-
-  const handleCreateOrders = () => {
-    setSuccessMessage(null);
-    setErrorMessage(null);
-    setCreatedOrders([]);
-
-    startTransition(async () => {
-      const result = await createOrdersFromLowStockAction(Array.from(selectedItemIds));
-
-      if ('error' in result && result.error) {
-        setErrorMessage(result.error);
-      } else if ('success' in result && result.success) {
-        setSuccessMessage(result.message);
-        setCreatedOrders(result.orders);
-        setSelectedItemIds(new Set()); // Clear selection after success
-      }
-    });
+    return (
+      <th 
+        className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+        onClick={() => handleSort(column)}
+      >
+        <div className="flex items-center gap-1">
+          <span>{label}</span>
+          {isActive && (
+            <>
+              {isAsc ? (
+                <ArrowUp className="h-3 w-3" />
+              ) : (
+                <ArrowDown className="h-3 w-3" />
+              )}
+            </>
+          )}
+          {!isActive && <span className="h-3 w-3" />}
+        </div>
+      </th>
+    );
   };
 
   if (items.length === 0) {
     return (
-      <EmptyState
-        icon={Package}
-        title={hasActiveFilters ? 'No items match your filters' : 'No items yet'}
-        description={
-          hasActiveFilters
-            ? 'Try adjusting your search or filter criteria to see more results.'
-            : canManage
-            ? 'Add your first inventory item using the form on the right.'
-            : 'An administrator needs to add items before they appear here.'
-        }
-      />
+      <Card className="p-8">
+        <EmptyState
+          icon={Package}
+          title={hasActiveFilters ? "No items found" : "No items yet"}
+          description={hasActiveFilters ? "Try adjusting your search or filters" : "Add items to your catalog to track inventory"}
+        />
+      </Card>
     );
   }
 
-  const lowStockItems = items.filter((item) => lowStockInfo[item.id]?.isLowStock);
-  const selectableLowStockItems = lowStockItems.filter((item) => item.defaultSupplier);
-
   return (
     <div className="space-y-4">
-      {/* Success/Error Messages */}
-      {successMessage && createdOrders.length > 0 && (
-        <div className="rounded-xl border border-green-800 bg-green-900/20 p-4">
-          <p className="font-semibold text-green-300">{successMessage}</p>
-          <div className="mt-3 space-y-2">
-            {createdOrders.map((order) => (
-              <div key={order.id}>
-                <Link
-                  href={`/orders/${order.id}`}
-                  className="text-sm text-green-400 hover:text-green-300 underline"
-                >
-                  View order for {order.supplierName} →
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Results count */}
+      <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+        <span>
+          {totalItems} {totalItems === 1 ? 'item' : 'items'} in inventory
+        </span>
+        {totalItems > 50 && (
+          <span>
+            Showing {((currentPage - 1) * 50) + 1}-{Math.min(currentPage * 50, totalItems)}
+          </span>
+        )}
+      </div>
 
-      {errorMessage && (
-        <div className="rounded-xl border border-rose-800 bg-rose-900/20 p-4">
-          <p className="text-sm text-rose-300">{errorMessage}</p>
-        </div>
-      )}
-      
-      {selectableLowStockItems.length < lowStockItems.length && lowStockItems.length > 0 && (
-        <div className="rounded-xl border border-amber-700 bg-amber-900/20 p-4">
-          <p className="text-sm font-semibold text-amber-300">
-            ⚠ {lowStockItems.length - selectableLowStockItems.length} low-stock item
-            {lowStockItems.length - selectableLowStockItems.length !== 1 ? 's' : ''} cannot be auto-ordered
-          </p>
-          <p className="mt-1 text-xs text-amber-400">
-            These items don&apos;t have a default supplier assigned. Set a default supplier to include them in auto-ordering.
-          </p>
-        </div>
-      )}
+      {/* Table */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
+              <tr>
+                <th className="px-4 py-3 w-8"></th>
+                <SortableHeader column="name" label="Item Name" />
+                <SortableHeader column="sku" label="SKU" />
+                <SortableHeader column="stock" label="Total Stock" />
+                <SortableHeader column="locations" label="Locations" />
+                <SortableHeader column="status" label="Status" />
+                <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              {items.map((item) => {
+                const isExpanded = expandedRows.has(item.id);
 
-      {/* Bulk Actions Bar */}
-      {canManage && lowStockItems.length > 0 && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-amber-900 dark:text-amber-300">
-                {lowStockItems.length} low-stock item{lowStockItems.length !== 1 ? 's' : ''} detected
-              </p>
-              {selectedItemIds.size > 0 && (
-                <p className="text-xs text-amber-800 dark:text-amber-400">
-                  {selectedItemIds.size} item{selectedItemIds.size !== 1 ? 's' : ''} selected
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleSelectAllLowStock}
-                className="rounded-lg border border-amber-700 bg-amber-900/40 px-3 py-1.5 text-xs font-medium text-amber-200 transition hover:bg-amber-900/60"
-              >
-                Select all low-stock
-              </button>
-              {selectedItemIds.size > 0 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleDeselectAll}
-                    className="rounded-lg border border-slate-700 bg-slate-800/40 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-slate-800/60"
-                  >
-                    Deselect all
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCreateOrders}
-                    disabled={isPending}
-                    className="rounded-lg bg-sky-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isPending ? 'Creating orders...' : 'Create orders from selected items'}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Item List */}
-      {items.map((item) => {
-        const totalQuantity = item.inventory?.reduce((sum, row) => sum + row.quantity, 0) || 0;
-        const itemLowStockInfo = lowStockInfo[item.id];
-        const isLowStock = itemLowStockInfo?.isLowStock || false;
-        const canSelect = canManage && isLowStock && item.defaultSupplier;
-        const isSelected = selectedItemIds.has(item.id);
-
-        return (
-          <div
-            key={item.id}
-            className={`rounded-xl border p-6 shadow-sm transition ${
-              isLowStock
-                ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/10'
-                : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none'
-            }`}
-          >
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-              <div className="flex items-start gap-3 flex-1">
-                {/* Checkbox */}
-                {canManage && (
-                  <div className="pt-1">
-                    {canSelect ? (
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleToggleItem(item.id)}
-                        className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-sky-600 focus:ring-2 focus:ring-sky-500/30 focus:ring-offset-0 cursor-pointer"
-                      />
-                    ) : (
-                      <div className="h-4 w-4" /> // Spacer for alignment
-                    )}
-                  </div>
-                )}
-
-                <div className="space-y-1 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{item.name}</h2>
-                    {item.sku ? (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                        {item.sku}
-                      </span>
-                    ) : null}
-                    {isLowStock && (
-                      <span className="rounded-full bg-amber-100 border border-amber-400 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/60 dark:border-amber-700 dark:text-amber-300">
-                        Low stock
-                      </span>
-                    )}
-                  </div>
-                  {item.description ? (
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{item.description}</p>
-                  ) : null}
-                  <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-500">
-                    Total on hand: <span className="text-slate-900 dark:text-slate-200">{totalQuantity}</span>
-                  </p>
-                  {item.defaultSupplier ? (
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Default supplier:{' '}
-                      <Link
-                        href={`/suppliers#${item.defaultSupplier.id}`}
-                        className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-                      >
-                        {item.defaultSupplier.name}
-                      </Link>
-                    </p>
-                  ) : isLowStock ? (
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      ⚠ No default supplier set
-                    </p>
-                  ) : null}
-                  {isLowStock && itemLowStockInfo.suggestedQuantity > 0 && (
-                    <p className="text-xs text-amber-800 dark:text-amber-300">
-                      Suggested order quantity: {itemLowStockInfo.suggestedQuantity}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {canManage ? (
-                <form action={deleteItemAction.bind(null, item.id)} className="self-start">
-                  <button
-                    type="submit"
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-rose-500 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 dark:hover:text-rose-300"
-                  >
-                    Delete
-                  </button>
-                </form>
-              ) : null}
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                  Locations
-                </h3>
-                {item.inventory?.length ? (
-                  <ul className="space-y-1 text-sm text-slate-700 dark:text-slate-300">
-                    {item.inventory.map((row) => {
-                      const isLocationLowStock =
-                        row.reorderPoint !== null && row.quantity < row.reorderPoint;
-                      return (
-                        <li
-                          key={row.locationId}
-                          className="flex items-center justify-between"
-                        >
-                          <span>
-                            {row.location.name}
-                            {row.location.code ? ` (${row.location.code})` : ''}
-                            {isLocationLowStock && (
-                              <span className="ml-2 text-xs text-amber-400">
-                                ⚠
-                              </span>
-                            )}
-                          </span>
-                          <span className={isLocationLowStock ? 'text-amber-800 dark:text-amber-300' : 'text-slate-900 dark:text-slate-100'}>
-                            {row.quantity}
-                            {row.reorderPoint !== null && ` / ${row.reorderPoint}`}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-slate-500 dark:text-slate-500">No stock recorded yet.</p>
-                )}
-              </div>
-
-              {canManage ? (
-                <details className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950/40">
-                  <summary className="cursor-pointer text-sm font-medium text-slate-900 dark:text-slate-200">
-                    Edit item
-                  </summary>
-                  <form action={upsertItemInlineAction} className="mt-3 space-y-3">
-                    <input type="hidden" name="itemId" value={item.id} />
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`name-${item.id}`}>
-                        Name
-                      </label>
-                      <input
-                        id={`name-${item.id}`}
-                        name="name"
-                        defaultValue={item.name}
-                        required
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                      />
-                    </div>
-                    <div className="flex gap-3">
-                      <div className="flex-1 space-y-1">
-                        <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`sku-${item.id}`}>
-                          SKU
-                        </label>
-                        <input
-                          id={`sku-${item.id}`}
-                          name="sku"
-                          defaultValue={item.sku ?? ''}
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                        />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`unit-${item.id}`}>
-                          Unit
-                        </label>
-                        <input
-                          id={`unit-${item.id}`}
-                          name="unit"
-                          defaultValue={item.unit ?? ''}
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`description-${item.id}`}>
-                        Description
-                      </label>
-                      <textarea
-                        id={`description-${item.id}`}
-                        name="description"
-                        rows={2}
-                        defaultValue={item.description ?? ''}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`supplier-${item.id}`}>
-                        Default supplier
-                      </label>
-                      <select
-                        id={`supplier-${item.id}`}
-                        name="defaultSupplierId"
-                        defaultValue={item.defaultSupplier?.id ?? 'none'}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                      >
-                        <option value="none">No default</option>
-                        {suppliers.map((supplier) => (
-                          <option key={supplier.id} value={supplier.id}>
-                            {supplier.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+                return (
+                  <>
+                    {/* Parent Row */}
+                    <tr
+                      key={item.id}
+                      className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
                     >
-                      Save changes
-                    </button>
-                  </form>
-                </details>
-              ) : null}
-            </div>
+                      {/* Expand/Collapse Button */}
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => toggleRow(item.id)}
+                          className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition"
+                          aria-label={isExpanded ? "Collapse" : "Expand"}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </button>
+                      </td>
+
+                      {/* Item Name */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-shrink-0 w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
+                            <Package className="h-4 w-4 text-slate-400" />
+                          </div>
+                          <span className="font-medium text-slate-900 dark:text-slate-200">
+                            {item.name}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* SKU */}
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs text-slate-700 dark:text-slate-300">
+                          {item.sku || '-'}
+                        </span>
+                      </td>
+
+                      {/* Total Stock */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-lg font-semibold ${
+                            item.isLowStock 
+                              ? 'text-orange-600 dark:text-orange-400' 
+                              : 'text-slate-900 dark:text-white'
+                          }`}>
+                            {item.totalStock}
+                          </span>
+                          {item.isLowStock && (
+                            <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Location Count */}
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded text-xs font-medium">
+                          {item.locationCount}
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        {item.isLowStock ? (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full text-xs font-medium">
+                            <AlertTriangle className="h-3 w-3" />
+                            Low Stock
+                          </div>
+                        ) : (
+                          <span className="inline-flex px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-medium">
+                            Good
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {canManage && (
+                            <Link href={`/orders/new?item=${item.id}`}>
+                              <Button variant="secondary" size="sm" className="text-xs">
+                                Order
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Expanded Location Details */}
+                    {isExpanded && (
+                      <tr className="bg-slate-50 dark:bg-slate-900/40">
+                        <td colSpan={7} className="px-4 py-4">
+                          <div className="ml-8 space-y-3">
+                            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
+                              Stock by Location
+                            </h4>
+                            
+                            {item.inventory && item.inventory.length > 0 ? (
+                              <div className="grid gap-3">
+                                {item.inventory.map((inv) => {
+                                  const isLowAtLocation = inv.reorderPoint !== null && inv.quantity < inv.reorderPoint;
+                                  
+                                  return (
+                                    <div
+                                      key={inv.locationId}
+                                      className="flex items-center justify-between p-3 bg-white dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700"
+                                    >
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-slate-900 dark:text-white">
+                                            {inv.location.name}
+                                            {inv.location.code && (
+                                              <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">
+                                                ({inv.location.code})
+                                              </span>
+                                            )}
+                                          </span>
+                                          {isLowAtLocation && (
+                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded text-xs font-medium">
+                                              <AlertTriangle className="h-3 w-3" />
+                                              Low
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-4 mt-1 text-xs text-slate-600 dark:text-slate-400">
+                                          <span>Quantity: <span className="font-semibold">{inv.quantity}</span></span>
+                                          {inv.reorderPoint !== null && (
+                                            <span>Reorder at: <span className="font-semibold">{inv.reorderPoint}</span></span>
+                                          )}
+                                          {inv.reorderQuantity !== null && (
+                                            <span>Reorder qty: <span className="font-semibold">{inv.reorderQuantity}</span></span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      
+                                      {canManage && (
+                                        <div className="flex gap-2">
+                                          <Link href={`/inventory?q=${encodeURIComponent(item.name)}&location=${inv.locationId}`}>
+                                            <Button variant="ghost" size="sm" className="text-xs">
+                                              View
+                                            </Button>
+                                          </Link>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-500 dark:text-slate-400">
+                                No inventory locations configured for this item.
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-slate-600 dark:text-slate-400">
+            Page {currentPage} of {totalPages}
           </div>
-        );
-      })}
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            
+            {/* Page numbers */}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? 'primary' : 'ghost'}
+                    size="sm"
+                    onClick={() => handlePageChange(pageNum)}
+                    className="min-w-[2rem]"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRightPagination className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

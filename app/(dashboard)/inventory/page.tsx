@@ -20,6 +20,10 @@ interface InventoryPageProps {
     q?: string;
     location?: string;
     supplier?: string;
+    lowStock?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    page?: string;
   }>;
 }
 
@@ -28,13 +32,18 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const ctx = buildRequestContextFromSession(session);
   const params = searchParams ? await searchParams : {};
   
-  const { q, location, supplier } = params;
+  const { q, location, supplier, lowStock, sortBy, sortOrder, page } = params;
+
+  // Pagination settings
+  const itemsPerPage = 50;
+  const currentPage = parseInt(page || '1', 10);
 
   // Fetch items using InventoryService with filters
   const items = await getInventoryService().findItems(ctx, {
     search: q?.trim(),
     locationId: location,
     supplierId: supplier,
+    lowStockOnly: lowStock === 'true',
   });
 
   // Transform items to convert Prisma Decimal to number for client component serialization
@@ -46,10 +55,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     })) || [],
   }));
 
-  // Calculate low-stock information for each item
-  const lowStockInfo: Record<string, { isLowStock: boolean; suggestedQuantity: number; lowStockLocations: string[] }> = {};
-  
-  for (const item of transformedItems) {
+  // Calculate low-stock information and totals for each item
+  const itemsWithStockInfo = transformedItems.map(item => {
+    const totalStock = item.inventory?.reduce((sum, inv) => sum + inv.quantity, 0) || 0;
+    const locationCount = item.inventory?.length || 0;
+    
     const lowStockLocations = (item.inventory || []).filter(
       (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
     );
@@ -60,12 +70,43 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
       return sum + (inv.reorderQuantity || inv.reorderPoint || 1);
     }, 0);
     
-    lowStockInfo[item.id] = {
+    return {
+      ...item,
+      totalStock,
+      locationCount,
       isLowStock,
       suggestedQuantity,
       lowStockLocations: lowStockLocations.map(loc => loc.locationId),
     };
-  }
+  });
+
+  // Sort items
+  const sortedItems = [...itemsWithStockInfo].sort((a, b) => {
+    const order = sortOrder === 'desc' ? -1 : 1;
+    
+    switch (sortBy) {
+      case 'name':
+        return order * a.name.localeCompare(b.name);
+      case 'sku':
+        return order * (a.sku || '').localeCompare(b.sku || '');
+      case 'stock':
+        return order * (a.totalStock - b.totalStock);
+      case 'locations':
+        return order * (a.locationCount - b.locationCount);
+      case 'status':
+        return order * ((a.isLowStock ? 1 : 0) - (b.isLowStock ? 1 : 0));
+      default:
+        // Default sort by name
+        return a.name.localeCompare(b.name);
+    }
+  });
+
+  // Pagination
+  const totalItems = sortedItems.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedItems = sortedItems.slice(startIndex, endIndex);
 
   const [suppliers, locations, adjustments] = await Promise.all([
     getInventoryService().getSuppliers(ctx),
@@ -79,7 +120,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     minimumRole: PracticeRole.STAFF,
   });
 
-  const hasActiveFilters = Boolean(q || location || supplier);
+  const hasActiveFilters = Boolean(q || location || supplier || lowStock);
 
   return (
     <div className="space-y-8">
@@ -102,22 +143,22 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           initialSearch={q}
           initialLocation={location}
           initialSupplier={supplier}
+          initialLowStock={lowStock === 'true'}
           locations={locations}
           suppliers={suppliers}
         />
 
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <LowStockItemList
-            items={transformedItems as any}
-            suppliers={suppliers}
-            canManage={canManage}
-            hasActiveFilters={hasActiveFilters}
-            lowStockInfo={lowStockInfo}
-            deleteItemAction={deleteItemAction}
-            upsertItemInlineAction={upsertItemInlineAction}
-          />
-          {canManage ? <CreateItemForm suppliers={suppliers} /> : null}
-        </div>
+        <LowStockItemList
+          items={paginatedItems as any}
+          locations={locations}
+          canManage={canManage}
+          hasActiveFilters={hasActiveFilters}
+          currentSort={sortBy || 'name'}
+          currentSortOrder={sortOrder || 'asc'}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+        />
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1fr_1fr] mt-8">
