@@ -110,6 +110,7 @@ model Practice {
   orderTemplates     OrderTemplate[]
   goodsReceipts      GoodsReceipt[]
   stockCountSessions StockCountSession[]
+  practiceSuppliers  PracticeSupplier[]
 }
 
 model PracticeUser {
@@ -176,6 +177,53 @@ model Product {
   @@index([isGs1Product])
 }
 
+model GlobalSupplier {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  website   String?
+  notes     String?  // General supplier notes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  practiceLinks PracticeSupplier[]
+
+  @@index([name])
+}
+
+model PracticeSupplier {
+  id               String   @id @default(cuid())
+  practiceId       String
+  globalSupplierId String
+  
+  // Practice-specific fields
+  accountNumber    String?  // Practice's account/customer number at this supplier
+  customLabel      String?  // Practice-specific display name override
+  orderingNotes    String?  // Practice-specific ordering/delivery notes
+  isPreferred      Boolean  @default(false)
+  isBlocked        Boolean  @default(false)
+  
+  // Migration traceability
+  migratedFromSupplierId String? // Original Supplier ID for backfill tracking
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  practice       Practice       @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
+  
+  // Reverse relations (Phase 2)
+  orders         Order[]
+  supplierItems  SupplierItem[]
+  defaultItems   Item[]
+
+  @@unique([practiceId, globalSupplierId])
+  @@index([practiceId])
+  @@index([globalSupplierId])
+  @@index([migratedFromSupplierId])
+}
+
 model Supplier {
   id         String   @id @default(cuid())
   practiceId String
@@ -227,32 +275,35 @@ model SupplierCatalog {
 // Practice-specific view of a Product
 // Each practice can have their own name, SKU, and settings for the same canonical Product
 model Item {
-  id                String   @id @default(cuid())
-  practiceId        String
-  productId         String // Links to canonical Product
-  defaultSupplierId String?
-  name              String // Practice-specific name (can override Product name)
-  sku               String? // Practice-specific SKU
-  description       String? // Practice-specific description
-  unit              String? // Practice-specific unit
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                        String   @id @default(cuid())
+  practiceId                String
+  productId                 String // Links to canonical Product
+  defaultSupplierId         String?
+  defaultPracticeSupplierId String? // Phase 2: optional PracticeSupplier reference
+  name                      String // Practice-specific name (can override Product name)
+  sku                       String? // Practice-specific SKU
+  description               String? // Practice-specific description
+  unit                      String? // Practice-specific unit
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
-  practice           Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  product            Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
-  defaultSupplier    Supplier?           @relation("ItemDefaultSupplier", fields: [defaultSupplierId], references: [id])
-  inventory          LocationInventory[]
-  supplierItems      SupplierItem[]
-  orderItems         OrderItem[]
-  stockAdjustments   StockAdjustment[]
-  transfers          InventoryTransfer[]
-  orderTemplateItems OrderTemplateItem[]
-  goodsReceiptLines  GoodsReceiptLine[]
-  stockCountLines    StockCountLine[]
+  practice                Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  product                 Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
+  defaultSupplier         Supplier?           @relation("ItemDefaultSupplier", fields: [defaultSupplierId], references: [id])
+  defaultPracticeSupplier PracticeSupplier?   @relation(fields: [defaultPracticeSupplierId], references: [id])
+  inventory               LocationInventory[]
+  supplierItems           SupplierItem[]
+  orderItems              OrderItem[]
+  stockAdjustments        StockAdjustment[]
+  transfers               InventoryTransfer[]
+  orderTemplateItems      OrderTemplateItem[]
+  goodsReceiptLines       GoodsReceiptLine[]
+  stockCountLines         StockCountLine[]
 
   @@index([practiceId])
   @@index([productId])
   @@index([defaultSupplierId])
+  @@index([defaultPracticeSupplierId])
   @@index([practiceId, name])
   @@index([practiceId, sku])
 }
@@ -273,45 +324,51 @@ model LocationInventory {
 }
 
 model SupplierItem {
-  id          String   @id @default(cuid())
-  supplierId  String
-  itemId      String
-  supplierSku String?
-  unitPrice   Decimal? @db.Decimal(12, 2)
-  currency    String?  @default("EUR")
-  minOrderQty Int?     @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  supplierId         String
+  practiceSupplierId String? // Phase 2: optional PracticeSupplier reference
+  itemId             String
+  supplierSku        String?
+  unitPrice          Decimal? @db.Decimal(12, 2)
+  currency           String?  @default("EUR")
+  minOrderQty        Int?     @default(1)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  item     Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  supplier         Supplier          @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id])
+  item             Item              @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@unique([supplierId, itemId])
   @@index([itemId])
+  @@index([practiceSupplierId])
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  practiceId  String
-  supplierId  String
-  status      OrderStatus @default(DRAFT)
-  createdById String
-  reference   String?
-  notes       String?
-  sentAt      DateTime?
-  expectedAt  DateTime?
-  receivedAt  DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                 String      @id @default(cuid())
+  practiceId         String
+  supplierId         String
+  practiceSupplierId String? // Phase 2: optional PracticeSupplier reference
+  status             OrderStatus @default(DRAFT)
+  createdById        String
+  reference          String?
+  notes              String?
+  sentAt             DateTime?
+  expectedAt         DateTime?
+  receivedAt         DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
-  practice      Practice       @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  supplier      Supplier       @relation(fields: [supplierId], references: [id])
-  createdBy     User           @relation("OrderCreatedBy", fields: [createdById], references: [id])
-  items         OrderItem[]
-  goodsReceipts GoodsReceipt[]
+  practice         Practice          @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  supplier         Supplier          @relation(fields: [supplierId], references: [id])
+  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id])
+  createdBy        User              @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  items            OrderItem[]
+  goodsReceipts    GoodsReceipt[]
 
   @@index([practiceId])
   @@index([supplierId])
+  @@index([practiceSupplierId])
   @@index([practiceId, status, createdAt])
 }
 

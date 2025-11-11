@@ -57,12 +57,22 @@ export class InventoryRepository extends BaseRepository {
       where.defaultSupplierId = filters.supplierId;
     }
 
+    // Filter by practice supplier (Phase 2)
+    if (filters?.practiceSupplierId) {
+      where.defaultPracticeSupplierId = filters.practiceSupplierId;
+    }
+
     const items = await client.item.findMany({
       where,
       include: {
         product: true,
         defaultSupplier: {
           select: { id: true, name: true, email: true, phone: true },
+        },
+        defaultPracticeSupplier: {
+          include: {
+            globalSupplier: true,
+          },
         },
         supplierItems: {
           select: {
@@ -103,10 +113,16 @@ export class InventoryRepository extends BaseRepository {
       include: {
         product: true,
         defaultSupplier: true,
+        defaultPracticeSupplier: {
+          include: {
+            globalSupplier: true,
+          },
+        },
         supplierItems: {
           select: {
             id: true,
             supplierId: true,
+            practiceSupplierId: true,
             unitPrice: true,
             currency: true,
             minOrderQty: true,
@@ -142,6 +158,7 @@ export class InventoryRepository extends BaseRepository {
         description: input.description ?? null,
         unit: input.unit ?? null,
         defaultSupplierId: input.defaultSupplierId ?? null,
+        defaultPracticeSupplierId: input.defaultPracticeSupplierId ?? null,
       },
     });
 
@@ -167,6 +184,7 @@ export class InventoryRepository extends BaseRepository {
         description: input.description,
         unit: input.unit,
         defaultSupplierId: input.defaultSupplierId,
+        defaultPracticeSupplierId: input.defaultPracticeSupplierId,
       },
     });
 

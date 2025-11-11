@@ -52,20 +52,31 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     ? await getInventoryService().findItems(ctx, {})
     : [];
 
-  // Filter items that match the order's supplier and convert Decimal to plain number
+  // Filter items that match the order's supplier (support both legacy and PracticeSupplier)
   const availableItems = allItems
     .filter((item) => {
       // Check if item is related to this supplier
-      const hasSupplierItem = item.supplierItems?.some((si: any) => si.supplierId === order.supplierId);
-      const hasDefaultSupplier = item.defaultSupplierId === order.supplierId;
-      return hasSupplierItem || hasDefaultSupplier;
+      if (order.practiceSupplierId) {
+        // New PracticeSupplier filtering
+        const hasSupplierItem = item.supplierItems?.some((si: any) => si.practiceSupplierId === order.practiceSupplierId);
+        const hasDefaultSupplier = item.defaultPracticeSupplierId === order.practiceSupplierId;
+        return hasSupplierItem || hasDefaultSupplier;
+      } else if (order.supplierId) {
+        // Legacy Supplier filtering
+        const hasSupplierItem = item.supplierItems?.some((si: any) => si.supplierId === order.supplierId);
+        const hasDefaultSupplier = item.defaultSupplierId === order.supplierId;
+        return hasSupplierItem || hasDefaultSupplier;
+      }
+      return false;
     })
     .filter((item) => !order.items?.some((oi: any) => oi.itemId === item.id))
     .map((item) => ({
       ...item,
       defaultSupplierId: item.defaultSupplierId,
+      defaultPracticeSupplierId: item.defaultPracticeSupplierId,
       supplierItems: item.supplierItems?.map((si: any) => ({
         supplierId: si.supplierId,
+        practiceSupplierId: si.practiceSupplierId,
         unitPrice: si.unitPrice ? parseFloat(si.unitPrice.toString()) : null,
       })),
     }));
@@ -136,15 +147,41 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 <StatusBadge status={order.status} />
               </dd>
             </div>
-            <div className="flex justify-between">
+            <div className="flex flex-col gap-1">
               <dt className="text-slate-600 dark:text-slate-400">Supplier</dt>
               <dd className="text-slate-900 dark:text-slate-200">
-                <Link
-                  href={`/suppliers#${order.supplier?.id}`}
-                  className="text-sky-400 hover:text-sky-300"
-                >
-                  {order.supplier?.name}
-                </Link>
+                {order.practiceSupplier ? (
+                  <>
+                    <Link
+                      href={`/suppliers#${order.practiceSupplier.id}`}
+                      className="text-sky-400 hover:text-sky-300"
+                    >
+                      {order.practiceSupplier.customLabel || order.practiceSupplier.globalSupplier.name}
+                    </Link>
+                    {order.practiceSupplier.accountNumber && (
+                      <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
+                        (Account: {order.practiceSupplier.accountNumber})
+                      </span>
+                    )}
+                    {order.practiceSupplier.isPreferred && (
+                      <span className="ml-2 text-xs">⭐</span>
+                    )}
+                    {order.practiceSupplier.orderingNotes && (
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 italic">
+                        {order.practiceSupplier.orderingNotes}
+                      </p>
+                    )}
+                  </>
+                ) : order.supplier ? (
+                  <Link
+                    href={`/suppliers#${order.supplier.id}`}
+                    className="text-sky-400 hover:text-sky-300"
+                  >
+                    {order.supplier.name}
+                  </Link>
+                ) : (
+                  <span className="text-slate-500 dark:text-slate-400">Unknown Supplier</span>
+                )}
               </dd>
             </div>
             <div className="flex justify-between">
@@ -357,6 +394,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             <AddItemForm 
               orderId={order.id} 
               supplierId={order.supplierId}
+              practiceSupplierId={order.practiceSupplierId}
               items={availableItems} 
             />
           </div>

@@ -3,6 +3,7 @@ import { PracticeRole } from '@prisma/client';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getInventoryService } from '@/src/services';
+import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
 
 import { NewOrderFormClient } from './_components/new-order-form-client';
@@ -29,8 +30,11 @@ export default async function NewOrderPage() {
     );
   }
 
-  const [suppliers, allItems] = await Promise.all([
-    getInventoryService().getSuppliers(ctx),
+  // Fetch PracticeSuppliers (excludes blocked by default)
+  const [practiceSuppliers, allItems] = await Promise.all([
+    getPracticeSupplierRepository().findPracticeSuppliers(practiceId, {
+      includeBlocked: false,
+    }),
     getInventoryService().findItems(ctx, {}),
   ]);
 
@@ -41,12 +45,14 @@ export default async function NewOrderPage() {
     sku: item.sku,
     unit: item.unit,
     defaultSupplierId: item.defaultSupplierId,
+    defaultPracticeSupplierId: item.defaultPracticeSupplierId,
     supplierItems: item.supplierItems?.map((si: any) => ({
       supplierId: si.supplierId,
+      practiceSupplierId: si.practiceSupplierId,
       unitPrice: si.unitPrice ? parseFloat(si.unitPrice.toString()) : null,
     })) || [],
   }));
 
-  return <NewOrderFormClient suppliers={suppliers} items={items} />;
+  return <NewOrderFormClient practiceSuppliers={practiceSuppliers} items={items} />;
 }
 

@@ -122,18 +122,58 @@ function LocationList({
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Items on hand</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Inventory Summary</h3>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {location.inventory.length} {location.inventory.length === 1 ? 'item' : 'items'}
+                  </span>
+                </div>
                 {location.inventory.length ? (
-                  <ul className="space-y-1 text-sm text-slate-700 dark:text-slate-300">
-                    {location.inventory.map((row: any) => (
-                      <li key={row.itemId} className="flex items-center justify-between">
-                        <span>{row.item.name}</span>
-                        <span className="text-slate-900 dark:text-slate-100">{row.quantity}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-lg bg-emerald-50 px-3 py-2 dark:bg-emerald-950/30">
+                        <div className="text-xs text-emerald-700 dark:text-emerald-400">Total Units</div>
+                        <div className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">{totalQuantity}</div>
+                      </div>
+                      <div className="rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-950/30">
+                        <div className="text-xs text-blue-700 dark:text-blue-400">Item Types</div>
+                        <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">{location.inventory.length}</div>
+                      </div>
+                      <div className="rounded-lg bg-amber-50 px-3 py-2 dark:bg-amber-950/30">
+                        <div className="text-xs text-amber-700 dark:text-amber-400">Low Stock</div>
+                        <div className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+                          {location.inventory.filter((row: any) => row.reorderPoint && row.quantity <= row.reorderPoint).length}
+                        </div>
+                      </div>
+                    </div>
+                    <details className="group mt-2">
+                      <summary className="cursor-pointer text-xs text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
+                        View all items ({location.inventory.length})
+                      </summary>
+                      <ul className="mt-2 space-y-1 rounded-lg border border-slate-200 bg-slate-50/50 p-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300">
+                        {location.inventory.map((row: any) => {
+                          const isLowStock = row.reorderPoint && row.quantity <= row.reorderPoint;
+                          return (
+                            <li key={row.itemId} className="flex items-center justify-between rounded px-2 py-1 hover:bg-white dark:hover:bg-slate-900">
+                              <span className="flex items-center gap-2">
+                                {isLowStock && (
+                                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Low stock" />
+                                )}
+                                {row.item.name}
+                              </span>
+                              <span className={`font-medium ${isLowStock ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                                {row.quantity}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </details>
+                  </>
                 ) : (
-                  <p className="text-xs text-slate-500">No recorded stock.</p>
+                  <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center dark:border-slate-700 dark:bg-slate-950/40">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">No recorded stock.</p>
+                  </div>
                 )}
               </div>
 

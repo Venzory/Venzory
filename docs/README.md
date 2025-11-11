@@ -1,339 +1,126 @@
-# Remcura V2 - Go-Ready Architecture
+# RemcuraV2 Documentation
 
-## 🎯 Overview
+This directory contains technical documentation for the RemcuraV2 inventory management system.
 
-Remcura V2 now features a **production-ready, Go-compatible layered architecture** that provides:
+## Architecture Documentation
 
-- ✅ **Clear separation of concerns** - Domain, Repository, Service, and API layers
-- ✅ **Automatic tenant isolation** - All queries scoped to practice
-- ✅ **Consistent authorization** - Role-based access control throughout
-- ✅ **Comprehensive audit trails** - All state changes logged
-- ✅ **High testability** - Mockable services, integration-testable repositories
-- ✅ **Go migration ready** - Structure maps directly to Go patterns
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Overall system architecture and design patterns
+- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - High-level implementation summary
 
-## 📚 Documentation
+## Migration Guides
 
-### Start Here
-1. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete architecture explanation
-   - Layer-by-layer breakdown
-   - Code examples and patterns
-   - Testing strategies
-   - Go migration path
+- **[GLOBAL_SUPPLIER_MIGRATION.md](./GLOBAL_SUPPLIER_MIGRATION.md)** - Phase 1: Global Supplier Architecture migration guide
+- **[PHASE_2_SUPPLIER_INTEGRATION.md](./PHASE_2_SUPPLIER_INTEGRATION.md)** - Phase 2: Supplier Integration into Orders and Items
+- **[MIGRATION_STATUS.md](./MIGRATION_STATUS.md)** - Current migration status and notes
+- **[MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)** - General migration guidelines
 
-2. **[MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)** - How to refactor existing code
-   - Step-by-step migration instructions
-   - Before/after examples
-   - Complete refactored action examples
-   - Common pitfalls and solutions
+## Feature Documentation
 
-3. **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - What's been built
-   - Summary of all completed work
-   - Metrics and code statistics
-   - Next steps for full migration
+- **[RECEIVING_MODULE_IMPLEMENTATION.md](./RECEIVING_MODULE_IMPLEMENTATION.md)** - Goods receiving module
+- **[PARTIAL_RECEIVING_FEATURE.md](./PARTIAL_RECEIVING_FEATURE.md)** - Partial receiving functionality
+- **[PRODUCT_CATALOG_IMPLEMENTATION.md](../PRODUCT_CATALOG_IMPLEMENTATION.md)** - Product catalog with GS1 integration
+- **[NOTIFICATIONS_IMPLEMENTATION_SUMMARY.md](../NOTIFICATIONS_IMPLEMENTATION_SUMMARY.md)** - Notification system
 
-## 🏗️ Architecture Layers
+## Phase Reports
 
-```
-┌─────────────────────────────────────────┐
-│     API Layer (Next.js Actions)         │  ← Thin wrappers
-└──────────────┬──────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│        Service Layer                    │  ← Business logic
-│  - InventoryService                     │  ← Authorization
-│  - OrderService                         │  ← Workflows
-│  - ReceivingService                     │
-│  - AuditService                         │
-└──────────────┬──────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│      Repository Layer                   │  ← Data access
-│  - InventoryRepository                  │  ← Tenant scoping
-│  - OrderRepository                      │  ← Prisma wrapper
-│  - ProductRepository                    │
-│  - ReceivingRepository                  │
-└──────────────┬──────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│         PostgreSQL via Prisma           │  ← Database
-└─────────────────────────────────────────┘
-```
+- **[PHASE_4_COMPLETION_REPORT.md](./PHASE_4_COMPLETION_REPORT.md)** - Phase 4 completion status
+- **[PHASE_5_COMPLETION_REPORT.md](./PHASE_5_COMPLETION_REPORT.md)** - Phase 5 completion status
+- **[PHASE_5_FINAL_COMPLETION_REPORT.md](./PHASE_5_FINAL_COMPLETION_REPORT.md)** - Phase 5 final report
+- **[SETTINGS_SUPPLIERS_LOCATIONS_REPORT.md](../SETTINGS_SUPPLIERS_LOCATIONS_REPORT.md)** - Settings and suppliers testing
+- **[VERIFICATION_REPORT.md](./VERIFICATION_REPORT.md)** - System verification report
+- **[HEALTH_CHECK_REPORT.md](./HEALTH_CHECK_REPORT.md)** - System health checks
 
-## 🚀 Quick Start
+## Internationalization
 
-### Using the New Architecture
+- **[i18n-reset-summary.md](./i18n-reset-summary.md)** - i18n implementation notes
 
-#### 1. In Server Actions
-```typescript
-import { buildRequestContext } from '@/src/lib/context/context-builder';
-import { getInventoryService } from '@/src/services/inventory';
-import { isDomainError } from '@/src/domain/errors';
+## Latest Updates
 
-export async function createItemAction(formData: FormData) {
-  try {
-    const ctx = await buildRequestContext();
-    const inventoryService = getInventoryService();
-    
-    const item = await inventoryService.createItem(ctx, {
-      productId: formData.get('productId') as string,
-      name: formData.get('name') as string,
-      // ...
-    });
-    
-    return { success: true, itemId: item.id };
-  } catch (error) {
-    if (isDomainError(error)) {
-      return { error: error.message };
-    }
-    throw error;
-  }
-}
-```
+### November 11, 2025 - Phase 2: Supplier Integration ✨
 
-#### 2. In Page Components
-```typescript
-import { buildRequestContext } from '@/src/lib/context/context-builder';
-import { InventoryRepository } from '@/src/repositories/inventory';
+Phase 2 integrates PracticeSupplier into core business flows (Orders and Items) with full backward compatibility:
 
-const inventoryRepository = new InventoryRepository();
+**New Features:**
+- Orders can use PracticeSupplier or legacy Supplier
+- Items support PracticeSupplier as default supplier
+- Dual-supplier pattern during transition
+- Automatic supplier ID resolution
+- Blocked supplier validation
+- Practice-specific supplier display (custom labels, account numbers)
 
-export default async function InventoryPage() {
-  const ctx = await buildRequestContext();
-  const items = await inventoryRepository.findItems(ctx.practiceId);
-  
-  return <div>{/* render items */}</div>;
-}
-```
+**Backend Status**: ✅ 100% Complete and Production Ready
 
-## 📁 Project Structure
+**Quick Start:**
+```bash
+# Check migration status
+npx prisma migrate status
 
-```
-/src
-  /domain                    # Domain models and rules
-    /models                  # TypeScript interfaces
-    /errors                  # Domain-specific errors
-    /validators              # Business rule validators
-  
-  /repositories              # Data access layer
-    /base                    # Base repository + transactions
-    /inventory               # Inventory data access
-    /orders                  # Order data access
-    /products                # Product catalog
-    /receiving               # Goods receiving
-    /audit                   # Audit logging
-    /users                   # Users & practices
-  
-  /services                  # Business logic layer
-    /audit                   # Centralized audit logging
-    /inventory               # Inventory management
-    /orders                  # Order workflows
-    /receiving               # Receiving workflows
-  
-  /lib
-    /context                 # Request context pattern
+# Create order with PracticeSupplier
+# (Programmatically - UI integration pending)
+await orderService.createOrder(ctx, {
+  practiceSupplierId: 'ps_abc123',
+  items: [{ itemId: 'item_1', quantity: 10, unitPrice: 5.99 }]
+});
 
-/docs
-  - ARCHITECTURE.md          # Complete architecture guide
-  - MIGRATION_GUIDE.md       # Refactoring instructions
-  - IMPLEMENTATION_SUMMARY.md # What's been completed
-
-/app/(dashboard)
-  /inventory
-    - actions-refactored.ts  # Example refactored actions
-  - Other actions (to be migrated)
-```
-
-## ✨ Key Features
-
-### 1. Request Context Pattern
-Every service method receives a `RequestContext` that contains:
-- User identity (`userId`, `email`, `name`)
-- Active practice (`practiceId`)
-- User role in practice (`role`)
-- All memberships
-- Timestamp and request ID
-
-This mirrors Go's `context.Context` pattern.
-
-### 2. Automatic Tenant Scoping
-All repository queries automatically scope to the user's practice:
-```typescript
-// Automatically adds WHERE practiceId = ctx.practiceId
-const items = await inventoryRepository.findItems(ctx.practiceId);
-```
-
-### 3. Authorization in Services
-Authorization is enforced in services, not actions:
-```typescript
-async createOrder(ctx: RequestContext, input: CreateOrderInput) {
-  requireRole(ctx, 'STAFF'); // Throws ForbiddenError if insufficient
-  // ... business logic
-}
-```
-
-### 4. Comprehensive Audit Logging
-All state changes are logged automatically:
-```typescript
-await auditService.logOrderCreated(ctx, orderId, {
-  supplierId: order.supplierId,
-  supplierName: supplier.name,
-  itemCount: items.length,
+# Create order with legacy Supplier (backward compatible)
+await orderService.createOrder(ctx, {
+  supplierId: 'supplier_xyz789',
+  items: [{ itemId: 'item_1', quantity: 10, unitPrice: 5.99 }]
 });
 ```
 
-### 5. Transaction Support
-Multi-step operations use transactions:
-```typescript
-return withTransaction(async (tx) => {
-  await repo1.create(data, { tx });
-  await repo2.update(id, changes, { tx });
-  await auditService.log(ctx, event, tx);
-});
-```
+**Migration Files:**
+- Phase 1: `prisma/migrations/20251111112724_add_global_and_practice_suppliers/migration.sql`
+- Phase 2: `prisma/migrations/20251111122948_add_practice_supplier_to_orders_items/migration.sql`
 
-## 🔄 Migration Status
-
-### ✅ Completed
-- [x] Domain layer (models, errors, validators)
-- [x] Request context and builders
-- [x] Base repository with tenant scoping
-- [x] All core repositories (6 repositories)
-- [x] All core services (4 services)
-- [x] Comprehensive documentation (3 guides)
-- [x] Example refactored actions
-- [x] Schema enhancements (indexes, timestamps)
-
-### 📋 To Migrate (See MIGRATION_GUIDE.md)
-- [ ] `app/(dashboard)/orders/actions.ts` → Use OrderService
-- [ ] `app/(dashboard)/receiving/actions.ts` → Use ReceivingService
-- [ ] `app/(dashboard)/products/actions.ts` → Create ProductService
-- [ ] Other action files as needed
-
-**Migration is straightforward** - follow the patterns in `MIGRATION_GUIDE.md`.
-
-## 🧪 Testing
-
-### Unit Tests (Services)
-```typescript
-describe('InventoryService', () => {
-  it('should adjust stock correctly', async () => {
-    const mockRepo = createMockInventoryRepository();
-    const service = new InventoryService(mockRepo, ...);
-    
-    const result = await service.adjustStock(ctx, input);
-    expect(result.newQuantity).toBe(15);
-  });
-});
-```
-
-### Integration Tests (Repositories)
-```typescript
-describe('InventoryRepository', () => {
-  it('should find items for practice', async () => {
-    const repo = new InventoryRepository();
-    const items = await repo.findItems('practice-1');
-    
-    expect(items[0].practiceId).toBe('practice-1');
-  });
-});
-```
-
-## 🔮 Future: Migration to Go
-
-The architecture is designed for seamless Go migration:
-
-### TypeScript → Go Mapping
-| TypeScript | Go |
-|-----------|-----|
-| `RequestContext` | `context.Context` |
-| `src/services` | `internal/services` |
-| `src/repositories` | `internal/repositories` |
-| `withTransaction()` | `db.Transaction()` |
-| `requireRole()` | Middleware |
-
-### Same Database
-- No schema changes required
-- Use sqlc, GORM, or pgx
-- Same PostgreSQL database
-
-### Example Go Service
-```go
-type InventoryService struct {
-    repo InventoryRepository
-    audit AuditService
-}
-
-func (s *InventoryService) CreateItem(ctx context.Context, input CreateItemInput) (*Item, error) {
-    // Check authorization
-    if !hasRole(ctx, "STAFF") {
-        return nil, errors.New("forbidden")
-    }
-    
-    // Create item
-    item, err := s.repo.CreateItem(ctx, input)
-    if err != nil {
-        return nil, err
-    }
-    
-    // Audit log
-    s.audit.LogItemCreated(ctx, item.ID, item)
-    
-    return item, nil
-}
-```
-
-## 📖 Best Practices
-
-### DO ✅
-- Always pass `RequestContext` to service methods
-- Use `withTransaction()` for multi-step operations
-- Log all state changes with `AuditService`
-- Enforce authorization in services
-- Use domain errors for validation
-- Keep actions thin (just parse and call service)
-
-### DON'T ❌
-- Import Prisma directly in services
-- Mix business logic in repositories
-- Skip tenant scoping checks
-- Forget to log audit events
-- Put authorization in actions
-- Write business logic in actions
-
-## 🆘 Getting Help
-
-1. **Architecture questions?** → Read `ARCHITECTURE.md`
-2. **How to migrate?** → Follow `MIGRATION_GUIDE.md`
-3. **What's been built?** → See `IMPLEMENTATION_SUMMARY.md`
-4. **Need examples?** → Check `actions-refactored.ts`
-
-## 📊 Statistics
-
-- **6,250+ lines** of production-quality TypeScript
-- **6 repositories** handling all data access
-- **4 services** implementing business logic
-- **1,000+ lines** of comprehensive documentation
-- **100% tenant-isolated** - automatic practice scoping
-- **Go-ready** - direct 1:1 mapping to Go patterns
-
-## 🎉 Benefits
-
-### For Development
-- **Faster feature development** - Clear patterns to follow
-- **Easier testing** - Mock services, test repositories
-- **Better code quality** - Separation of concerns enforced
-
-### For Architecture
-- **Maintainable** - Clear layer boundaries
-- **Scalable** - Services can be split into microservices
-- **Flexible** - Easy to swap implementations
-
-### For Business
-- **Audit compliance** - Complete tracking of all actions
-- **Security** - Consistent authorization and tenant isolation
-- **Future-proof** - Ready for Go migration when needed
+See **[PHASE_2_SUPPLIER_INTEGRATION.md](./PHASE_2_SUPPLIER_INTEGRATION.md)** for complete details.
 
 ---
 
-**Ready to build features quickly with a solid, Go-ready foundation!** 🚀
+### November 11, 2025 - Phase 1: Global Supplier Architecture ✨
 
+The system now includes a new global supplier architecture alongside the existing practice-scoped model:
+
+**New Features:**
+- Platform-wide supplier management via `GlobalSupplier` table
+- Practice-specific supplier links via `PracticeSupplier` table
+- Data backfill script with dry-run mode
+- Admin verification dashboard at `/admin/supplier-migration`
+- Full backward compatibility with existing code
+
+**Migration File:**
+- `prisma/migrations/20251111112724_add_global_and_practice_suppliers/migration.sql`
+
+See **[GLOBAL_SUPPLIER_MIGRATION.md](./GLOBAL_SUPPLIER_MIGRATION.md)** for complete details.
+
+---
+
+## Development Commands
+
+```bash
+# Database
+npm run db:push          # Push schema changes (development)
+npm run db:migrate       # Create and run migrations
+npm run db:studio        # Open Prisma Studio
+
+# Application
+npm run dev              # Start development server
+npm run build            # Build for production
+npm run start            # Start production server
+
+# Utilities
+npm run backfill:suppliers  # Backfill global supplier data
+```
+
+## Contributing
+
+When adding new features or making significant changes:
+
+1. Update relevant documentation in this directory
+2. Create migrations for schema changes
+3. Add entries to MIGRATION_STATUS.md
+4. Update this README with quick links
+
+---
+
+**Last Updated**: November 11, 2025

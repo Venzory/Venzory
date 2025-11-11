@@ -5,21 +5,27 @@ import Link from 'next/link';
 
 import { createDraftOrderAction } from '../../actions';
 import { ItemSelector, type ItemForSelection } from '../../_components/item-selector';
+import type { PracticeSupplierWithRelations } from '@/src/domain/models/suppliers';
 
 interface NewOrderFormClientProps {
-  suppliers: { id: string; name: string }[];
+  practiceSuppliers: PracticeSupplierWithRelations[];
   items: {
     id: string;
     name: string;
     sku: string | null;
     unit: string | null;
     defaultSupplierId: string | null;
-    supplierItems: { supplierId: string; unitPrice: any }[];
+    defaultPracticeSupplierId: string | null;
+    supplierItems: { 
+      supplierId: string; 
+      practiceSupplierId: string | null;
+      unitPrice: any;
+    }[];
   }[];
 }
 
-export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps) {
-  const [selectedSupplier, setSelectedSupplier] = useState('');
+export function NewOrderFormClient({ practiceSuppliers, items }: NewOrderFormClientProps) {
+  const [selectedPracticeSupplierId, setSelectedPracticeSupplierId] = useState('');
   const [selectedItems, setSelectedItems] = useState<
     { itemId: string; quantity: number; unitPrice: number }[]
   >([]);
@@ -55,7 +61,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
     setError('');
     setIsSubmitting(true);
 
-    if (!selectedSupplier) {
+    if (!selectedPracticeSupplierId) {
       setError('Please select a supplier');
       setIsSubmitting(false);
       return;
@@ -68,7 +74,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
     }
 
     const formData = new FormData(e.currentTarget);
-    formData.set('supplierId', selectedSupplier);
+    formData.set('practiceSupplierId', selectedPracticeSupplierId);
     formData.set('items', JSON.stringify(selectedItems));
 
     try {
@@ -124,30 +130,54 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
         {/* Supplier Selection */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Supplier</h2>
-          <div className="space-y-2">
-            <label htmlFor="supplierId" className="text-sm text-slate-700 dark:text-slate-400">
-              Select Supplier *
-            </label>
-            <select
-              id="supplierId"
-              value={selectedSupplier}
-              onChange={(e) => {
-                setSelectedSupplier(e.target.value);
-                setSelectedItems([]); // Clear items when supplier changes
-              }}
-              required
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-            >
-              <option value="">Choose a supplier...</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          
+          {practiceSuppliers.length === 0 ? (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/20">
+              <p className="text-sm text-amber-900 dark:text-amber-200">
+                No suppliers configured. Please contact your administrator to set up suppliers.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label htmlFor="practiceSupplierId" className="text-sm text-slate-700 dark:text-slate-400">
+                Select Supplier *
+              </label>
+              <select
+                id="practiceSupplierId"
+                value={selectedPracticeSupplierId}
+                onChange={(e) => {
+                  setSelectedPracticeSupplierId(e.target.value);
+                  setSelectedItems([]); // Clear items when supplier changes
+                }}
+                required
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+              >
+                <option value="">Choose a supplier...</option>
+                {practiceSuppliers.map((ps) => {
+                  const displayName = ps.customLabel || ps.globalSupplier.name;
+                  const accountInfo = ps.accountNumber ? ` (Account: ${ps.accountNumber})` : '';
+                  const preferredMark = ps.isPreferred ? '⭐ ' : '';
+                  return (
+                    <option key={ps.id} value={ps.id}>
+                      {preferredMark}{displayName}{accountInfo}
+                    </option>
+                  );
+                })}
+              </select>
+              
+              {selectedPracticeSupplierId && (() => {
+                const selectedPs = practiceSuppliers.find(ps => ps.id === selectedPracticeSupplierId);
+                return selectedPs?.orderingNotes ? (
+                  <div className="mt-2 rounded-lg border border-blue-300 bg-blue-50 p-3 dark:border-blue-700 dark:bg-blue-900/20">
+                    <p className="text-xs font-medium text-blue-900 dark:text-blue-200">Ordering Notes:</p>
+                    <p className="mt-1 text-xs text-blue-800 dark:text-blue-300">{selectedPs.orderingNotes}</p>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
 
-          {!selectedSupplier ? (
+          {!selectedPracticeSupplierId && practiceSuppliers.length > 0 ? (
             <p className="text-xs text-slate-500 dark:text-slate-500">
               Select a supplier to see available items
             </p>
@@ -155,7 +185,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
         </div>
 
         {/* Items Selection */}
-        {selectedSupplier ? (
+        {selectedPracticeSupplierId ? (
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
             <div className="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Order Items</h2>
@@ -285,7 +315,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
                 </label>
                 <ItemSelector
                   items={items as ItemForSelection[]}
-                  supplierId={selectedSupplier}
+                  practiceSupplierId={selectedPracticeSupplierId}
                   onSelect={handleAddItem}
                   excludeItemIds={selectedItems.map((si) => si.itemId)}
                   placeholder="Search items by name or SKU..."
@@ -296,7 +326,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
         ) : null}
 
         {/* Notes and Reference */}
-        {selectedSupplier ? (
+        {selectedPracticeSupplierId ? (
           <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Additional Information</h2>
             <div className="space-y-4">
@@ -337,7 +367,7 @@ export function NewOrderFormClient({ suppliers, items }: NewOrderFormClientProps
           </Link>
           <button
             type="submit"
-            disabled={isSubmitting || !selectedSupplier || selectedItems.length === 0}
+            disabled={isSubmitting || !selectedPracticeSupplierId || selectedItems.length === 0}
             className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100"
           >
             {isSubmitting ? 'Creating...' : 'Create Draft Order'}

@@ -12,4 +12,5 @@ export * from './audit';
 export * from './users';
 export * from './locations';
 export * from './stock-count';
+export * from './suppliers';
 

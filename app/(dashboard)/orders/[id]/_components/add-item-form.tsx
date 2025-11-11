@@ -6,21 +6,24 @@ import { ItemSelector, type ItemForSelection } from '../../_components/item-sele
 
 interface AddItemFormProps {
   orderId: string;
-  supplierId: string;
+  supplierId?: string | null;
+  practiceSupplierId?: string | null;
   items: Array<{
     id: string;
     name: string;
     sku: string | null;
     unit: string | null;
     defaultSupplierId: string | null;
+    defaultPracticeSupplierId?: string | null;
     supplierItems?: Array<{
       supplierId: string;
+      practiceSupplierId?: string | null;
       unitPrice: number | null;
     }>;
   }>;
 }
 
-export function AddItemForm({ orderId, supplierId, items }: AddItemFormProps) {
+export function AddItemForm({ orderId, supplierId, practiceSupplierId, items }: AddItemFormProps) {
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [selectedItemPrice, setSelectedItemPrice] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
@@ -93,7 +96,8 @@ export function AddItemForm({ orderId, supplierId, items }: AddItemFormProps) {
             </label>
             <ItemSelector
               items={items as ItemForSelection[]}
-              supplierId={supplierId}
+              supplierId={supplierId || undefined}
+              practiceSupplierId={practiceSupplierId || undefined}
               onSelect={handleItemSelect}
               excludeItemIds={[]}
               placeholder="Search items by name or SKU..."

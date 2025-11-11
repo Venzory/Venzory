@@ -41,6 +41,10 @@ export class OrderRepository extends BaseRepository {
       where.supplierId = filters.supplierId;
     }
 
+    if (filters?.practiceSupplierId) {
+      where.practiceSupplierId = filters.practiceSupplierId;
+    }
+
     if (filters?.status) {
       where.status = filters.status;
     }
@@ -64,6 +68,11 @@ export class OrderRepository extends BaseRepository {
       include: {
         supplier: {
           select: { id: true, name: true, email: true, phone: true },
+        },
+        practiceSupplier: {
+          include: {
+            globalSupplier: true,
+          },
         },
         items: {
           include: {
@@ -97,6 +106,11 @@ export class OrderRepository extends BaseRepository {
       where: { id: orderId, practiceId },
       include: {
         supplier: true,
+        practiceSupplier: {
+          include: {
+            globalSupplier: true,
+          },
+        },
         items: {
           include: {
             item: {
@@ -136,7 +150,8 @@ export class OrderRepository extends BaseRepository {
     const order = await client.order.create({
       data: {
         practiceId: input.practiceId,
-        supplierId: input.supplierId,
+        supplierId: input.supplierId!, // Will be set by service layer
+        practiceSupplierId: input.practiceSupplierId ?? null,
         status: OrderStatus.DRAFT,
         createdById,
         reference: input.reference ?? null,

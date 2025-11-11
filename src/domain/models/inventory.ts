@@ -5,6 +5,7 @@
 
 import type { BaseEntity, Location, Supplier } from './common';
 import type { Product } from './products';
+import type { PracticeSupplier } from './suppliers';
 
 /**
  * Item - Practice-specific view of a Product
@@ -13,6 +14,7 @@ export interface Item extends BaseEntity {
   practiceId: string;
   productId: string;
   defaultSupplierId: string | null;
+  defaultPracticeSupplierId: string | null; // Phase 2: optional PracticeSupplier reference
   name: string;
   sku: string | null;
   description: string | null;
@@ -25,6 +27,7 @@ export interface Item extends BaseEntity {
 export interface ItemWithRelations extends Item {
   product?: Product;
   defaultSupplier?: Supplier | null;
+  defaultPracticeSupplier?: PracticeSupplier | null; // Phase 2: practice-specific supplier info
   inventory?: LocationInventory[];
   supplierItems?: SupplierItem[];
 }
@@ -81,6 +84,7 @@ export interface InventoryTransfer extends BaseEntity {
  */
 export interface SupplierItem extends BaseEntity {
   supplierId: string;
+  practiceSupplierId: string | null; // Phase 2: optional PracticeSupplier reference
   itemId: string;
   supplierSku: string | null;
   unitPrice: number | null;
@@ -99,6 +103,7 @@ export interface CreateItemInput {
   description?: string | null;
   unit?: string | null;
   defaultSupplierId?: string | null;
+  defaultPracticeSupplierId?: string | null; // Phase 2: optional PracticeSupplier reference
 }
 
 /**
@@ -110,6 +115,7 @@ export interface UpdateItemInput {
   description?: string | null;
   unit?: string | null;
   defaultSupplierId?: string | null;
+  defaultPracticeSupplierId?: string | null; // Phase 2: optional PracticeSupplier reference
 }
 
 /**
@@ -142,6 +148,7 @@ export interface InventoryFilters {
   search?: string;
   locationId?: string;
   supplierId?: string;
+  practiceSupplierId?: string; // Phase 2: filter by PracticeSupplier
   lowStockOnly?: boolean;
 }
 

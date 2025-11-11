@@ -6,6 +6,7 @@
 import { OrderRepository } from '@/src/repositories/orders';
 import { InventoryRepository } from '@/src/repositories/inventory';
 import { UserRepository } from '@/src/repositories/users';
+import { PracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { AuditService } from '../audit/audit-service';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
@@ -37,6 +38,7 @@ export class OrderService {
     private orderRepository: OrderRepository,
     private inventoryRepository: InventoryRepository,
     private userRepository: UserRepository,
+    private practiceSupplierRepository: PracticeSupplierRepository,
     private auditService: AuditService
   ) {}
 
@@ -84,6 +86,7 @@ export class OrderService {
 
   /**
    * Create new order
+   * Supports both legacy Supplier and new PracticeSupplier (Phase 2)
    */
   async createOrder(
     ctx: RequestContext,
@@ -97,13 +100,21 @@ export class OrderService {
       throw new ValidationError('Order must have at least one item');
     }
 
+    // Validate supplier IDs - at least one must be provided
+    if (!input.supplierId && !input.practiceSupplierId) {
+      throw new ValidationError('Either supplierId or practiceSupplierId must be provided');
+    }
+
     // Validate all items
     for (const item of input.items) {
       validatePositiveQuantity(item.quantity);
     }
 
-    // Verify supplier exists
-    await this.userRepository.findSupplierById(input.supplierId, ctx.practiceId);
+    // Phase 2: Resolve supplier IDs using dual-supplier pattern
+    const resolvedSupplierIds = await this.resolveSupplierIds(
+      input,
+      ctx.practiceId
+    );
 
     return withTransaction(async (tx) => {
       // Verify all items exist
@@ -111,12 +122,14 @@ export class OrderService {
         await this.inventoryRepository.findItemById(item.itemId, ctx.practiceId, { tx });
       }
 
-      // Create order
+      // Create order with resolved supplier IDs
       const order = await this.orderRepository.createOrder(
         ctx.userId,
         {
           ...input,
           practiceId: ctx.practiceId,
+          supplierId: resolvedSupplierIds.supplierId,
+          practiceSupplierId: resolvedSupplierIds.practiceSupplierId,
         },
         { tx }
       );
@@ -134,13 +147,16 @@ export class OrderService {
         return sum + price * item.quantity;
       }, 0) ?? 0;
 
+      // Get supplier name from appropriate source
+      const supplierName = this.getSupplierDisplayName(fullOrder);
+
       // Log audit event
       await this.auditService.logOrderCreated(
         ctx,
         order.id,
         {
-          supplierId: input.supplierId,
-          supplierName: fullOrder.supplier?.name ?? 'Unknown',
+          supplierId: resolvedSupplierIds.supplierId,
+          supplierName,
           itemCount: input.items.length,
           totalAmount,
         },
@@ -149,6 +165,84 @@ export class OrderService {
 
       return fullOrder;
     });
+  }
+
+  /**
+   * Resolve supplier IDs for dual-supplier pattern (Phase 2)
+   * Ensures both supplierId and practiceSupplierId are populated when applicable
+   */
+  private async resolveSupplierIds(
+    input: Pick<CreateOrderInput, 'supplierId' | 'practiceSupplierId'>,
+    practiceId: string
+  ): Promise<{ supplierId: string; practiceSupplierId: string | null }> {
+    // Case 1: PracticeSupplier provided (preferred - Phase 2)
+    if (input.practiceSupplierId) {
+      const practiceSupplier = await this.practiceSupplierRepository.findPracticeSupplierById(
+        input.practiceSupplierId,
+        practiceId
+      );
+
+      // Check if supplier is blocked
+      if (practiceSupplier.isBlocked) {
+        throw new BusinessRuleViolationError('Cannot create order with blocked supplier');
+      }
+
+      // Derive legacy supplierId from migration tracking or find legacy supplier
+      let legacySupplierId = practiceSupplier.migratedFromSupplierId;
+      
+      if (!legacySupplierId) {
+        // If no migration tracking, this is a new PracticeSupplier
+        // For backward compatibility, we still need a legacy Supplier record
+        // This is a transitional state - in Phase 3+ we'll remove this requirement
+        throw new ValidationError(
+          'PracticeSupplier has no legacy supplier mapping. Please contact support.'
+        );
+      }
+
+      // Verify legacy supplier exists
+      await this.userRepository.findSupplierById(legacySupplierId, practiceId);
+
+      return {
+        supplierId: legacySupplierId,
+        practiceSupplierId: input.practiceSupplierId,
+      };
+    }
+
+    // Case 2: Legacy Supplier provided (fallback - backward compatibility)
+    if (input.supplierId) {
+      // Verify supplier exists
+      await this.userRepository.findSupplierById(input.supplierId, practiceId);
+
+      // Try to find corresponding PracticeSupplier for forward compatibility
+      const practiceSupplier = await this.practiceSupplierRepository.findPracticeSupplierByMigratedId(
+        practiceId,
+        input.supplierId
+      );
+
+      return {
+        supplierId: input.supplierId,
+        practiceSupplierId: practiceSupplier?.id ?? null,
+      };
+    }
+
+    // Should never reach here due to validation above
+    throw new ValidationError('No supplier specified');
+  }
+
+  /**
+   * Get supplier display name from order (Phase 2 helper)
+   * Prefers PracticeSupplier customLabel, falls back to GlobalSupplier or legacy Supplier name
+   */
+  private getSupplierDisplayName(order: OrderWithRelations): string {
+    // Prefer PracticeSupplier info if available
+    if (order.practiceSupplier) {
+      return order.practiceSupplier.customLabel 
+        || order.practiceSupplier.globalSupplier?.name 
+        || 'Unknown';
+    }
+
+    // Fall back to legacy Supplier
+    return order.supplier?.name ?? 'Unknown';
   }
 
   /**
@@ -906,10 +1000,12 @@ let orderServiceInstance: OrderService | null = null;
 export function getOrderService(): OrderService {
   if (!orderServiceInstance) {
     const { getAuditService } = require('../audit/audit-service');
+    const { getPracticeSupplierRepository } = require('@/src/repositories/suppliers');
     orderServiceInstance = new OrderService(
       new OrderRepository(),
       new InventoryRepository(),
       new UserRepository(),
+      getPracticeSupplierRepository(),
       getAuditService()
     );
   }

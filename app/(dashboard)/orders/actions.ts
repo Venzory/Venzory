@@ -20,7 +20,8 @@ const orderService = getOrderService();
 
 // Validation schemas
 const createDraftOrderSchema = z.object({
-  supplierId: z.string().min(1, 'Supplier is required'),
+  supplierId: z.string().optional(), // Legacy support
+  practiceSupplierId: z.string().optional(), // New PracticeSupplier support
   notes: z.string().max(512).optional().transform((value) => value?.trim() || null),
   reference: z.string().max(128).optional().transform((value) => value?.trim() || null),
   items: z.array(
@@ -30,6 +31,9 @@ const createDraftOrderSchema = z.object({
       unitPrice: z.union([z.coerce.number().nonnegative(), z.null()]).optional().transform((value) => value ?? null),
     })
   ).min(1, 'At least one item is required'),
+}).refine((data) => data.supplierId || data.practiceSupplierId, {
+  message: 'Either supplierId or practiceSupplierId is required',
+  path: ['supplierId'],
 });
 
 const updateOrderItemSchema = z.object({
@@ -73,6 +77,7 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
 
     const parsed = createDraftOrderSchema.safeParse({
       supplierId: formData.get('supplierId'),
+      practiceSupplierId: formData.get('practiceSupplierId'),
       notes: formData.get('notes'),
       reference: formData.get('reference'),
       items,
@@ -82,11 +87,12 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
       return { error: parsed.error.issues[0]?.message || 'Invalid order data' } as const;
     }
 
-    const { supplierId, notes, reference, items: orderItems } = parsed.data;
+    const { supplierId, practiceSupplierId, notes, reference, items: orderItems } = parsed.data;
 
-    // Create order using service
+    // Create order using service (backend handles dual-supplier logic)
     const result = await orderService.createOrder(ctx, {
       supplierId,
+      practiceSupplierId,
       notes,
       reference,
       items: orderItems.map(item => ({
