@@ -70,6 +70,7 @@ export interface UpdateProductInput {
   brand?: string | null;
   name?: string;
   description?: string | null;
+  isGs1Product?: boolean;
   gs1VerificationStatus?: Gs1VerificationStatus;
   gs1VerifiedAt?: Date | null;
   gs1Data?: Record<string, any> | null;

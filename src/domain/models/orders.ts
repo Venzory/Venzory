@@ -14,10 +14,10 @@ export type OrderStatus = 'DRAFT' | 'SENT' | 'PARTIALLY_RECEIVED' | 'RECEIVED' |
  */
 export interface Order extends BaseEntity {
   practiceId: string;
-  supplierId: string;
+  supplierId: string | null;
   practiceSupplierId: string | null; // Phase 2: optional PracticeSupplier reference
   status: OrderStatus;
-  createdById: string;
+  createdById: string | null;
   reference: string | null;
   notes: string | null;
   sentAt: Date | null;
@@ -59,7 +59,7 @@ export interface OrderTemplate extends BaseEntity {
   practiceId: string;
   name: string;
   description: string | null;
-  createdById: string;
+  createdById: string | null;
 }
 
 /**

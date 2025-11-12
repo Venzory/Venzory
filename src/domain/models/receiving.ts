@@ -18,7 +18,7 @@ export interface GoodsReceipt extends BaseEntity {
   orderId: string | null;
   supplierId: string | null;
   status: GoodsReceiptStatus;
-  createdById: string;
+  createdById: string | null;
   receivedAt: Date | null;
   notes: string | null;
 }
@@ -35,7 +35,7 @@ export interface GoodsReceiptWithRelations extends GoodsReceipt {
     id: string;
     name: string | null;
     email: string;
-  };
+  } | null;
 }
 
 /**

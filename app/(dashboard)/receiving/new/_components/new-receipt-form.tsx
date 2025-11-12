@@ -8,7 +8,7 @@ import { createGoodsReceiptAction } from '../../actions';
 interface OrderContext {
   id: string;
   reference: string | null;
-  supplierId: string;
+  supplierId: string | null;
   supplierName: string;
   items: Array<{
     id: string;
