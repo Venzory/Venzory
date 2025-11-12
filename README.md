@@ -24,27 +24,33 @@ application with App Router, Tailwind CSS, and Prisma for data access.
    npm install
    ```
 
-2. Duplicate the environment template and provide secrets:
+2. Configure environment variables:
 
    ```bash
    cp .env.example .env.local
    ```
    
-   **Required environment variables:**
-   - `DATABASE_URL` – PostgreSQL connection string
-   - `NEXTAUTH_SECRET` – Random secret for NextAuth (generate with `openssl rand -base64 32`)
-   - `NEXTAUTH_URL` – App URL (e.g., `http://localhost:3000`)
-   - `RESEND_API_KEY` – API key from [Resend](https://resend.com) for password reset emails
-   - `NEXT_PUBLIC_APP_URL` – Public app URL for email links (e.g., `http://localhost:3000`)
-   - `CSRF_SECRET` – Random secret for CSRF token signing (generate with `openssl rand -base64 32`)
+   **The application uses strict environment validation with Zod** and will fail-fast at startup if any required variable is missing or invalid. This ensures configuration errors are caught early with clear, actionable error messages.
+   
+   **Required (all environments):**
+   - `DATABASE_URL` – PostgreSQL connection string (must start with `postgres://` or `postgresql://`)
+   - `NEXTAUTH_SECRET` – Random secret for NextAuth, minimum 32 characters (generate with `openssl rand -base64 32`)
+   - `CSRF_SECRET` – Random secret for CSRF token signing, minimum 32 characters (generate with `openssl rand -base64 32`)
 
-   **Optional environment variables:**
-   - `REDIS_URL` – Redis connection URL for production rate limiting (omit for in-memory fallback)
-   - `SENTRY_DSN` – Sentry DSN for server-side error tracking (omit to disable)
-   - `NEXT_PUBLIC_SENTRY_DSN` – Sentry DSN for client-side error tracking (omit to disable)
-   - `SENTRY_ORG` – Sentry organization slug (for source map uploads)
-   - `SENTRY_PROJECT` – Sentry project slug (for source map uploads)
-   - `SENTRY_AUTH_TOKEN` – Sentry auth token (for CI/CD source map uploads)
+   **Auto-defaults in development:**
+   - `NEXTAUTH_URL` – Defaults to `http://localhost:3000` in development (HTTPS required in production)
+   - `NEXT_PUBLIC_APP_URL` – Defaults to `http://localhost:3000` in development (HTTPS required in production)
+
+   **Required in production only:**
+   - `RESEND_API_KEY` – API key from [Resend](https://resend.com) for email functionality (optional in dev, logs to console)
+   - `REDIS_URL` – Redis connection URL for distributed rate limiting (optional in dev, uses in-memory fallback)
+
+   **Optional (all environments):**
+   - `SENTRY_DSN` – Sentry DSN for server-side error tracking
+   - `NEXT_PUBLIC_SENTRY_DSN` – Sentry DSN for client-side error tracking
+   - `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` – For Sentry source map uploads
+   
+   See [`.env.example`](.env.example) for detailed documentation on each variable.
 
 3. Push the Prisma schema to your database (creates tables):
 
@@ -92,6 +98,43 @@ application with App Router, Tailwind CSS, and Prisma for data access.
 ### Production Hardening
 
 This application includes several production-ready features for security, reliability, and maintainability:
+
+#### Environment Variable Validation
+
+The application uses **strict, fail-fast environment variable validation** with Zod to catch configuration errors at startup before the app can serve requests.
+
+**Key Features:**
+- **Type-safe access**: All env vars are accessed via a typed `env` object from `lib/env.ts` instead of `process.env`
+- **Fail-fast validation**: Invalid or missing required variables cause immediate startup failure with clear error messages
+- **Production vs development validation**: Different requirements based on `NODE_ENV`
+- **Automatic defaults**: Development URLs default to `http://localhost:3000`
+- **Strict format validation**: 
+  - Database URLs must start with `postgres://` or `postgresql://`
+  - Secrets must be at least 32 characters
+  - Production URLs must use HTTPS
+  - Optional variables are validated if present
+
+**Example error output:**
+```
+❌ Invalid environment variables:
+
+  DATABASE_URL: DATABASE_URL must be a valid PostgreSQL connection string (postgres:// or postgresql://)
+  NEXTAUTH_SECRET: NEXTAUTH_SECRET must be at least 32 characters for security. Generate with: openssl rand -base64 32
+  NEXT_PUBLIC_APP_URL: NEXT_PUBLIC_APP_URL must use HTTPS in production
+
+💡 Fix these issues in your .env.local file or environment configuration.
+   See .env.example for a complete list of required variables.
+```
+
+**Usage in code:**
+```typescript
+// ❌ Don't use process.env directly
+const secret = process.env.NEXTAUTH_SECRET;
+
+// ✅ Use the typed env module
+import { env } from '@/lib/env';
+const secret = env.NEXTAUTH_SECRET; // Type-safe and validated
+```
 
 #### Rate Limiting
 
@@ -343,6 +386,204 @@ If you receive `403 Invalid request` errors:
 - HMAC signing: Prevents token forgery and tampering
 - Timing-safe comparison: Prevents timing attacks during token verification
 - SameSite=Lax: Provides CSRF protection while allowing normal navigation
+
+#### Error Handling and Logging
+
+The application implements a global error handler for all API routes, providing consistent error responses, correlation ID tracking, and structured logging.
+
+**Features:**
+
+- **Consistent Error Format**: All errors return `{ error: { code, message } }` with optional `details` field
+- **Correlation IDs**: Every request/response includes an `X-Request-Id` header for distributed tracing
+- **Structured Logging**: Uses Pino for JSON-formatted logs with correlation IDs
+- **Domain Error Mapping**: Business logic errors are mapped to appropriate HTTP status codes
+- **Production Safety**: Internal error details and stack traces are hidden in production
+
+**Using Error Handling in API Routes:**
+
+All new API routes should use the composed `apiHandler` or `apiHandlerContext` wrappers:
+
+```typescript
+import { apiHandler } from '@/lib/api-handler';
+import { NextResponse } from 'next/server';
+import { NotFoundError, ValidationError } from '@/src/domain/errors';
+
+// Simple route
+export const GET = apiHandler(async (request: Request) => {
+  const item = await findItem(id);
+  if (!item) throw new NotFoundError('Item', id);
+  
+  return NextResponse.json(item);
+});
+
+// Route with dynamic parameters
+import { apiHandlerContext } from '@/lib/api-handler';
+
+export const PATCH = apiHandlerContext(
+  async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params;
+    const item = await updateItem(id);
+    return NextResponse.json(item);
+  }
+);
+```
+
+The `apiHandler` and `apiHandlerContext` wrappers automatically provide:
+- CSRF protection for mutating requests (POST, PUT, PATCH, DELETE)
+- Error handling with consistent response format
+- Correlation ID generation and header attachment
+- Structured error logging
+
+**Domain Errors:**
+
+Throw appropriate domain errors for business logic violations. These are automatically mapped to HTTP responses:
+
+```typescript
+import {
+  NotFoundError,        // 404
+  UnauthorizedError,    // 401
+  ForbiddenError,       // 403
+  ValidationError,      // 422
+  ConflictError,        // 409
+  RateLimitError,       // 429
+} from '@/src/domain/errors';
+
+// Example: Not found
+throw new NotFoundError('User', userId);
+// Response: 404 { error: { code: 'NOT_FOUND', message: "User with ID 'xyz' not found" } }
+
+// Example: Validation with details
+throw new ValidationError('Invalid input', {
+  email: ['Invalid email format'],
+  password: ['Password too short']
+});
+// Response: 422 { error: { code: 'VALIDATION_ERROR', message: 'Invalid input', details: {...} } }
+
+// Example: Rate limiting
+throw new RateLimitError('Too many requests', {
+  limit: 10,
+  remaining: 0,
+  reset: 1234567890
+});
+// Response: 429 with X-RateLimit-* headers
+```
+
+**Client-Side Error Handling:**
+
+Parse error responses consistently:
+
+```typescript
+const response = await fetchWithCsrf('/api/items', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Item' }),
+});
+
+if (!response.ok) {
+  const errorData = await response.json();
+  console.error('Error:', errorData.error.code, errorData.error.message);
+  
+  // Handle validation errors
+  if (errorData.error.code === 'VALIDATION_ERROR' && errorData.error.details) {
+    // Display field-specific errors
+    console.log('Validation errors:', errorData.error.details);
+  }
+}
+```
+
+**Correlation IDs:**
+
+Every API response includes an `X-Request-Id` header for tracing:
+
+```typescript
+const response = await fetch('/api/items');
+const correlationId = response.headers.get('X-Request-Id');
+console.log('Request ID:', correlationId);
+```
+
+You can also provide your own correlation ID:
+
+```typescript
+const response = await fetch('/api/items', {
+  headers: {
+    'X-Request-ID': 'my-custom-correlation-id',
+  },
+});
+```
+
+**Structured Logging:**
+
+The application uses Pino for structured logging. All logs include correlation IDs:
+
+```typescript
+import logger from '@/lib/logger';
+
+// In your code
+logger.info({ userId, action: 'login' }, 'User logged in');
+logger.error({ error, orderId }, 'Failed to process order');
+
+// Logs are automatically enriched with correlation IDs in API routes
+```
+
+**Environment Configuration:**
+
+- **Development**: Logs are pretty-printed and colorized for readability
+- **Production**: Logs are JSON-formatted for log aggregation systems (ELK, Datadog, etc.)
+
+Control log level with the `LOG_LEVEL` environment variable (defaults to `debug` in dev, `info` in prod):
+
+```bash
+LOG_LEVEL=debug  # trace, debug, info, warn, error, fatal
+```
+
+**Error Response Examples:**
+
+```json
+// Domain error
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Item with ID '123' not found"
+  }
+}
+
+// Validation error with details
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input",
+    "details": {
+      "email": ["Valid email required"],
+      "password": ["Password must be at least 8 characters"]
+    }
+  }
+}
+
+// Unexpected error (production)
+{
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "An unexpected error occurred"
+  }
+}
+```
+
+**Testing Error Handling:**
+
+The test suite includes comprehensive error handler tests:
+
+```bash
+npm test
+```
+
+Tests cover:
+- Happy path responses with correlation IDs
+- Domain error mapping to correct HTTP status codes
+- Validation errors with details
+- Rate limit errors with headers
+- Unexpected errors return generic 500
+- No stack traces leak in production
+- Correlation ID generation and header propagation
 
 ### Next Steps
 

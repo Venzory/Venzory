@@ -10,7 +10,7 @@ export function RemoveUserButton({ userId, userName }: { userId: string; userNam
   const handleRemove = async () => {
     const confirmed = await confirm({
       title: 'Remove User',
-      message: `Are you sure you want to remove ${userName} from the practice?`,
+      message: `Are you sure you want to remove ${userName} from your practice?\n\nThey will lose access to all practice data and won't be able to log in. This won't affect any historical records they created.`,
       confirmLabel: 'Remove',
       variant: 'danger',
     });

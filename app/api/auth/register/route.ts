@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getAuthService } from '@/src/services';
+import { apiHandler } from '@/lib/api-handler';
+import { ValidationError } from '@/src/domain/errors';
 
 const registerSchema = z.object({
   practiceName: z.string().min(2, 'Practice name is required').max(120),
@@ -10,53 +12,30 @@ const registerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(120),
 });
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const parsed = registerSchema.safeParse(body);
+export const POST = apiHandler(async (request: Request) => {
+  const body = await request.json();
+  const parsed = registerSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: 'Invalid input',
-          details: parsed.error.flatten().fieldErrors,
-        },
-        { status: 422 },
-      );
-    }
-
-    const { practiceName, email, password, name } = parsed.data;
-
-    // Register practice using AuthService
-    const result = await getAuthService().registerPractice(
-      practiceName,
-      email,
-      password,
-      name
-    );
-
-    return NextResponse.json(
-      {
-        practice: result.practice,
-        user: result.user,
-      },
-      { status: 201 },
-    );
-  } catch (error) {
-    console.error('[register]', error);
-    
-    // Handle specific errors
-    if (error instanceof Error && error.message.includes('already exists')) {
-      return NextResponse.json(
-        { error: 'A user with this email already exists. Please sign in instead.' },
-        { status: 409 },
-      );
-    }
-    
-    return NextResponse.json(
-      { error: 'Unexpected error creating practice' },
-      { status: 500 },
-    );
+  if (!parsed.success) {
+    throw new ValidationError('Invalid input', parsed.error.flatten().fieldErrors);
   }
-}
+
+  const { practiceName, email, password, name } = parsed.data;
+
+  // Register practice using AuthService (throws ConflictError if user exists)
+  const result = await getAuthService().registerPractice(
+    practiceName,
+    email,
+    password,
+    name
+  );
+
+  return NextResponse.json(
+    {
+      practice: result.practice,
+      user: result.user,
+    },
+    { status: 201 },
+  );
+});
 

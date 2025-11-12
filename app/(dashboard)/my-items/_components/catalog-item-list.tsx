@@ -134,7 +134,7 @@ export function CatalogItemList({
           description="Browse products from your suppliers and add them to your catalog to get started."
           action={
             <Link href="/supplier-catalog">
-              <Button variant="primary">Browse Catalog</Button>
+              <Button variant="primary">Browse Supplier Catalog</Button>
             </Link>
           }
         />

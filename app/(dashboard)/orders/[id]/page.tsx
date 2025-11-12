@@ -17,6 +17,7 @@ import {
 } from '../actions';
 import { EditableOrderItem } from './_components/editable-order-item';
 import { AddItemForm } from './_components/add-item-form';
+import { OrderActions } from './_components/order-actions';
 
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>;
@@ -105,26 +106,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </p>
         </div>
         <div className="flex gap-3">
-          {canEdit ? (
-            <>
-              <form action={sendOrderAction.bind(null, order.id)}>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
-                >
-                  Send to Supplier
-                </button>
-              </form>
-              <form action={deleteOrderAction.bind(null, order.id)}>
-                <button
-                  type="submit"
-                  className="rounded-lg border border-rose-700 px-4 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-900/20"
-                >
-                  Delete Order
-                </button>
-              </form>
-            </>
-          ) : null}
+          <OrderActions 
+            orderId={order.id} 
+            canEdit={canEdit} 
+            canReceive={canReceive}
+          />
           {canReceive ? (
             <Link
               href={`/receiving/new?orderId=${order.id}`}

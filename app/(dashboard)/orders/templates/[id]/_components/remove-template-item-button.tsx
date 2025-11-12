@@ -10,7 +10,7 @@ export function RemoveTemplateItemButton({ templateItemId }: { templateItemId: s
   const handleRemove = async () => {
     const confirmed = await confirm({
       title: 'Remove Item',
-      message: 'Remove this item from the template?',
+      message: 'Remove this item from the template? This won\'t affect any existing orders created from this template.',
       confirmLabel: 'Remove',
       variant: 'danger',
     });

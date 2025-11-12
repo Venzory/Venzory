@@ -6,17 +6,20 @@ import { Package } from 'lucide-react';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getInventoryService, getOrderService } from '@/src/services';
+import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
+import { prisma } from '@/lib/prisma';
+import { OnboardingReminderCard } from './_components/onboarding-reminder-card';
 
 export default async function DashboardPage() {
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
   // Fetch all data in parallel using services
-  const [items, orders, adjustments, suppliers] = await Promise.all([
+  const [items, orders, adjustments, suppliers, practice, practiceSuppliers] = await Promise.all([
     // Fetch all items with inventory to calculate low stock
     getInventoryService().findItems(ctx, {}),
     // Fetch orders for stats and recent orders table
@@ -25,6 +28,16 @@ export default async function DashboardPage() {
     getInventoryService().getRecentAdjustments(ctx, 5),
     // Fetch all suppliers for links
     getInventoryService().getSuppliers(ctx),
+    // Fetch practice for onboarding status
+    prisma.practice.findUnique({
+      where: { id: practiceId },
+      select: {
+        onboardingCompletedAt: true,
+        onboardingSkippedAt: true,
+      },
+    }),
+    // Fetch practice suppliers
+    getPracticeSupplierRepository().findPracticeSuppliers(practiceId),
   ]);
 
   // Calculate low-stock information for each item
@@ -66,6 +79,16 @@ export default async function DashboardPage() {
     minimumRole: PracticeRole.STAFF,
   });
 
+  // Onboarding status checks
+  const hasSuppliers = practiceSuppliers.length > 0;
+  const hasItems = items.length > 0;
+  const hasOrders = orders.length > 0;
+  const isOnboardingComplete = practice?.onboardingCompletedAt != null;
+  const allSetupComplete = hasSuppliers && hasItems && hasOrders;
+  
+  // Show reminder if: onboarding not complete AND setup not complete AND (skipped OR staff+)
+  const shouldShowReminder = !isOnboardingComplete && !allSetupComplete && canManage;
+
   return (
     <section className="space-y-8">
       <header className="space-y-1">
@@ -84,6 +107,15 @@ export default async function DashboardPage() {
           )}
         </div>
       </header>
+
+      {/* Onboarding Reminder Card */}
+      {shouldShowReminder && (
+        <OnboardingReminderCard
+          hasSuppliers={hasSuppliers}
+          hasItems={hasItems}
+          hasOrders={hasOrders}
+        />
+      )}
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

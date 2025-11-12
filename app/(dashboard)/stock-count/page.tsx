@@ -54,7 +54,7 @@ export default async function StockCountPage() {
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Stock Count</h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Perform quick stock counts and adjust inventory
+            Perform physical stock counts and reconcile inventory discrepancies.
           </p>
         </div>
         <Link href="/stock-count/new">

@@ -186,7 +186,7 @@ export default async function SupplierDetailPage({ params }: SupplierDetailPageP
                   Remove Supplier
                 </h2>
                 <p className="mb-4 text-sm text-rose-700 dark:text-rose-300">
-                  Removing this supplier only disconnects it from your practice. The supplier itself stays available on the platform.
+                  This will remove the supplier from your practice. Your existing orders and item records will be preserved, but you won&apos;t be able to create new orders with this supplier unless you add them back.
                 </p>
                 <form action={unlinkPracticeSupplierAction.bind(null, practiceSupplier.id)}>
                   <button

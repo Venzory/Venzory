@@ -96,6 +96,10 @@ model Practice {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Onboarding tracking
+  onboardingCompletedAt DateTime?
+  onboardingSkippedAt   DateTime?
+
   users              PracticeUser[]
   locations          Location[]
   items              Item[]
@@ -179,7 +183,7 @@ model Product {
 
 model GlobalSupplier {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique
   email     String?
   phone     String?
   website   String?
@@ -210,8 +214,9 @@ model PracticeSupplier {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  practice       Practice       @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
+  practice            Practice       @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  globalSupplier      GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
+  migratedFromSupplier Supplier?     @relation("PracticeSupplierMigration", fields: [migratedFromSupplierId], references: [id], onDelete: SetNull)
   
   // Reverse relations (Phase 2)
   orders           Order[]
@@ -236,14 +241,16 @@ model Supplier {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  practice           Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  items              SupplierItem[]
-  defaultItems       Item[]              @relation("ItemDefaultSupplier")
-  orders             Order[]
-  orderTemplateItems OrderTemplateItem[]
-  supplierCatalogs   SupplierCatalog[]
-  goodsReceipts      GoodsReceipt[]
+  practice                  Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  items                     SupplierItem[]
+  defaultItems              Item[]              @relation("ItemDefaultSupplier")
+  orders                    Order[]
+  orderTemplateItems        OrderTemplateItem[]
+  supplierCatalogs          SupplierCatalog[]
+  goodsReceipts             GoodsReceipt[]
+  practiceSupplierMigrations PracticeSupplier[] @relation("PracticeSupplierMigration")
 
+  @@unique([practiceId, name])
   @@index([practiceId])
 }
 
@@ -293,8 +300,8 @@ model Item {
 
   practice                Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
   product                 Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
-  defaultSupplier         Supplier?           @relation("ItemDefaultSupplier", fields: [defaultSupplierId], references: [id])
-  defaultPracticeSupplier PracticeSupplier?   @relation(fields: [defaultPracticeSupplierId], references: [id])
+  defaultSupplier         Supplier?           @relation("ItemDefaultSupplier", fields: [defaultSupplierId], references: [id], onDelete: SetNull)
+  defaultPracticeSupplier PracticeSupplier?   @relation(fields: [defaultPracticeSupplierId], references: [id], onDelete: SetNull)
   inventory               LocationInventory[]
   supplierItems           SupplierItem[]
   orderItems              OrderItem[]
@@ -340,7 +347,7 @@ model SupplierItem {
   updatedAt          DateTime @updatedAt
 
   supplier         Supplier          @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id])
+  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
   item             Item              @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@unique([supplierId, itemId])
@@ -351,10 +358,10 @@ model SupplierItem {
 model Order {
   id                 String      @id @default(cuid())
   practiceId         String
-  supplierId         String
+  supplierId         String?
   practiceSupplierId String? // Phase 2: optional PracticeSupplier reference
   status             OrderStatus @default(DRAFT)
-  createdById        String
+  createdById        String?
   reference          String?
   notes              String?
   sentAt             DateTime?
@@ -364,9 +371,9 @@ model Order {
   updatedAt          DateTime    @updatedAt
 
   practice         Practice          @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  supplier         Supplier          @relation(fields: [supplierId], references: [id])
-  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id])
-  createdBy        User              @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  supplier         Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
+  createdBy        User?             @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   items            OrderItem[]
   goodsReceipts    GoodsReceipt[]
 
@@ -395,12 +402,12 @@ model OrderTemplate {
   practiceId  String
   name        String
   description String?
-  createdById String
+  createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   practice  Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  createdBy User                @relation("OrderTemplateCreatedBy", fields: [createdById], references: [id])
+  createdBy User?               @relation("OrderTemplateCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   items     OrderTemplateItem[]
 
   @@index([practiceId])
@@ -431,13 +438,13 @@ model StockAdjustment {
   quantity    Int
   reason      String?
   note        String?
-  createdById String
+  createdById String?
   createdAt   DateTime @default(now())
 
-  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  practice  Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  createdBy User     @relation(fields: [createdById], references: [id])
+  item      Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  location  Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  practice  Practice  @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([practiceId])
   @@index([itemId])
@@ -452,14 +459,14 @@ model InventoryTransfer {
   toLocationId   String
   quantity       Int
   note           String?
-  createdById    String
+  createdById    String?
   createdAt      DateTime @default(now())
 
-  practice     Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  item         Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  fromLocation Location @relation("TransferFromLocation", fields: [fromLocationId], references: [id])
-  toLocation   Location @relation("TransferToLocation", fields: [toLocationId], references: [id])
-  createdBy    User     @relation("TransferCreatedBy", fields: [createdById], references: [id])
+  practice     Practice  @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  item         Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  fromLocation Location  @relation("TransferFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
+  toLocation   Location  @relation("TransferToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
+  createdBy    User?     @relation("TransferCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([practiceId])
   @@index([itemId])
@@ -474,7 +481,7 @@ model GoodsReceipt {
   orderId     String?
   supplierId  String?
   status      GoodsReceiptStatus @default(DRAFT)
-  createdById String
+  createdById String?
   receivedAt  DateTime?
   notes       String?
   createdAt   DateTime           @default(now())
@@ -484,7 +491,7 @@ model GoodsReceipt {
   location  Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
   order     Order?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
   supplier  Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  createdBy User               @relation("GoodsReceiptCreatedBy", fields: [createdById], references: [id])
+  createdBy User?              @relation("GoodsReceiptCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   lines     GoodsReceiptLine[]
 
   @@index([practiceId])
@@ -518,14 +525,14 @@ model StockCountSession {
   practiceId  String
   locationId  String
   status      StockCountStatus @default(IN_PROGRESS)
-  createdById String
+  createdById String?
   completedAt DateTime?
   notes       String?
   createdAt   DateTime         @default(now())
 
   practice  Practice         @relation(fields: [practiceId], references: [id], onDelete: Cascade)
   location  Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  createdBy User             @relation("StockCountCreatedBy", fields: [createdById], references: [id])
+  createdBy User?            @relation("StockCountCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   lines     StockCountLine[]
 
   @@index([practiceId])

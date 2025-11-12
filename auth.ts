@@ -4,6 +4,7 @@ import { compare } from 'bcryptjs';
 import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
+import { env } from '@/lib/env';
 
 const credentialsSchema = z.object({
   email: z.string().email().min(1),
@@ -18,7 +19,7 @@ export const {
 } = NextAuth({
   session: { strategy: 'jwt' },
   trustHost: true,
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/login',
   },

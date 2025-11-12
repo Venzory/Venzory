@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { toast } from '@/lib/toast';
 
 import { upsertItemAction } from '../actions';
@@ -21,24 +21,32 @@ const initialState: FormState = {};
 
 export function CreateItemForm({ suppliers }: { suppliers: SupplierOption[] }) {
   const [state, formAction] = useActionState(upsertItemAction, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (state.success) {
-      toast.success(state.success);
+      toast.success(`${state.success} successfully! You can now add it to orders or adjust inventory levels.`);
+      // Reset form after successful creation
+      formRef.current?.reset();
     } else if (state.error) {
       toast.error(state.error);
     }
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+    <form ref={formRef} action={formAction} className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
       <div>
         <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Add inventory item</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">Define catalog details and optional default supplier.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Create a new item in your practice catalog. You can set initial stock levels after creation.</p>
       </div>
 
       <div className="space-y-4">
-        <Input label="Name" name="name" id="item-name" required />
+        <div className="space-y-2">
+          <Input label="Name" name="name" id="item-name" required />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            The display name for this item in your practice
+          </p>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
@@ -63,6 +71,9 @@ export function CreateItemForm({ suppliers }: { suppliers: SupplierOption[] }) {
               maxLength={14}
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
             />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Optional: Used for barcode scanning
+            </p>
           </div>
           <div className="space-y-2">
             <label htmlFor="item-brand" className="text-sm font-medium text-slate-700 dark:text-slate-200">

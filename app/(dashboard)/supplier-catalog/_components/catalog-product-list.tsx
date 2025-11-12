@@ -114,7 +114,7 @@ export function CatalogProductList({
         <EmptyState
           icon={Package}
           title="No products available"
-          description="Your linked suppliers don't have any products in their catalogs yet."
+          description="There are no products available from your linked suppliers yet. If you haven't added any suppliers, start by linking one to browse their catalog."
         />
       </Card>
     );

@@ -5,7 +5,7 @@
 
 import type { BaseEntity, Location, Supplier } from './common';
 import type { Product } from './products';
-import type { PracticeSupplier } from './suppliers';
+import type { PracticeSupplier, PracticeSupplierWithRelations } from './suppliers';
 
 /**
  * Item - Practice-specific view of a Product
@@ -27,7 +27,7 @@ export interface Item extends BaseEntity {
 export interface ItemWithRelations extends Item {
   product?: Product;
   defaultSupplier?: Supplier | null;
-  defaultPracticeSupplier?: PracticeSupplier | null; // Phase 2: practice-specific supplier info
+  defaultPracticeSupplier?: PracticeSupplierWithRelations | null; // Phase 2: practice-specific supplier info with global supplier
   inventory?: LocationInventory[];
   supplierItems?: SupplierItem[];
 }

@@ -4,6 +4,8 @@ import type { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { checkRouteAccess } from '@/lib/route-guards';
 import { generateCSP } from '@/lib/csp';
+import { createSignedCsrfToken, getCsrfTokenFromCookie, parseAndVerifySignedToken } from '@/lib/csrf';
+import { env } from '@/lib/env';
 
 const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog'];
 const authRoutes = ['/login', '/register'];
@@ -19,6 +21,42 @@ function generateNonce(): string {
 }
 
 /**
+ * Set CSRF cookie if not present or invalid
+ * Cookie properties:
+ * - Name: __Host-csrf (secure prefix)
+ * - HttpOnly: true (prevent JavaScript access)
+ * - SameSite: Lax (protect against CSRF while allowing normal navigation)
+ * - Secure: true (HTTPS only in production)
+ * - Path: /
+ * - Max-Age: 3600 (1 hour)
+ */
+async function setCsrfCookie(response: NextResponse, request: Request): Promise<void> {
+  const isProduction = env.NODE_ENV === 'production';
+  
+  // Check if valid CSRF cookie already exists
+  const existingToken = getCsrfTokenFromCookie(request);
+  let needsNewToken = true;
+  
+  if (existingToken) {
+    // Verify the existing token is valid
+    const verified = await parseAndVerifySignedToken(existingToken);
+    if (verified) {
+      needsNewToken = false;
+    }
+  }
+  
+  if (needsNewToken) {
+    // Generate new signed CSRF token
+    const signedToken = await createSignedCsrfToken();
+    
+    // Set cookie with security attributes
+    const cookieValue = `__Host-csrf=${encodeURIComponent(signedToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600${isProduction ? '; Secure' : ''}`;
+    
+    response.headers.append('Set-Cookie', cookieValue);
+  }
+}
+
+/**
  * Applies security headers to a NextResponse
  * 
  * Headers applied:
@@ -29,9 +67,9 @@ function generateNonce(): string {
  * - Permissions-Policy: Disables sensitive browser features
  * - Content-Security-Policy: Comprehensive XSS protection with nonce
  */
-function applySecurityHeaders(response: NextResponse, nonce: string): NextResponse {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const isProduction = process.env.NODE_ENV === 'production';
+async function applySecurityHeaders(response: NextResponse, nonce: string, request: Request): Promise<NextResponse> {
+  const isDevelopment = env.NODE_ENV === 'development';
+  const isProduction = env.NODE_ENV === 'production';
 
   // X-Frame-Options: DENY - Prevent clickjacking by disallowing iframe embedding
   response.headers.set('X-Frame-Options', 'DENY');
@@ -74,10 +112,13 @@ function applySecurityHeaders(response: NextResponse, nonce: string): NextRespon
   // 2. Exposing nonces unnecessarily could be a security risk
   // 3. CSP nonce is already included in the Content-Security-Policy header
 
+  // Set CSRF cookie for protection against CSRF attacks
+  await setCsrfCookie(response, request);
+
   return response;
 }
 
-export default auth((request) => {
+export default auth(async (request) => {
   const { pathname } = request.nextUrl;
 
   const isProtected = protectedMatchers.some((path) => pathname.startsWith(path));
@@ -89,7 +130,7 @@ export default auth((request) => {
   // If user is authenticated and trying to access auth routes, redirect to dashboard
   if (request.auth && isAuthRoute) {
     const response = NextResponse.redirect(new URL('/dashboard', request.nextUrl.origin));
-    return applySecurityHeaders(response, nonce);
+    return await applySecurityHeaders(response, nonce, request);
   }
 
   // If user is not authenticated and trying to access protected routes, redirect to login
@@ -97,7 +138,7 @@ export default auth((request) => {
     const signInUrl = new URL('/login', request.nextUrl.origin);
     signInUrl.searchParams.set('callbackUrl', request.nextUrl.href);
     const response = NextResponse.redirect(signInUrl);
-    return applySecurityHeaders(response, nonce);
+    return await applySecurityHeaders(response, nonce, request);
   }
 
   // For authenticated users on protected routes, check role-based access
@@ -112,13 +153,13 @@ export default auth((request) => {
       const accessDeniedUrl = new URL('/access-denied', request.nextUrl.origin);
       accessDeniedUrl.searchParams.set('from', pathname);
       const response = NextResponse.redirect(accessDeniedUrl);
-      return applySecurityHeaders(response, nonce);
+      return await applySecurityHeaders(response, nonce, request);
     }
   }
 
   // Apply security headers to normal responses
   const response = NextResponse.next();
-  return applySecurityHeaders(response, nonce);
+  return await applySecurityHeaders(response, nonce, request);
 });
 
 export const config = {

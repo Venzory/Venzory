@@ -39,7 +39,7 @@ export default async function OrdersPage() {
           </Link>
           {canManage && (
             <Link href="/orders/new">
-              <Button variant="primary">New Order</Button>
+              <Button variant="primary">Create Order</Button>
             </Link>
           )}
         </div>
@@ -64,8 +64,15 @@ function OrdersList({
         title="No orders yet"
         description={
           canManage
-            ? 'Create your first purchase order to start tracking inventory deliveries.'
+            ? 'Start tracking your inventory by creating your first purchase order. You can order from any linked supplier.'
             : 'Orders will appear here once created by staff members.'
+        }
+        action={
+          canManage ? (
+            <Link href="/orders/new">
+              <Button variant="primary">Create Your First Order</Button>
+            </Link>
+          ) : undefined
         }
       />
     );

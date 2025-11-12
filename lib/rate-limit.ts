@@ -1,3 +1,5 @@
+import { env } from '@/lib/env';
+
 // Dynamic import for ioredis to avoid Edge Runtime issues
 let Redis: typeof import('ioredis').default | null = null;
 
@@ -201,7 +203,7 @@ class InMemoryRateLimiter implements RateLimiter {
  * Create a rate limiter instance based on environment configuration
  */
 export function createRateLimiter(config: RateLimitConfig): RateLimiter {
-  const redisUrl = typeof process !== 'undefined' ? process.env?.REDIS_URL : undefined;
+  const redisUrl = env.REDIS_URL;
 
   // Use Redis only if URL is configured AND Redis client is available
   if (redisUrl && Redis) {

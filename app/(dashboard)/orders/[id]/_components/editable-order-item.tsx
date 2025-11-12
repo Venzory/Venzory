@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+import { useConfirm } from '@/hooks/use-confirm';
+import { toast } from '@/lib/toast';
 import { updateOrderItemAction, removeOrderItemAction } from '../../actions';
 
 export function EditableOrderItem({
@@ -19,7 +22,32 @@ export function EditableOrderItem({
   itemSku: string | null;
   itemUnit: string | null;
 }) {
+  const confirm = useConfirm();
+  const [isRemoving, setIsRemoving] = useState(false);
   const lineTotal = unitPrice * quantity;
+
+  const handleRemove = async () => {
+    const confirmed = await confirm({
+      title: 'Remove Item',
+      message: `Are you sure you want to remove "${itemName}" from this order?`,
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsRemoving(true);
+    try {
+      await removeOrderItemAction(orderId, itemId);
+      toast.success('Item removed from order');
+    } catch (error: any) {
+      console.error('Failed to remove item:', error);
+      toast.error(error?.message || 'Failed to remove item');
+      setIsRemoving(false);
+    }
+  };
 
   return (
     <tr>
@@ -66,14 +94,14 @@ export function EditableOrderItem({
         {lineTotal > 0 ? `€${lineTotal.toFixed(2)}` : '-'}
       </td>
       <td className="px-4 py-3 text-right">
-        <form action={removeOrderItemAction.bind(null, orderId, itemId)}>
-          <button
-            type="submit"
-            className="text-sm text-rose-400 transition hover:text-rose-300"
-          >
-            Remove
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={handleRemove}
+          disabled={isRemoving}
+          className="text-sm text-rose-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isRemoving ? 'Removing...' : 'Remove'}
+        </button>
       </td>
     </tr>
   );

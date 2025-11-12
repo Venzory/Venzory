@@ -70,6 +70,13 @@ export class BusinessRuleViolationError extends DomainError {
   }
 }
 
+export class RateLimitError extends DomainError {
+  constructor(message: string = 'Too many requests. Please try again later.', details?: Record<string, unknown>) {
+    super(message, 'RATE_LIMIT_EXCEEDED', 429, details);
+    this.name = 'RateLimitError';
+  }
+}
+
 /**
  * Helper to determine if an error is a DomainError
  */

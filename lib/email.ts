@@ -1,9 +1,10 @@
 import { Resend } from 'resend';
 import type { PracticeRole } from '@prisma/client';
+import { env } from '@/lib/env';
 
 // Initialize Resend client - gracefully handle missing API key during build
-const resend = process.env.RESEND_API_KEY 
-  ? new Resend(process.env.RESEND_API_KEY)
+const resend = env.RESEND_API_KEY 
+  ? new Resend(env.RESEND_API_KEY)
   : null;
 
 interface SendPasswordResetEmailParams {
@@ -51,7 +52,7 @@ export async function sendPasswordResetEmail({
       };
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const resetUrl = `${baseUrl}/auth/reset-password/${token}`;
     const displayName = name || 'there';
 
@@ -150,7 +151,7 @@ export async function sendUserInviteEmail({
   inviterName,
 }: SendUserInviteEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const inviteUrl = `${baseUrl}/auth/accept-invite/${token}`;
     const roleDisplay = role.charAt(0) + role.slice(1).toLowerCase();
     const inviter = inviterName || 'An administrator';

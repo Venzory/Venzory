@@ -27,7 +27,7 @@ export default async function LocationsPage() {
       <div className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Locations</h1>
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Organise stock by physical location and understand how items are distributed.
+          Organize stock by physical location and track how items are distributed across your practice.
         </p>
       </div>
 
@@ -39,9 +39,9 @@ export default async function LocationsPage() {
           />
         ) : (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 dark:shadow-none">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">View only</h2>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">View Only</h2>
             <p className="mt-2">
-              Location hierarchy is managed by staff. Request access to reorganise storage areas or rooms.
+              Locations are managed by staff members. Contact an administrator to add or reorganize storage areas.
             </p>
           </div>
         )}

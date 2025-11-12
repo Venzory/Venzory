@@ -29,6 +29,7 @@ import {
   validatePositiveQuantity,
   validateStringLength,
   validateOrderCanBeSent,
+  validatePrice,
 } from '@/src/domain/validators';
 import { prisma } from '@/lib/prisma';
 import type { OrderTemplate, OrderTemplateItem } from '@prisma/client';
@@ -289,6 +290,11 @@ export class OrderService {
 
     // Validate input
     validatePositiveQuantity(input.quantity);
+    
+    // Validate price if provided
+    if (input.unitPrice !== undefined && input.unitPrice !== null) {
+      validatePrice(Number(input.unitPrice));
+    }
 
     return withTransaction(async (tx) => {
       // Verify order exists and is DRAFT
@@ -338,6 +344,11 @@ export class OrderService {
 
     // Validate input
     validatePositiveQuantity(input.quantity);
+    
+    // Validate price if provided
+    if (input.unitPrice !== undefined && input.unitPrice !== null) {
+      validatePrice(Number(input.unitPrice));
+    }
 
     return withTransaction(async (tx) => {
       // Verify order exists and is DRAFT

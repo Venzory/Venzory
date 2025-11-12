@@ -195,3 +195,31 @@ export function validateTransferLocations(fromLocationId: string, toLocationId: 
   }
 }
 
+/**
+ * Validate GTIN format and throw error if invalid
+ */
+export function validateGtinOrThrow(gtin: string, fieldName: string = 'GTIN'): void {
+  if (!validateGtin(gtin)) {
+    throw new ValidationError(
+      `${fieldName} format is invalid. Must be a valid GTIN-8, GTIN-12, GTIN-13, or GTIN-14 with correct check digit.`
+    );
+  }
+}
+
+/**
+ * Validate that two entities belong to the same practice
+ * Used for cross-entity validation to prevent cross-practice data leakage
+ */
+export function validateSamePractice(
+  entityA: { practiceId: string; name: string },
+  entityB: { practiceId: string; name: string },
+  errorMessage?: string
+): void {
+  if (entityA.practiceId !== entityB.practiceId) {
+    throw new ValidationError(
+      errorMessage || 
+      `${entityA.name} and ${entityB.name} must belong to the same practice`
+    );
+  }
+}
+

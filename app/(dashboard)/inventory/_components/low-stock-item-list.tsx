@@ -119,7 +119,14 @@ export function LowStockItemList({
         <EmptyState
           icon={Package}
           title={hasActiveFilters ? "No items found" : "No items yet"}
-          description={hasActiveFilters ? "Try adjusting your search or filters" : "Add items to your catalog to track inventory"}
+          description={hasActiveFilters ? "Try adjusting your search or filters" : "Add items to your catalog to start tracking inventory levels across your locations."}
+          action={
+            !hasActiveFilters ? (
+              <Link href="/supplier-catalog">
+                <Button variant="primary">Browse Supplier Catalog</Button>
+              </Link>
+            ) : undefined
+          }
         />
       </Card>
     );

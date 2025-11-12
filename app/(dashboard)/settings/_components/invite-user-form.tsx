@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PracticeRole } from '@prisma/client';
 import { toast } from '@/lib/toast';
+import { fetchWithCsrf } from '@/lib/fetch-with-csrf';
 
 type FormState = {
   email: string;
@@ -58,7 +59,7 @@ export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/invites', {
+      const response = await fetchWithCsrf('/api/invites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

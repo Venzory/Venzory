@@ -58,7 +58,7 @@ export default async function ReceivingPage() {
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Receiving</h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Receive deliveries and manage goods receipts
+            Record incoming deliveries and manage goods receipts.
           </p>
         </div>
         <Link href="/receiving/new">

@@ -229,7 +229,7 @@ export function AddSupplierModal({
                   No suppliers available
                 </h3>
                 <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                  There are no global suppliers in the system yet.
+                  There are no suppliers in the system yet.
                 </p>
               </div>
             )}

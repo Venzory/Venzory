@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { toast } from '@/lib/toast';
 import { addOrderItemAction } from '../../actions';
 import { ItemSelector, type ItemForSelection } from '../../_components/item-selector';
 
@@ -63,12 +64,14 @@ export function AddItemForm({ orderId, supplierId, practiceSupplierId, items }: 
       
       if (result && 'error' in result) {
         setError(result.error);
+        toast.error(result.error);
       } else {
         // Reset form on success
         setSelectedItemId('');
         setSelectedItemPrice(0);
         setQuantity(1);
         setUnitPrice(0);
+        toast.success('Item added to order');
       }
     });
   };

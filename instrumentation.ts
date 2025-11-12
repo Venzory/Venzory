@@ -1,9 +1,12 @@
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
+  // Import env module to ensure validation happens early
+  const { env } = await import('./lib/env');
+
+  if (env.NEXT_RUNTIME === 'nodejs') {
     await import('./sentry.server.config');
   }
 
-  if (process.env.NEXT_RUNTIME === 'edge') {
+  if (env.NEXT_RUNTIME === 'edge') {
     await import('./sentry.edge.config');
   }
 }

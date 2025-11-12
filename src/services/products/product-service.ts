@@ -22,7 +22,7 @@ import {
   BusinessRuleViolationError,
   NotFoundError,
 } from '@/src/domain/errors';
-import { validateStringLength } from '@/src/domain/validators';
+import { validateStringLength, validateGtinOrThrow, validatePrice } from '@/src/domain/validators';
 
 export class ProductService {
   constructor(
@@ -64,8 +64,15 @@ export class ProductService {
     if (input.brand) {
       validateStringLength(input.brand, 'Brand', 1, 128);
     }
+    
+    // Validate GTIN format if provided (CRITICAL for Magento integration)
     if (input.gtin) {
-      validateStringLength(input.gtin, 'GTIN', 1, 14);
+      validateGtinOrThrow(input.gtin);
+    }
+    
+    // Validate GS1 consistency: GS1 products must have a GTIN
+    if (input.isGs1Product && !input.gtin) {
+      throw new ValidationError('GS1 products must have a GTIN');
     }
 
     return withTransaction(async (tx) => {
@@ -119,21 +126,33 @@ export class ProductService {
     if (input.brand !== undefined && input.brand !== null) {
       validateStringLength(input.brand, 'Brand', 1, 128);
     }
+    
+    // Validate GTIN format if provided (CRITICAL for Magento integration)
     if (input.gtin !== undefined && input.gtin !== null) {
-      validateStringLength(input.gtin, 'GTIN', 1, 14);
+      validateGtinOrThrow(input.gtin);
     }
 
     return withTransaction(async (tx) => {
       // Verify product exists
-      await this.productRepository.findProductById(productId, { tx });
+      const existing = await this.productRepository.findProductById(productId, { tx });
+
+      // Validate GS1 consistency
+      if (input.isGs1Product !== undefined || input.gtin !== undefined) {
+        const newIsGs1 = input.isGs1Product ?? existing.isGs1Product;
+        const newGtin = input.gtin ?? existing.gtin;
+        
+        if (newIsGs1 && !newGtin) {
+          throw new ValidationError('GS1 products must have a GTIN');
+        }
+      }
 
       // Check for duplicate GTIN if changing GTIN
       if (input.gtin) {
-        const existing = await this.productRepository.findProductByGtin(
+        const duplicate = await this.productRepository.findProductByGtin(
           input.gtin,
           { tx }
         );
-        if (existing && existing.id !== productId) {
+        if (duplicate && duplicate.id !== productId) {
           throw new BusinessRuleViolationError(
             'A product with this GTIN already exists'
           );
@@ -247,6 +266,18 @@ export class ProductService {
   ): Promise<SupplierCatalog> {
     // Check permissions
     requireRole(ctx, 'ADMIN');
+    
+    // Validate price if provided
+    if (input.unitPrice !== undefined && input.unitPrice !== null) {
+      validatePrice(Number(input.unitPrice));
+    }
+    
+    // Validate minOrderQty if provided
+    if (input.minOrderQty !== undefined && input.minOrderQty !== null) {
+      if (input.minOrderQty <= 0) {
+        throw new ValidationError('Minimum order quantity must be positive');
+      }
+    }
 
     return withTransaction(async (tx) => {
       // Verify product exists

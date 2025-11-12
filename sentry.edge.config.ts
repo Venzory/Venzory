@@ -3,8 +3,9 @@
 // TODO: Re-enable when Sentry releases a fix
 
 // import * as Sentry from '@sentry/nextjs';
+// import { env } from '@/lib/env';
 
-// const SENTRY_DSN = process.env.SENTRY_DSN;
+// const SENTRY_DSN = env.SENTRY_DSN;
 
 // if (SENTRY_DSN) {
 //   Sentry.init({
@@ -16,7 +17,7 @@
 //     // Setting this option to true will print useful information to the console while you're setting up Sentry.
 //     debug: false,
 
-//     environment: process.env.NODE_ENV || 'development',
+//     environment: env.NODE_ENV,
 //   });
 
 //   console.log('[Sentry] Edge runtime error tracking initialized');
