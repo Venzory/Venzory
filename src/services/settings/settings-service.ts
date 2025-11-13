@@ -71,8 +71,11 @@ export class SettingsService {
       // Generate new slug if name changed
       let slug = practice.slug;
       if (practice.name !== input.name) {
-        const generateSlug = require('@/lib/slug').generateUniquePracticeSlug;
-        slug = await generateSlug(input.name);
+        slug = await this.userRepository.generateUniquePracticeSlug(
+          input.name,
+          ctx.practiceId,
+          { tx }
+        );
       }
 
       // Update practice

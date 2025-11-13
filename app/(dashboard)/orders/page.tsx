@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Package } from 'lucide-react';
+import { calculateOrderTotal } from '@/lib/prisma-transforms';
 
 export default async function OrdersPage() {
   const { session, practiceId } = await requireActivePractice();
@@ -108,10 +109,7 @@ function OrdersList({
           <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
             {orders.map((order) => {
               const itemCount = order.items.length;
-              const total = order.items.reduce((sum: number, item: any) => {
-                const price = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0;
-                return sum + price * item.quantity;
-              }, 0);
+              const total = calculateOrderTotal(order.items);
 
               return (
                 <tr key={order.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">

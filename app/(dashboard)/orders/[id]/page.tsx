@@ -7,6 +7,7 @@ import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getOrderService, getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
+import { decimalToNumber, calculateOrderTotal } from '@/lib/prisma-transforms';
 
 import {
   removeOrderItemAction,
@@ -49,9 +50,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const locations = await getInventoryService().getLocations(ctx);
 
   // Get all items for adding to order (only if can edit)
-  const allItems = canEdit
-    ? await getInventoryService().findItems(ctx, {})
-    : [];
+  const allItemsResult = canEdit
+    ? await getInventoryService().findItems(ctx, {}, { limit: 10000 })
+    : { items: [], totalCount: 0 };
+  const allItems = allItemsResult.items;
 
   // Filter items that match the order's supplier (support both legacy and PracticeSupplier)
   const availableItems = allItems
@@ -78,14 +80,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       supplierItems: item.supplierItems?.map((si: any) => ({
         supplierId: si.supplierId,
         practiceSupplierId: si.practiceSupplierId,
-        unitPrice: si.unitPrice ? parseFloat(si.unitPrice.toString()) : null,
+        unitPrice: decimalToNumber(si.unitPrice),
       })),
     }));
 
-  const total = order.items?.reduce((sum, item) => {
-    const price = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0;
-    return sum + price * item.quantity;
-  }, 0) || 0;
+  const total = calculateOrderTotal(order.items || []);
 
   return (
     <div className="space-y-6">
@@ -95,13 +94,13 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           <div className="flex items-center gap-3">
             <Link
               href="/orders"
-              className="text-sm text-slate-400 transition hover:text-slate-200"
+              className="text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             >
               ← Back to Orders
             </Link>
           </div>
-          <h1 className="text-2xl font-semibold text-white">Order Details</h1>
-          <p className="text-sm text-slate-300">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Order Details</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             {order.reference ? `Reference: ${order.reference}` : `Order #${order.id.slice(0, 8)}`}
           </p>
         </div>
@@ -276,7 +275,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
         {(order.items?.length || 0) === 0 ? (
           <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-400">
-            <p className="font-medium text-slate-200">No items in this order</p>
+            <p className="font-medium text-slate-900 dark:text-slate-200">No items in this order</p>
             <p className="mt-2">
               {canEdit ? 'Add items using the form below.' : 'This order has no items yet.'}
             </p>
@@ -284,32 +283,30 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-slate-800 bg-slate-950/40">
+              <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                     Item
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                     Quantity
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                     Unit Price
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                     Total
                   </th>
                   {canEdit ? (
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                       Actions
                     </th>
                   ) : null}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {order.items?.map((orderItem: any) => {
-                  const unitPrice = orderItem.unitPrice
-                    ? parseFloat(orderItem.unitPrice.toString())
-                    : 0;
+                  const unitPrice = decimalToNumber(orderItem.unitPrice) || 0;
                   const lineTotal = unitPrice * orderItem.quantity;
 
                   if (canEdit) {
@@ -331,40 +328,40 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     <tr key={orderItem.id}>
                       <td className="px-4 py-3">
                         <div className="flex flex-col">
-                          <span className="font-medium text-slate-200">
+                          <span className="font-medium text-slate-900 dark:text-slate-200">
                             {orderItem.item?.name}
                           </span>
                           {orderItem.item?.sku ? (
-                            <span className="text-xs text-slate-500">{orderItem.item?.sku}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-500">{orderItem.item?.sku}</span>
                           ) : null}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="text-slate-200">
+                        <span className="text-slate-900 dark:text-slate-200">
                           {orderItem.quantity} {orderItem.item?.unit || 'units'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="text-slate-200">
+                        <span className="text-slate-900 dark:text-slate-200">
                           {unitPrice > 0 ? `€${unitPrice.toFixed(2)}` : '-'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-200">
+                      <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-200">
                         {lineTotal > 0 ? `€${lineTotal.toFixed(2)}` : '-'}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-              <tfoot className="border-t border-slate-800 bg-slate-950/40">
+              <tfoot className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                 <tr>
                   <td 
                     colSpan={canEdit ? 3 : 3} 
-                    className="px-4 py-3 text-right font-semibold text-slate-200"
+                    className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-200"
                   >
                     Total
                   </td>
-                  <td className="px-4 py-3 text-right text-lg font-bold text-white">
+                  <td className="px-4 py-3 text-right text-lg font-bold text-slate-900 dark:text-white">
                     {total > 0 ? `€${total.toFixed(2)}` : '-'}
                   </td>
                   {canEdit ? <td></td> : null}
@@ -393,11 +390,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
 function StatusBadge({ status }: { status: OrderStatus }) {
   const styles = {
-    [OrderStatus.DRAFT]: 'bg-slate-700 text-slate-200',
-    [OrderStatus.SENT]: 'bg-blue-900/50 text-blue-300',
-    [OrderStatus.PARTIALLY_RECEIVED]: 'bg-amber-900/50 text-amber-300',
-    [OrderStatus.RECEIVED]: 'bg-green-900/50 text-green-300',
-    [OrderStatus.CANCELLED]: 'bg-rose-900/50 text-rose-300',
+    [OrderStatus.DRAFT]: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
+    [OrderStatus.SENT]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+    [OrderStatus.PARTIALLY_RECEIVED]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+    [OrderStatus.RECEIVED]: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
+    [OrderStatus.CANCELLED]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
   };
 
   return (

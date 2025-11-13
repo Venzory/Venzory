@@ -8,6 +8,7 @@ import { hasRole } from '@/lib/rbac';
 import { InviteUserForm } from './_components/invite-user-form';
 import { PracticeSettingsForm } from './_components/practice-settings-form';
 import { RemoveUserButton } from './_components/remove-user-button';
+import { UserRoleSelector } from './_components/user-role-selector';
 import {
   updatePracticeSettingsInlineAction,
   updateUserRoleInlineAction,
@@ -136,19 +137,11 @@ export default async function SettingsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {isAdmin && membership.user.id !== session.user.id ? (
-                        <form action={updateUserRoleInlineAction} className="inline">
-                          <input type="hidden" name="userId" value={membership.user.id} />
-                          <select
-                            name="role"
-                            defaultValue={membership.role}
-                            onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                            className="rounded-full border-0 px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-sky-500/30 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-200"
-                          >
-                            <option value="ADMIN">Admin</option>
-                            <option value="STAFF">Staff</option>
-                            <option value="VIEWER">Viewer</option>
-                          </select>
-                        </form>
+                        <UserRoleSelector
+                          userId={membership.user.id}
+                          currentRole={membership.role}
+                          updateRoleAction={updateUserRoleInlineAction}
+                        />
                       ) : (
                         <span
                           className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${

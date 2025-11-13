@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useConfirm } from '@/hooks/use-confirm';
 import { toast } from '@/lib/toast';
 import { updateOrderItemAction, removeOrderItemAction } from '../../actions';
@@ -24,7 +24,67 @@ export function EditableOrderItem({
 }) {
   const confirm = useConfirm();
   const [isRemoving, setIsRemoving] = useState(false);
-  const lineTotal = unitPrice * quantity;
+  const [isPendingQty, startQtyTransition] = useTransition();
+  const [isPendingPrice, startPriceTransition] = useTransition();
+  
+  // Optimistic state for quantity and price
+  const [optimisticQuantity, setOptimisticQuantity] = useState(quantity);
+  const [optimisticUnitPrice, setOptimisticUnitPrice] = useState(unitPrice);
+  
+  // Calculate line total with optimistic values
+  const lineTotal = optimisticUnitPrice * optimisticQuantity;
+
+  const handleQuantityChange = async (newQuantity: number) => {
+    // Guard against invalid values
+    if (newQuantity < 1 || isPendingQty) return;
+    
+    // Optimistically update the UI immediately
+    const previousQuantity = optimisticQuantity;
+    setOptimisticQuantity(newQuantity);
+    
+    startQtyTransition(async () => {
+      const formData = new FormData();
+      formData.set('orderId', orderId);
+      formData.set('itemId', itemId);
+      formData.set('quantity', newQuantity.toString());
+      formData.set('unitPrice', optimisticUnitPrice.toString());
+      
+      try {
+        await updateOrderItemAction(formData);
+      } catch (error: any) {
+        // Rollback on error
+        setOptimisticQuantity(previousQuantity);
+        console.error('Failed to update quantity:', error);
+        toast.error(error?.message || 'Failed to update quantity');
+      }
+    });
+  };
+
+  const handlePriceChange = async (newPrice: number) => {
+    // Guard against invalid values
+    if (newPrice < 0 || isPendingPrice) return;
+    
+    // Optimistically update the UI immediately
+    const previousPrice = optimisticUnitPrice;
+    setOptimisticUnitPrice(newPrice);
+    
+    startPriceTransition(async () => {
+      const formData = new FormData();
+      formData.set('orderId', orderId);
+      formData.set('itemId', itemId);
+      formData.set('quantity', optimisticQuantity.toString());
+      formData.set('unitPrice', newPrice.toString());
+      
+      try {
+        await updateOrderItemAction(formData);
+      } catch (error: any) {
+        // Rollback on error
+        setOptimisticUnitPrice(previousPrice);
+        console.error('Failed to update price:', error);
+        toast.error(error?.message || 'Failed to update price');
+      }
+    });
+  };
 
   const handleRemove = async () => {
     const confirmed = await confirm({
@@ -50,47 +110,81 @@ export function EditableOrderItem({
   };
 
   return (
-    <tr>
+    <tr className={isRemoving ? 'opacity-50 transition-opacity' : ''}>
       <td className="px-4 py-3">
         <div className="flex flex-col">
-          <span className="font-medium text-slate-200">{itemName}</span>
-          {itemSku ? <span className="text-xs text-slate-500">{itemSku}</span> : null}
+          <span className={`font-medium text-slate-900 dark:text-slate-200 ${isRemoving ? 'line-through' : ''}`}>
+            {itemName}
+          </span>
+          {itemSku ? <span className="text-xs text-slate-500 dark:text-slate-500">{itemSku}</span> : null}
         </div>
       </td>
       <td className="px-4 py-3 text-right">
-        <form action={updateOrderItemAction} className="inline-flex items-center gap-2">
-          <input type="hidden" name="orderId" value={orderId} />
-          <input type="hidden" name="itemId" value={itemId} />
-          <input type="hidden" name="unitPrice" value={unitPrice} />
+        <div className="inline-flex items-center gap-2">
           <input
-            name="quantity"
             type="number"
             min="1"
-            defaultValue={quantity}
-            className="w-20 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-center text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
-            onChange={(e) => e.currentTarget.form?.requestSubmit()}
+            value={optimisticQuantity}
+            disabled={isPendingQty || isRemoving}
+            onChange={(e) => {
+              const newValue = parseInt(e.target.value) || 1;
+              setOptimisticQuantity(newValue);
+            }}
+            onBlur={(e) => {
+              const newValue = parseInt(e.target.value) || 1;
+              if (newValue !== quantity) {
+                handleQuantityChange(newValue);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                const newValue = parseInt(e.currentTarget.value) || 1;
+                if (newValue !== quantity) {
+                  handleQuantityChange(newValue);
+                }
+                e.currentTarget.blur();
+              }
+            }}
+            className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-center text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
-          <span className="text-slate-400">{itemUnit || 'units'}</span>
-        </form>
+          <span className="text-slate-600 dark:text-slate-400">{itemUnit || 'units'}</span>
+        </div>
       </td>
       <td className="px-4 py-3 text-right">
-        <form action={updateOrderItemAction} className="inline-flex items-center gap-1">
-          <input type="hidden" name="orderId" value={orderId} />
-          <input type="hidden" name="itemId" value={itemId} />
-          <input type="hidden" name="quantity" value={quantity} />
-          <span className="text-slate-400">€</span>
+        <div className="inline-flex items-center gap-1">
+          <span className="text-slate-600 dark:text-slate-400">€</span>
           <input
-            name="unitPrice"
             type="number"
             min="0"
             step="0.01"
-            defaultValue={unitPrice}
-            className="w-24 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-right text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
-            onChange={(e) => e.currentTarget.form?.requestSubmit()}
+            value={optimisticUnitPrice}
+            disabled={isPendingPrice || isRemoving}
+            onChange={(e) => {
+              const newValue = parseFloat(e.target.value) || 0;
+              setOptimisticUnitPrice(newValue);
+            }}
+            onBlur={(e) => {
+              const newValue = parseFloat(e.target.value) || 0;
+              if (newValue !== unitPrice) {
+                handlePriceChange(newValue);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                const newValue = parseFloat(e.currentTarget.value) || 0;
+                if (newValue !== unitPrice) {
+                  handlePriceChange(newValue);
+                }
+                e.currentTarget.blur();
+              }
+            }}
+            className="w-24 rounded border border-slate-300 bg-white px-2 py-1 text-right text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
-        </form>
+        </div>
       </td>
-      <td className="px-4 py-3 text-right font-medium text-slate-200">
+      <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-200">
         {lineTotal > 0 ? `€${lineTotal.toFixed(2)}` : '-'}
       </td>
       <td className="px-4 py-3 text-right">
@@ -98,7 +192,7 @@ export function EditableOrderItem({
           type="button"
           onClick={handleRemove}
           disabled={isRemoving}
-          className="text-sm text-rose-400 transition hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+          className="text-sm text-rose-600 transition hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400 dark:hover:text-rose-300"
         >
           {isRemoving ? 'Removing...' : 'Remove'}
         </button>

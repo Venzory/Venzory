@@ -12,10 +12,14 @@
  */
 
 import { Prisma, IntegrationType } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import { ProductRepository } from '@/src/repositories/products';
 import { ProductData, CatalogEntry, SupplierDataFeed, ImportResult } from './types';
 import { lookupGtin, isValidGtin, enrichProductWithGs1Data } from './gs1-lookup';
 import logger from '@/lib/logger';
+import type { CreateProductInput, UpsertSupplierCatalogInput } from '@/src/domain/models';
+
+// Initialize repository instance
+const productRepository = new ProductRepository();
 
 /**
  * Find an existing Product by GTIN, or create a new one
@@ -31,27 +35,30 @@ import logger from '@/lib/logger';
 export async function findOrCreateProduct(productData: ProductData): Promise<string> {
   // If GTIN provided, try to find existing product
   if (productData.gtin && isValidGtin(productData.gtin)) {
-    const existing = await prisma.product.findUnique({
-      where: { gtin: productData.gtin },
-      select: { id: true },
-    });
+    const existing = await productRepository.findProductByGtin(productData.gtin);
     
     if (existing) {
       return existing.id;
     }
     
     // Create new GS1 product and attempt lookup
-    const product = await prisma.product.create({
-      data: {
-        gtin: productData.gtin,
-        brand: productData.brand,
-        name: productData.name,
-        description: productData.description,
-        isGs1Product: true,
+    const createInput: CreateProductInput = {
+      gtin: productData.gtin,
+      brand: productData.brand,
+      name: productData.name,
+      description: productData.description,
+      isGs1Product: true,
+    };
+    
+    const product = await productRepository.createProduct(createInput);
+    
+    // Update GS1 data if provided
+    if (productData.gs1VerificationStatus || productData.gs1Data) {
+      await productRepository.updateProduct(product.id, {
         gs1VerificationStatus: productData.gs1VerificationStatus || 'UNVERIFIED',
-        gs1Data: productData.gs1Data as Prisma.InputJsonValue,
-      },
-    });
+        gs1Data: productData.gs1Data,
+      });
+    }
     
     // Attempt GS1 enrichment in background (don't wait)
     enrichProductWithGs1Data(product.id).catch(err => {
@@ -67,16 +74,15 @@ export async function findOrCreateProduct(productData: ProductData): Promise<str
   }
   
   // No GTIN - create non-GS1 product
-  const product = await prisma.product.create({
-    data: {
-      gtin: null,
-      brand: productData.brand,
-      name: productData.name,
-      description: productData.description,
-      isGs1Product: false,
-      gs1VerificationStatus: 'UNVERIFIED',
-    },
-  });
+  const createInput: CreateProductInput = {
+    gtin: null,
+    brand: productData.brand,
+    name: productData.name,
+    description: productData.description,
+    isGs1Product: false,
+  };
+  
+  const product = await productRepository.createProduct(createInput);
   
   return product.id;
 }
@@ -97,46 +103,21 @@ export async function syncSupplierCatalog(
   productId: string,
   catalogData: CatalogEntry
 ): Promise<string> {
-  // Check if catalog entry already exists
-  const existing = await prisma.supplierCatalog.findUnique({
-    where: {
-      supplierId_productId: {
-        supplierId,
-        productId,
-      },
-    },
-  });
-  
-  const data = {
+  const upsertInput: UpsertSupplierCatalogInput = {
+    supplierId,
+    productId,
     supplierSku: catalogData.supplierSku,
     unitPrice: catalogData.unitPrice,
     currency: catalogData.currency || 'EUR',
     minOrderQty: catalogData.minOrderQty || 1,
     integrationType: catalogData.integrationType,
-    integrationConfig: catalogData.integrationConfig as Prisma.InputJsonValue,
+    integrationConfig: catalogData.integrationConfig,
     isActive: catalogData.isActive ?? true,
-    lastSyncAt: new Date(),
   };
   
-  if (existing) {
-    // Update existing catalog entry
-    const updated = await prisma.supplierCatalog.update({
-      where: { id: existing.id },
-      data,
-    });
-    return updated.id;
-  }
+  const catalog = await productRepository.upsertSupplierCatalog(upsertInput);
   
-  // Create new catalog entry
-  const created = await prisma.supplierCatalog.create({
-    data: {
-      ...data,
-      supplierId,
-      productId,
-    },
-  });
-  
-  return created.id;
+  return catalog.id;
 }
 
 /**
@@ -191,10 +172,7 @@ export async function batchProcessSupplierFeeds(
       const { productId } = await processSupplierFeed(supplierId, feed);
       
       // Check if product was newly created or updated
-      const product = await prisma.product.findUnique({
-        where: { id: productId },
-        select: { id: true, gtin: true, name: true, createdAt: true },
-      });
+      const product = await productRepository.findProductById(productId);
       
       if (product) {
         // Check if it was just created (within last second)

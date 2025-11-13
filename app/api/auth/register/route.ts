@@ -7,7 +7,7 @@ import { ValidationError } from '@/src/domain/errors';
 
 const registerSchema = z.object({
   practiceName: z.string().min(2, 'Practice name is required').max(120),
-  email: z.string().email('Valid email required'),
+  email: z.string().email('Invalid email format'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(1, 'Name is required').max(120),
 });

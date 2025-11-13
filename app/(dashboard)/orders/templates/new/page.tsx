@@ -29,10 +29,11 @@ export default async function NewTemplatePage() {
     );
   }
 
-  const [allItems, suppliers] = await Promise.all([
-    getInventoryService().findItems(ctx, {}),
+  const [itemsResult, suppliers] = await Promise.all([
+    getInventoryService().findItems(ctx, {}, { limit: 10000 }),
     getInventoryService().getSuppliers(ctx),
   ]);
+  const allItems = itemsResult.items;
 
   // Transform items to match expected format
   const items = allItems.map(item => ({

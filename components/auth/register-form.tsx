@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import { cn } from '@/lib/utils';
 
 type RegisterFormState = {
   practiceName: string;
@@ -20,17 +21,27 @@ export function RegisterForm() {
     password: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setState((prev) => ({ ...prev, [name]: value }));
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => {
+        const updated = { ...prev };
+        delete updated[name];
+        return updated;
+      });
+    }
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
     setSuccess(null);
 
     startTransition(async () => {
@@ -43,7 +54,14 @@ export function RegisterForm() {
 
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
-          setError(payload.error ?? 'Registration failed.');
+          
+          // Extract field errors from validation error details
+          if (payload.error?.details && typeof payload.error.details === 'object') {
+            setFieldErrors(payload.error.details);
+          } else {
+            // Generic error message
+            setError(payload.error?.message ?? 'Registration failed.');
+          }
           return;
         }
 
@@ -76,8 +94,16 @@ export function RegisterForm() {
           required
           value={state.practiceName}
           onChange={handleChange}
-          className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+          className={cn(
+            "w-full rounded-lg border bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 transition-colors focus:outline-none focus:ring-2",
+            fieldErrors.practiceName
+              ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
+              : "border-slate-800 focus:border-sky-500 focus:ring-sky-500/30"
+          )}
         />
+        {fieldErrors.practiceName?.[0] && (
+          <p className="text-xs text-rose-400">{fieldErrors.practiceName[0]}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -91,8 +117,16 @@ export function RegisterForm() {
           required
           value={state.name}
           onChange={handleChange}
-          className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+          className={cn(
+            "w-full rounded-lg border bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 transition-colors focus:outline-none focus:ring-2",
+            fieldErrors.name
+              ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
+              : "border-slate-800 focus:border-sky-500 focus:ring-sky-500/30"
+          )}
         />
+        {fieldErrors.name?.[0] && (
+          <p className="text-xs text-rose-400">{fieldErrors.name[0]}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -107,8 +141,16 @@ export function RegisterForm() {
           required
           value={state.email}
           onChange={handleChange}
-          className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+          className={cn(
+            "w-full rounded-lg border bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 transition-colors focus:outline-none focus:ring-2",
+            fieldErrors.email
+              ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
+              : "border-slate-800 focus:border-sky-500 focus:ring-sky-500/30"
+          )}
         />
+        {fieldErrors.email?.[0] && (
+          <p className="text-xs text-rose-400">{fieldErrors.email[0]}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -123,8 +165,16 @@ export function RegisterForm() {
           required
           value={state.password}
           onChange={handleChange}
-          className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+          className={cn(
+            "w-full rounded-lg border bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 transition-colors focus:outline-none focus:ring-2",
+            fieldErrors.password
+              ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
+              : "border-slate-800 focus:border-sky-500 focus:ring-sky-500/30"
+          )}
         />
+        {fieldErrors.password?.[0] && (
+          <p className="text-xs text-rose-400">{fieldErrors.password[0]}</p>
+        )}
       </div>
 
       {error ? <p className="text-sm text-rose-400">{error}</p> : null}

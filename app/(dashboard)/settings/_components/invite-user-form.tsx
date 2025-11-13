@@ -1,17 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useActionState, useEffect, useRef } from 'react';
 import { PracticeRole } from '@prisma/client';
 import { toast } from '@/lib/toast';
-import { fetcher } from '@/lib/fetcher';
-import { ClientApiError, toUserMessage } from '@/lib/client-error';
+import { Input } from '@/components/ui/input';
+import { inviteUserAction } from '../actions';
+import type { FormState } from '@/lib/form-types';
 
-type FormState = {
-  email: string;
-  role: PracticeRole;
-  name: string;
-};
+const initialState: FormState = {};
 
 interface InviteUserFormProps {
   practiceId: string;
@@ -19,103 +15,42 @@ interface InviteUserFormProps {
 }
 
 export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps) {
-  const router = useRouter();
-  const [state, setState] = useState<FormState>({
-    email: '',
-    role: PracticeRole.STAFF,
-    name: '',
-  });
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [state, formAction] = useActionState(inviteUserAction, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (success) {
-      toast.success(success);
-    } else if (error) {
-      toast.error(error);
+    if (state.success) {
+      toast.success(state.success);
+      // Reset form after successful invitation
+      formRef.current?.reset();
+    } else if (state.error) {
+      toast.error(state.error);
     }
-  }, [success, error]);
-
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = event.target;
-    setState((prev) => ({ ...prev, [name]: value }));
-    setError(null);
-    setSuccess(null);
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    // Validate email
-    if (!state.email || !state.email.includes('@')) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await fetcher.post('/api/invites', {
-        body: {
-          email: state.email,
-          role: state.role,
-          name: state.name || undefined,
-          practiceId,
-        },
-      });
-
-      // Success - reset form and show success message
-      setSuccess(`Invitation sent to ${state.email}`);
-      setState({
-        email: '',
-        role: PracticeRole.STAFF,
-        name: '',
-      });
-      setIsSubmitting(false);
-
-      // Refresh the page to show the new pending invite
-      router.refresh();
-    } catch (err) {
-      if (err instanceof ClientApiError) {
-        setError(toUserMessage(err));
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-      }
-      setIsSubmitting(false);
-    }
-  };
-
-  const disableForm = isSubmitting;
+    // Don't toast field errors - they're shown inline
+  }, [state]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-4">
       <p className="text-sm text-slate-700 dark:text-slate-300">
         Send an invitation to add a new user to <strong>{practiceName}</strong>.
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            Email address <span className="text-rose-600 dark:text-rose-400">*</span>
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={state.email}
-            onChange={handleChange}
-            disabled={disableForm}
-            placeholder="user@example.com"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
-          />
+      {state.error && (
+        <div className="rounded-lg bg-rose-900/20 border border-rose-800 p-4">
+          <p className="text-sm text-rose-300">{state.error}</p>
         </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input
+          label="Email address"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          placeholder="user@example.com"
+          error={state.errors?.email?.[0]}
+        />
 
         <div className="space-y-2">
           <label htmlFor="role" className="text-sm font-medium text-slate-700 dark:text-slate-200">
@@ -125,9 +60,7 @@ export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps
             id="role"
             name="role"
             required
-            value={state.role}
-            onChange={handleChange}
-            disabled={disableForm}
+            defaultValue={PracticeRole.STAFF}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           >
             <option value={PracticeRole.VIEWER}>Viewer - Read-only access</option>
@@ -146,9 +79,6 @@ export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps
           name="name"
           type="text"
           autoComplete="name"
-          value={state.name}
-          onChange={handleChange}
-          disabled={disableForm}
           placeholder="Pre-fill name for invitee"
           className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
@@ -156,10 +86,9 @@ export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps
 
       <button
         type="submit"
-        disabled={disableForm}
         className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100"
       >
-        {isSubmitting ? 'Sending invitation...' : 'Send invitation'}
+        Send invitation
       </button>
     </form>
   );

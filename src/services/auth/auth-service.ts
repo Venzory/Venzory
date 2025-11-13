@@ -9,7 +9,7 @@ import { randomBytes } from 'crypto';
 import { MembershipStatus, PracticeRole, User, Practice, UserInvite, PasswordResetToken } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { withTransaction } from '@/src/repositories/base/transaction';
-import { generateUniquePracticeSlug } from '@/lib/slug';
+import { UserRepository } from '@/src/repositories/users';
 import { sendPasswordResetEmail, sendUserInviteEmail } from '@/lib/email';
 import { ConflictError, NotFoundError, ValidationError } from '@/src/domain/errors';
 import logger from '@/lib/logger';
@@ -130,7 +130,8 @@ class AuthServiceImpl implements IAuthService {
     }
 
     // Generate unique slug for practice
-    const slug = await generateUniquePracticeSlug(practiceName);
+    const userRepository = new UserRepository();
+    const slug = await userRepository.generateUniquePracticeSlug(practiceName);
 
     // Hash password
     const passwordHash = await hash(password, 12);

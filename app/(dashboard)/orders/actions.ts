@@ -33,7 +33,7 @@ const createDraftOrderSchema = z.object({
     })
   ).min(1, 'At least one item is required'),
 }).refine((data) => data.supplierId || data.practiceSupplierId, {
-  message: 'Either supplierId or practiceSupplierId is required',
+  message: 'Supplier is required',
   path: ['supplierId'],
 });
 
@@ -53,8 +53,8 @@ const updateOrderSchema = z.object({
 
 const addOrderItemSchema = z.object({
   orderId: z.string().min(1),
-  itemId: z.string().min(1),
-  quantity: z.coerce.number().int().positive(),
+  itemId: z.string().min(1, 'Item is required'),
+  quantity: z.coerce.number().int('Quantity must be a whole number').positive('Quantity must be at least 1'),
   unitPrice: z.union([z.coerce.number().nonnegative(), z.null()]).optional().transform((value) => value ?? null),
 });
 
@@ -87,7 +87,7 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
     });
 
     if (!parsed.success) {
-      return { error: parsed.error.issues[0]?.message || 'Invalid order data' } as const;
+      return { errors: parsed.error.flatten().fieldErrors } as const;
     }
 
     const { supplierId, practiceSupplierId, notes, reference, items: orderItems } = parsed.data;
@@ -169,7 +169,11 @@ export async function updateOrderItemAction(formData: FormData) {
 /**
  * Add an order item (with form validation)
  */
-export async function addOrderItemAction(_prevState: unknown, formData: FormData) {
+export async function addOrderItemAction(_prevState: unknown, formData: FormData): Promise<{
+  success?: string;
+  error?: string;
+  errors?: Record<string, string[]>;
+}> {
   await verifyCsrfFromHeaders();
   
   try {
@@ -183,7 +187,7 @@ export async function addOrderItemAction(_prevState: unknown, formData: FormData
     });
 
     if (!parsed.success) {
-      return { error: parsed.error.issues[0]?.message || 'Invalid data' } as const;
+      return { errors: parsed.error.flatten().fieldErrors };
     }
 
     const { orderId, itemId, quantity, unitPrice } = parsed.data;
@@ -196,14 +200,14 @@ export async function addOrderItemAction(_prevState: unknown, formData: FormData
     });
 
     if (isDomainError(result)) {
-      return { error: result.message } as const;
+      return { error: result.message };
     }
 
     revalidatePath(`/orders/${orderId}`);
-    return { success: true } as const;
+    return { success: 'Item added to order' };
   } catch (error: any) {
     console.error('Failed to add order item:', error);
-    return { error: error.message || 'Failed to add item' } as const;
+    return { error: error.message || 'Failed to add item' };
   }
 }
 

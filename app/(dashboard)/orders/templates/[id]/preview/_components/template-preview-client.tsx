@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { createOrdersFromTemplateAction } from '../../../actions';
+import { decimalToNumber } from '@/lib/prisma-transforms';
 
 interface TemplateItem {
   id: string;
@@ -79,9 +80,7 @@ export function TemplatePreviewClient({
     const supplierItem = templateItem.item.supplierItems.find(
       (si) => si.supplierId === supplierId
     );
-    const unitPrice = supplierItem?.unitPrice
-      ? parseFloat(supplierItem.unitPrice.toString())
-      : null;
+    const unitPrice = decimalToNumber(supplierItem?.unitPrice);
 
     if (!groupedBySupplier.has(supplierId)) {
       groupedBySupplier.set(supplierId, []);
@@ -154,9 +153,7 @@ export function TemplatePreviewClient({
 
     // Get unit price from supplier items
     const supplierItem = item.supplierItems.find((si) => si.supplierId === supplierId);
-    const unitPrice = supplierItem?.unitPrice
-      ? parseFloat(supplierItem.unitPrice.toString())
-      : null;
+    const unitPrice = decimalToNumber(supplierItem?.unitPrice);
 
     setSupplierGroups((prev) => {
       const newGroups = new Map(prev);

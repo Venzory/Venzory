@@ -9,8 +9,11 @@
 
 import { Gs1VerificationStatus } from '@prisma/client';
 import { Gs1LookupResponse } from './types';
-import { prisma } from '@/lib/prisma';
+import { ProductRepository } from '@/src/repositories/products';
 import logger from '@/lib/logger';
+
+// Initialize repository instance
+const productRepository = new ProductRepository();
 
 /**
  * Look up product information from GS1 registry
@@ -70,14 +73,7 @@ export async function updateGs1Verification(
   status: Gs1VerificationStatus,
   gs1Data?: Record<string, any>
 ): Promise<void> {
-  await prisma.product.update({
-    where: { id: productId },
-    data: {
-      gs1VerificationStatus: status,
-      gs1VerifiedAt: status === Gs1VerificationStatus.VERIFIED ? new Date() : null,
-      gs1Data: gs1Data ? (gs1Data as any) : null,
-    },
-  });
+  await productRepository.updateGs1Verification(productId, status, gs1Data);
 }
 
 /**
@@ -140,10 +136,7 @@ export async function batchLookupGtins(
  * @returns true if enriched, false if no GS1 data found or no GTIN
  */
 export async function enrichProductWithGs1Data(productId: string): Promise<boolean> {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: { id: true, gtin: true },
-  });
+  const product = await productRepository.findProductById(productId);
   
   if (!product || !product.gtin) {
     return false;
@@ -157,17 +150,14 @@ export async function enrichProductWithGs1Data(productId: string): Promise<boole
     
     if (gs1Data && gs1Data.found) {
       // Update product with GS1 data
-      await prisma.product.update({
-        where: { id: productId },
-        data: {
-          brand: gs1Data.brand,
-          name: gs1Data.name || product.gtin, // Fallback to GTIN if no name
-          description: gs1Data.description,
-          isGs1Product: true,
-          gs1VerificationStatus: Gs1VerificationStatus.VERIFIED,
-          gs1VerifiedAt: gs1Data.verifiedAt,
-          gs1Data: gs1Data.rawData,
-        },
+      await productRepository.updateProduct(productId, {
+        brand: gs1Data.brand,
+        name: gs1Data.name || product.gtin, // Fallback to GTIN if no name
+        description: gs1Data.description,
+        isGs1Product: true,
+        gs1VerificationStatus: Gs1VerificationStatus.VERIFIED,
+        gs1VerifiedAt: gs1Data.verifiedAt,
+        gs1Data: gs1Data.rawData,
       });
       
       return true;
@@ -197,17 +187,7 @@ export async function enrichProductWithGs1Data(productId: string): Promise<boole
  * @param limit - Maximum number of products to refresh
  */
 export async function refreshExpiredVerifications(limit: number = 100): Promise<number> {
-  const expiredProducts = await prisma.product.findMany({
-    where: {
-      gtin: { not: null },
-      isGs1Product: true,
-      gs1VerificationStatus: {
-        in: [Gs1VerificationStatus.EXPIRED, Gs1VerificationStatus.FAILED],
-      },
-    },
-    take: limit,
-    select: { id: true },
-  });
+  const expiredProducts = await productRepository.findProductsForGs1Refresh(limit);
   
   let refreshed = 0;
   

@@ -8,6 +8,7 @@ import { getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { parseListParams } from '@/lib/url-params';
 
 import { CreateItemForm } from './_components/create-item-form';
 import { StockAdjustmentForm } from './_components/stock-adjustment-form';
@@ -33,18 +34,25 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const ctx = buildRequestContextFromSession(session);
   const params = searchParams ? await searchParams : {};
   
-  const { q, location, supplier, lowStock, sortBy, sortOrder, page } = params;
+  // Parse common list parameters using shared utility
+  const { page: currentPage, limit: itemsPerPage, search, sortBy, sortOrder } = parseListParams(params);
+  const { location, supplier, lowStock } = params;
 
-  // Pagination settings
-  const itemsPerPage = 50;
-  const currentPage = parseInt(page || '1', 10);
+  // Determine if we can sort server-side (only for simple fields)
+  const canSortServerSide = !sortBy || sortBy === 'name' || sortBy === 'sku';
+  const serverSortBy = canSortServerSide ? (sortBy as 'name' | 'sku' | undefined) : undefined;
 
-  // Fetch items using InventoryService with filters
-  const items = await getInventoryService().findItems(ctx, {
-    search: q?.trim(),
+  // Fetch items using InventoryService with filters and pagination
+  const { items, totalCount } = await getInventoryService().findItems(ctx, {
+    search,
     locationId: location,
     supplierId: supplier,
     lowStockOnly: lowStock === 'true',
+  }, {
+    page: canSortServerSide ? currentPage : 1,
+    limit: canSortServerSide ? itemsPerPage : 10000, // Fetch all if client-side sorting needed
+    sortBy: serverSortBy,
+    sortOrder: canSortServerSide ? (sortOrder as 'asc' | 'desc') : undefined,
   });
 
   // Transform items to convert Prisma Decimal to number for client component serialization
@@ -66,33 +74,35 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     };
   });
 
-  // Sort items
-  const sortedItems = [...itemsWithStockInfo].sort((a, b) => {
-    const order = sortOrder === 'desc' ? -1 : 1;
-    
-    switch (sortBy) {
-      case 'name':
-        return order * a.name.localeCompare(b.name);
-      case 'sku':
-        return order * (a.sku || '').localeCompare(b.sku || '');
-      case 'stock':
-        return order * (a.totalStock - b.totalStock);
-      case 'locations':
-        return order * (a.locationCount - b.locationCount);
-      case 'status':
-        return order * ((a.isLowStock ? 1 : 0) - (b.isLowStock ? 1 : 0));
-      default:
-        // Default sort by name
-        return a.name.localeCompare(b.name);
-    }
-  });
+  // For computed fields (stock, locations, status), we still need client-side sorting
+  let finalItems = itemsWithStockInfo;
+  let finalTotalCount = totalCount;
+  
+  if (!canSortServerSide && sortBy) {
+    const sortedItems = [...itemsWithStockInfo].sort((a, b) => {
+      const order = sortOrder === 'desc' ? -1 : 1;
+      
+      switch (sortBy) {
+        case 'stock':
+          return order * (a.totalStock - b.totalStock);
+        case 'locations':
+          return order * (a.locationCount - b.locationCount);
+        case 'status':
+          return order * ((a.isLowStock ? 1 : 0) - (b.isLowStock ? 1 : 0));
+        default:
+          return 0;
+      }
+    });
 
-  // Pagination
-  const totalItems = sortedItems.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedItems = sortedItems.slice(startIndex, endIndex);
+    // Client-side pagination for computed sorts
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    finalItems = sortedItems.slice(startIndex, endIndex);
+    finalTotalCount = sortedItems.length;
+  }
+
+  // Calculate pagination UI values
+  const totalPages = Math.ceil(finalTotalCount / itemsPerPage);
 
   const [suppliers, locations, adjustments] = await Promise.all([
     getInventoryService().getSuppliers(ctx),
@@ -106,7 +116,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     minimumRole: PracticeRole.STAFF,
   });
 
-  const hasActiveFilters = Boolean(q || location || supplier || lowStock);
+  const hasActiveFilters = Boolean(search || location || supplier || lowStock);
 
   return (
     <div className="space-y-8">
@@ -126,7 +136,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         </div>
 
         <SearchFilters
-          initialSearch={q}
+          initialSearch={search}
           initialLocation={location}
           initialSupplier={supplier}
           initialLowStock={lowStock === 'true'}
@@ -135,7 +145,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
         />
 
         <LowStockItemList
-          items={paginatedItems as any}
+          items={finalItems as any}
           locations={locations}
           canManage={canManage}
           hasActiveFilters={hasActiveFilters}
@@ -143,7 +153,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           currentSortOrder={sortOrder || 'asc'}
           currentPage={currentPage}
           totalPages={totalPages}
-          totalItems={totalItems}
+          totalItems={finalTotalCount}
         />
       </section>
 

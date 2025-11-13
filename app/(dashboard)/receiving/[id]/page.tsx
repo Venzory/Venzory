@@ -20,7 +20,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
   }
 
   // Fetch all items for adding manually
-  const items = await getInventoryService().findItems(ctx, {});
+  const { items } = await getInventoryService().findItems(ctx, {}, { limit: 10000 });
 
   // If linked to an order, fetch expected items and calculate what's already been received
   let expectedItems: Array<{

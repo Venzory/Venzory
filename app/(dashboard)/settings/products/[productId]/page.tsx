@@ -7,6 +7,7 @@ import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getProductService } from '@/src/services';
 import { hasRole, canManageProducts, canViewProductPricing } from '@/lib/rbac';
+import { decimalToNumber } from '@/lib/prisma-transforms';
 
 import { Gs1StatusBadge } from '../_components/gs1-status-badge';
 import { IntegrationTypeBadge } from '../_components/integration-type-badge';
@@ -199,9 +200,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {product.supplierCatalogs?.map((catalog: any) => {
-                  const unitPrice = catalog.unitPrice
-                    ? parseFloat(catalog.unitPrice.toString())
-                    : null;
+                  const unitPrice = decimalToNumber(catalog.unitPrice);
 
                   return (
                     <tr key={catalog.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">

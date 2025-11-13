@@ -31,6 +31,7 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
     { itemId: string; quantity: number; unitPrice: number }[]
   >([]);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddItem = (itemId: string, defaultPrice: number) => {
@@ -60,19 +61,8 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
     setIsSubmitting(true);
-
-    if (!selectedPracticeSupplierId) {
-      setError('Please select a supplier');
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (selectedItems.length === 0) {
-      setError('Please add at least one item');
-      setIsSubmitting(false);
-      return;
-    }
 
     const formData = new FormData(e.currentTarget);
     formData.set('practiceSupplierId', selectedPracticeSupplierId);
@@ -80,7 +70,12 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
 
     try {
       const result = await createDraftOrderAction(null, formData);
-      if (result && 'error' in result) {
+      if (result && 'errors' in result && result.errors) {
+        // Field-level validation errors
+        setFieldErrors(result.errors);
+        setIsSubmitting(false);
+      } else if (result && 'error' in result) {
+        // Form-level error
         setError(result.error);
         setIsSubmitting(false);
       }
@@ -165,6 +160,10 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
                   );
                 })}
               </select>
+              
+              {fieldErrors.supplierId?.[0] && (
+                <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.supplierId[0]}</p>
+              )}
               
               {selectedPracticeSupplierId && (() => {
                 const selectedPs = practiceSuppliers.find(ps => ps.id === selectedPracticeSupplierId);
@@ -321,6 +320,9 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
                   excludeItemIds={selectedItems.map((si) => si.itemId)}
                   placeholder="Search items by name or SKU..."
                 />
+                {fieldErrors.items?.[0] && (
+                  <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.items[0]}</p>
+                )}
               </div>
             </div>
           </div>

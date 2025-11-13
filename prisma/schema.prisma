@@ -332,6 +332,7 @@ model LocationInventory {
   item     Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@id([locationId, itemId])
+  @@index([itemId, reorderPoint, quantity])
 }
 
 model SupplierItem {

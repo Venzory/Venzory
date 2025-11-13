@@ -31,7 +31,7 @@ export default async function CountSessionPage({ params }: CountSessionPageProps
   }
 
   // Fetch all items for adding manually using InventoryService
-  const allItems = await getInventoryService().findItems(ctx, {});
+  const { items: allItems } = await getInventoryService().findItems(ctx, {}, { limit: 10000 });
   const items = allItems.map(item => ({
     id: item.id,
     name: item.name,

@@ -46,19 +46,50 @@ export class InventoryService {
   ) {}
 
   /**
-   * Find items with filters
+   * Find items with filters, pagination, and sorting
    */
   async findItems(
     ctx: RequestContext,
     filters?: Partial<InventoryFilters>,
-    pagination?: { page?: number; limit?: number }
-  ): Promise<ItemWithRelations[]> {
-    return this.inventoryRepository.findItems(ctx.practiceId, filters, {
+    options?: {
+      page?: number;
+      limit?: number;
+      sortBy?: 'name' | 'sku' | 'createdAt';
+      sortOrder?: 'asc' | 'desc';
+    }
+  ): Promise<{ items: ItemWithRelations[]; totalCount: number }> {
+    // Map sortBy to Prisma orderBy
+    let orderBy: any = { name: 'asc' }; // default
+    if (options?.sortBy) {
+      const direction = options.sortOrder ?? 'asc';
+      switch (options.sortBy) {
+        case 'name':
+          orderBy = { name: direction };
+          break;
+        case 'sku':
+          orderBy = { sku: direction };
+          break;
+        case 'createdAt':
+          orderBy = { createdAt: direction };
+          break;
+        default:
+          orderBy = { name: 'asc' };
+      }
+    }
+
+    // Fetch items with pagination and sorting
+    const items = await this.inventoryRepository.findItems(ctx.practiceId, filters, {
       pagination: {
-        page: pagination?.page ?? 1,
-        limit: pagination?.limit ?? 50,
+        page: options?.page ?? 1,
+        limit: options?.limit ?? 50,
       },
+      orderBy,
     });
+
+    // Get total count for pagination UI
+    const totalCount = await this.inventoryRepository.countItems(ctx.practiceId, filters);
+
+    return { items, totalCount };
   }
 
   /**

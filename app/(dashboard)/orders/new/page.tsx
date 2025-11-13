@@ -5,6 +5,7 @@ import { buildRequestContextFromSession } from '@/src/lib/context/context-builde
 import { getInventoryService } from '@/src/services';
 import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
+import { decimalToNumber } from '@/lib/prisma-transforms';
 
 import { NewOrderFormClient } from './_components/new-order-form-client';
 
@@ -36,15 +37,15 @@ export default async function NewOrderPage({ searchParams }: NewOrderPageProps) 
   }
 
   // Fetch PracticeSuppliers (excludes blocked by default)
-  const [practiceSuppliers, allItems] = await Promise.all([
+  const [practiceSuppliers, itemsResult] = await Promise.all([
     getPracticeSupplierRepository().findPracticeSuppliers(practiceId, {
       includeBlocked: false,
     }),
-    getInventoryService().findItems(ctx, {}),
+    getInventoryService().findItems(ctx, {}, { limit: 10000 }),
   ]);
 
   // Transform items to match expected format
-  const items = allItems.map(item => ({
+  const items = itemsResult.items.map(item => ({
     id: item.id,
     name: item.name,
     sku: item.sku,
@@ -54,7 +55,7 @@ export default async function NewOrderPage({ searchParams }: NewOrderPageProps) 
     supplierItems: item.supplierItems?.map((si: any) => ({
       supplierId: si.supplierId,
       practiceSupplierId: si.practiceSupplierId,
-      unitPrice: si.unitPrice ? parseFloat(si.unitPrice.toString()) : null,
+      unitPrice: decimalToNumber(si.unitPrice),
     })) || [],
   }));
 

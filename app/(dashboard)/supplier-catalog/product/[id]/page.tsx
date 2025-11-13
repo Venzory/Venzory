@@ -38,7 +38,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
 
   // Check if already in catalog
   const inventoryService = getInventoryService();
-  const items = await inventoryService.findItems(ctx, { productId: id });
+  const { items } = await inventoryService.findItems(ctx, { productId: id }, { limit: 1 });
   const existingItem = items[0] || null;
 
   const canManage = hasRole({

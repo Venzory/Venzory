@@ -12,13 +12,14 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { OnboardingReminderCard } from './_components/onboarding-reminder-card';
 import { calculateItemStockInfo } from '@/lib/inventory-utils';
+import { calculateOrderTotal } from '@/lib/prisma-transforms';
 
 export default async function DashboardPage() {
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
   // Fetch data in parallel with safe limits to prevent performance issues
-  const [items, orders, adjustments, suppliers, onboardingStatus, practiceSuppliers] = await Promise.all([
+  const [itemsResult, orders, adjustments, suppliers, onboardingStatus, practiceSuppliers] = await Promise.all([
     // Limit items to 100 for dashboard calculations
     getInventoryService().findItems(ctx, {}, { page: 1, limit: 100 }),
     // Limit orders to recent 50 for stats
@@ -32,6 +33,9 @@ export default async function DashboardPage() {
     // Fetch practice suppliers
     getSettingsService().getPracticeSuppliers(ctx),
   ]);
+
+  // Extract items from the result
+  const items = itemsResult.items;
 
   // Calculate low-stock information for each item using shared utility
   const itemsWithStockInfo = items.map((item) => ({
@@ -190,10 +194,7 @@ export default async function DashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                   {orders.map((order) => {
-                    const total = (order.items || []).reduce((sum, item) => {
-                      const price = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0;
-                      return sum + price * item.quantity;
-                    }, 0);
+                    const total = calculateOrderTotal(order.items || []);
 
                     return (
                       <tr key={order.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">

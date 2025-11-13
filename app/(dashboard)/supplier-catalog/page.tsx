@@ -8,6 +8,7 @@ import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { parseListParams } from '@/lib/url-params';
 
 import { CatalogProductList } from './_components/catalog-product-list';
 import { CatalogFilters } from './_components/catalog-filters';
@@ -28,11 +29,9 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const ctx = buildRequestContextFromSession(session);
   const params = searchParams ? await searchParams : {};
   
-  const { q, supplier, notInItems, sortBy, sortOrder, page } = params;
-  
-  // Pagination settings
-  const itemsPerPage = 50;
-  const currentPage = parseInt(page || '1', 10);
+  // Parse common list parameters using shared utility
+  const { page: currentPage, limit: itemsPerPage, search, sortBy, sortOrder } = parseListParams(params);
+  const { supplier, notInItems } = params;
 
   // Get practice's linked suppliers
   const practiceSuppliers = await getPracticeSupplierRepository().findPracticeSuppliers(
@@ -40,16 +39,25 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     { includeBlocked: false }
   );
 
-  // Find products available from practice's suppliers
+  // Determine if we can sort server-side (only for simple fields)
+  const canSortServerSide = !sortBy || sortBy === 'name' || sortBy === 'brand';
+  const serverSortBy = canSortServerSide ? (sortBy as 'name' | 'brand' | undefined) : undefined;
+
+  // Find products available from practice's suppliers with pagination
   const productService = getProductService();
-  const products = await productService.findProductsForPractice(ctx, {
-    search: q?.trim(),
+  const { products, totalCount } = await productService.findProductsForPractice(ctx, {
+    search,
     practiceSupplierId: supplier,
+  }, {
+    page: canSortServerSide ? currentPage : 1,
+    limit: canSortServerSide ? itemsPerPage : 10000, // Fetch all if client-side sorting needed
+    sortBy: serverSortBy,
+    sortOrder: canSortServerSide ? (sortOrder as 'asc' | 'desc') : undefined,
   });
 
   // Get all items for this practice to determine what's already in catalog
   const inventoryService = getInventoryService();
-  const items = await inventoryService.findItems(ctx, {});
+  const { items } = await inventoryService.findItems(ctx, {}, { limit: 10000 });
   const itemsByProductId = new Map(items.map(item => [item.productId, item]));
 
   // Batch fetch all supplier offers for products (avoids N+1 query)
@@ -61,7 +69,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     const offers = offersByProductId.get(product.id) || [];
     const existingItem = itemsByProductId.get(product.id);
     const lowestPrice = offers.length > 0
-      ? Math.min(...offers.map(o => o.unitPrice ? Number(o.unitPrice) : Infinity))
+      ? Math.min(...offers.map(o => o.unitPrice !== null && o.unitPrice !== undefined ? Number(o.unitPrice) : Infinity))
       : null;
     
     return {
@@ -79,35 +87,37 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     productsWithInfo = productsWithInfo.filter(p => !p.inCatalog);
   }
 
-  // Sort products
-  const sortedProducts = [...productsWithInfo].sort((a, b) => {
-    const order = sortOrder === 'desc' ? -1 : 1;
-    
-    switch (sortBy) {
-      case 'name':
-        return order * a.name.localeCompare(b.name);
-      case 'brand':
-        return order * (a.brand || '').localeCompare(b.brand || '');
-      case 'suppliers':
-        return order * (a.supplierCount - b.supplierCount);
-      case 'price':
-        const priceA = a.lowestPrice ?? Infinity;
-        const priceB = b.lowestPrice ?? Infinity;
-        return order * (priceA - priceB);
-      case 'status':
-        return order * ((a.inCatalog ? 1 : 0) - (b.inCatalog ? 1 : 0));
-      default:
-        // Default sort by name
-        return a.name.localeCompare(b.name);
-    }
-  });
+  // For computed fields (suppliers, price, status), we still need client-side sorting
+  let finalProducts = productsWithInfo;
+  let finalTotalCount = notInItems === 'true' ? productsWithInfo.length : totalCount;
+  
+  if (!canSortServerSide && sortBy) {
+    const sortedProducts = [...productsWithInfo].sort((a, b) => {
+      const order = sortOrder === 'desc' ? -1 : 1;
+      
+      switch (sortBy) {
+        case 'suppliers':
+          return order * (a.supplierCount - b.supplierCount);
+        case 'price':
+          const priceA = a.lowestPrice ?? Infinity;
+          const priceB = b.lowestPrice ?? Infinity;
+          return order * (priceA - priceB);
+        case 'status':
+          return order * ((a.inCatalog ? 1 : 0) - (b.inCatalog ? 1 : 0));
+        default:
+          return 0;
+      }
+    });
 
-  // Pagination
-  const totalProducts = sortedProducts.length;
-  const totalPages = Math.ceil(totalProducts / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedProducts = sortedProducts.slice(startIndex, endIndex);
+    // Client-side pagination for computed sorts
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    finalProducts = sortedProducts.slice(startIndex, endIndex);
+    finalTotalCount = sortedProducts.length;
+  }
+
+  // Calculate pagination UI values
+  const totalPages = Math.ceil(finalTotalCount / itemsPerPage);
 
   const canManage = hasRole({
     memberships: session.user.memberships,
@@ -115,7 +125,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     minimumRole: PracticeRole.STAFF,
   });
 
-  const hasActiveFilters = Boolean(q || supplier || notInItems);
+  const hasActiveFilters = Boolean(search || supplier || notInItems);
 
   return (
     <div className="space-y-8">
@@ -135,21 +145,21 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         </div>
 
         <CatalogFilters 
-          initialSearch={q}
+          initialSearch={search}
           initialSupplier={supplier}
           initialNotInItems={notInItems === 'true'}
           suppliers={practiceSuppliers}
         />
 
         <CatalogProductList
-          products={paginatedProducts as any}
+          products={finalProducts as any}
           canManage={canManage}
           hasActiveFilters={hasActiveFilters}
           currentSort={sortBy || 'name'}
           currentSortOrder={sortOrder || 'asc'}
           currentPage={currentPage}
           totalPages={totalPages}
-          totalProducts={totalProducts}
+          totalProducts={finalTotalCount}
         />
       </section>
     </div>

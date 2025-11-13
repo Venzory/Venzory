@@ -11,6 +11,7 @@ import { AuditService } from '../audit/audit-service';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
 import { withTransaction } from '@/src/repositories/base';
+import { calculateOrderTotal, decimalToNumber } from '@/lib/prisma-transforms';
 import {
   CreateOrderInput,
   UpdateOrderInput,
@@ -143,10 +144,7 @@ export class OrderService {
       );
 
       // Calculate total amount
-      const totalAmount = fullOrder.items?.reduce((sum, item) => {
-        const price = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0;
-        return sum + price * item.quantity;
-      }, 0) ?? 0;
+      const totalAmount = calculateOrderTotal(fullOrder.items || []);
 
       // Get supplier name from appropriate source
       const supplierName = this.getSupplierDisplayName(fullOrder);
@@ -434,10 +432,7 @@ export class OrderService {
       );
 
       // Calculate total amount
-      const totalAmount = order.items?.reduce((sum, item) => {
-        const price = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0;
-        return sum + price * item.quantity;
-      }, 0) ?? 0;
+      const totalAmount = calculateOrderTotal(order.items || []);
 
       // Log audit event
       await this.auditService.logOrderSent(
@@ -552,9 +547,7 @@ export class OrderService {
         const matchingSupplierItem = (item as any).supplierItems?.find(
           (si: any) => si.supplierId === supplierId
         );
-        const unitPrice = matchingSupplierItem?.unitPrice 
-          ? parseFloat(matchingSupplierItem.unitPrice.toString())
-          : null;
+        const unitPrice = decimalToNumber(matchingSupplierItem?.unitPrice);
 
         // Add to supplier group
         if (!supplierGroups.has(supplierId)) {

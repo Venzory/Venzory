@@ -38,9 +38,13 @@ const upsertItemSchema = z.object({
     .transform((value) => (value && value !== 'none' ? value : null)),
   gtin: z
     .string()
-    .max(14)
+    .max(14, 'GTIN must be 14 characters or less')
     .optional()
-    .transform((value) => value?.trim() || null),
+    .transform((value) => value?.trim() || null)
+    .refine(
+      (value) => !value || /^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(value),
+      { message: 'Invalid GTIN format. Must be 8, 12, 13, or 14 digits' }
+    ),
   brand: z
     .string()
     .max(128)
@@ -91,8 +95,8 @@ const upsertSupplierSchema = z.object({
 });
 
 const stockAdjustmentSchema = z.object({
-  itemId: z.string().min(1, 'Please select an item'),
-  locationId: z.string().min(1, 'Please select a location'),
+  itemId: z.string().min(1, 'Item is required'),
+  locationId: z.string().min(1, 'Location is required'),
   quantity: z.coerce.number().int('Quantity must be a whole number').refine((val) => val !== 0, {
     message: 'Quantity change cannot be zero',
   }),
@@ -121,7 +125,7 @@ export async function upsertItemAction(_prevState: unknown, formData: FormData) 
     });
 
     if (!parsed.success) {
-      return { error: 'Invalid item fields' } as const;
+      return { errors: parsed.error.flatten().fieldErrors } as const;
     }
 
     const { itemId, gtin, brand, name, description, sku, unit, defaultSupplierId } = parsed.data;
@@ -204,7 +208,7 @@ export async function upsertLocationAction(_prevState: unknown, formData: FormDa
     if (payload.locationId) {
       const parsed = updateLocationSchema.safeParse(payload);
       if (!parsed.success) {
-        return { error: 'Invalid location details' } as const;
+        return { errors: parsed.error.flatten().fieldErrors };
       }
 
       const { locationId, ...values } = parsed.data;
@@ -212,20 +216,20 @@ export async function upsertLocationAction(_prevState: unknown, formData: FormDa
     } else {
       const parsed = createLocationSchema.safeParse(payload);
       if (!parsed.success) {
-        return { error: 'Invalid location details' } as const;
+        return { errors: parsed.error.flatten().fieldErrors };
       }
 
       await userRepository.createLocation(ctx.practiceId, parsed.data);
     }
 
     revalidatePath('/locations');
-    return { success: payload.locationId ? 'Location updated' : 'Location created' } as const;
+    return { success: payload.locationId ? 'Location updated' : 'Location created' };
   } catch (error) {
     console.error('[upsertLocationAction]', error);
     if (isDomainError(error)) {
-      return { error: error.message } as const;
+      return { error: error.message };
     }
-    return { error: 'An unexpected error occurred' } as const;
+    return { error: 'An unexpected error occurred' };
   }
 }
 
@@ -328,14 +332,13 @@ export async function createStockAdjustmentAction(_prevState: unknown, formData:
     });
 
     if (!parsed.success) {
-      const firstError = parsed.error?.issues?.[0];
-      return { error: firstError?.message || 'Invalid adjustment details' } as const;
+      return { errors: parsed.error.flatten().fieldErrors };
     }
 
     await inventoryService.adjustStock(ctx, parsed.data);
 
     revalidatePath('/inventory');
-    return { success: 'Stock adjustment recorded' } as const;
+    return { success: 'Stock adjustment recorded' };
   } catch (error) {
     console.error('[createStockAdjustmentAction] Full error:', error);
     console.error('[createStockAdjustmentAction] Error details:', {
@@ -344,12 +347,12 @@ export async function createStockAdjustmentAction(_prevState: unknown, formData:
       name: error instanceof Error ? error.name : undefined,
     });
     if (isDomainError(error)) {
-      return { error: error.message } as const;
+      return { error: error.message };
     }
     if (error instanceof Error) {
-      return { error: error.message } as const;
+      return { error: error.message };
     }
-    return { error: 'An unexpected error occurred' } as const;
+    return { error: 'An unexpected error occurred' };
   }
 }
 

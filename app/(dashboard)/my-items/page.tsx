@@ -6,6 +6,7 @@ import { buildRequestContextFromSession } from '@/src/lib/context/context-builde
 import { getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 import { Button } from '@/components/ui/button';
+import { parseListParams } from '@/lib/url-params';
 
 import { CatalogItemList } from './_components/catalog-item-list';
 import { MyCatalogFilters } from './_components/my-catalog-filters';
@@ -28,18 +29,25 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
   const ctx = buildRequestContextFromSession(session);
   const params = searchParams ? await searchParams : {};
   
-  const { q, supplier, lowStock, highlight, sortBy, sortOrder, page } = params;
+  // Parse common list parameters using shared utility
+  const { page: currentPage, limit: itemsPerPage, search, sortBy, sortOrder } = parseListParams(params);
+  const { supplier, lowStock, highlight } = params;
 
-  // Pagination settings
-  const itemsPerPage = 50;
-  const currentPage = parseInt(page || '1', 10);
+  // Determine if we can sort server-side (only for simple fields)
+  const canSortServerSide = !sortBy || sortBy === 'name' || sortBy === 'sku';
+  const serverSortBy = canSortServerSide ? (sortBy as 'name' | 'sku' | undefined) : undefined;
 
   // Fetch items with filters
   const inventoryService = getInventoryService();
-  const items = await inventoryService.findItems(ctx, {
-    search: q?.trim(),
+  const { items, totalCount } = await inventoryService.findItems(ctx, {
+    search,
     practiceSupplierId: supplier,
     lowStockOnly: lowStock === 'true',
+  }, {
+    page: canSortServerSide ? currentPage : 1,
+    limit: canSortServerSide ? itemsPerPage : 10000,
+    sortBy: serverSortBy,
+    sortOrder: canSortServerSide ? (sortOrder as 'asc' | 'desc') : undefined,
   });
 
   // Get suppliers for filter
@@ -55,37 +63,39 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
     };
   });
 
-  // Sort items
-  const sortedItems = [...itemsWithStockInfo].sort((a, b) => {
-    const order = sortOrder === 'desc' ? -1 : 1;
-    
-    switch (sortBy) {
-      case 'name':
-        return order * a.name.localeCompare(b.name);
-      case 'sku':
-        return order * (a.sku || '').localeCompare(b.sku || '');
-      case 'brand':
-        return order * (a.product?.brand || '').localeCompare(b.product?.brand || '');
-      case 'supplier':
-        const supplierA = a.defaultPracticeSupplier?.customLabel || a.defaultPracticeSupplier?.globalSupplier?.name || '';
-        const supplierB = b.defaultPracticeSupplier?.customLabel || b.defaultPracticeSupplier?.globalSupplier?.name || '';
-        return order * supplierA.localeCompare(supplierB);
-      case 'stock':
-        return order * (a.totalStock - b.totalStock);
-      case 'status':
-        return order * ((a.isLowStock ? 1 : 0) - (b.isLowStock ? 1 : 0));
-      default:
-        // Default sort by name
-        return a.name.localeCompare(b.name);
-    }
-  });
+  // For computed fields (brand, supplier, stock, status), we still need client-side sorting
+  let finalItems = itemsWithStockInfo;
+  let finalTotalCount = totalCount;
+  
+  if (!canSortServerSide && sortBy) {
+    const sortedItems = [...itemsWithStockInfo].sort((a, b) => {
+      const order = sortOrder === 'desc' ? -1 : 1;
+      
+      switch (sortBy) {
+        case 'brand':
+          return order * (a.product?.brand || '').localeCompare(b.product?.brand || '');
+        case 'supplier':
+          const supplierA = a.defaultPracticeSupplier?.customLabel || a.defaultPracticeSupplier?.globalSupplier?.name || '';
+          const supplierB = b.defaultPracticeSupplier?.customLabel || b.defaultPracticeSupplier?.globalSupplier?.name || '';
+          return order * supplierA.localeCompare(supplierB);
+        case 'stock':
+          return order * (a.totalStock - b.totalStock);
+        case 'status':
+          return order * ((a.isLowStock ? 1 : 0) - (b.isLowStock ? 1 : 0));
+        default:
+          return 0;
+      }
+    });
 
-  // Pagination
-  const totalItems = sortedItems.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedItems = sortedItems.slice(startIndex, endIndex);
+    // Client-side pagination for computed sorts
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    finalItems = sortedItems.slice(startIndex, endIndex);
+    finalTotalCount = sortedItems.length;
+  }
+
+  // Calculate pagination UI values
+  const totalPages = Math.ceil(finalTotalCount / itemsPerPage);
 
   const canManage = hasRole({
     memberships: session.user.memberships,
@@ -93,7 +103,7 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
     minimumRole: PracticeRole.STAFF,
   });
 
-  const hasActiveFilters = Boolean(q || supplier || lowStock);
+  const hasActiveFilters = Boolean(search || supplier || lowStock);
 
   return (
     <div className="space-y-8">
@@ -113,14 +123,14 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
         </div>
 
         <MyCatalogFilters 
-          initialSearch={q}
+          initialSearch={search}
           initialSupplier={supplier}
           initialLowStock={lowStock === 'true'}
           suppliers={suppliers}
         />
 
         <CatalogItemList
-          items={paginatedItems as any}
+          items={finalItems as any}
           canManage={canManage}
           hasActiveFilters={hasActiveFilters}
           highlightItemId={highlight}
@@ -128,7 +138,7 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
           currentSortOrder={sortOrder || 'asc'}
           currentPage={currentPage}
           totalPages={totalPages}
-          totalItems={totalItems}
+          totalItems={finalTotalCount}
         />
       </section>
     </div>

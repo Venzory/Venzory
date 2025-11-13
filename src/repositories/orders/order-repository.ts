@@ -21,6 +21,7 @@ import {
   OrderSummary,
 } from '@/src/domain/models';
 import { NotFoundError } from '@/src/domain/errors';
+import { calculateOrderTotal } from '@/lib/prisma-transforms';
 
 export class OrderRepository extends BaseRepository {
   /**
@@ -494,10 +495,7 @@ export class OrderRepository extends BaseRepository {
       supplierName: order.supplier?.name ?? 'Unknown',
       status: order.status,
       itemCount: order.items?.length ?? 0,
-      totalAmount: order.items?.reduce((sum, item) => {
-        const price = item.unitPrice ? parseFloat(item.unitPrice.toString()) : 0;
-        return sum + price * item.quantity;
-      }, 0) ?? 0,
+      totalAmount: calculateOrderTotal(order.items || []),
       createdAt: order.createdAt,
       sentAt: order.sentAt,
     }));

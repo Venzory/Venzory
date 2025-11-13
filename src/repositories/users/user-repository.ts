@@ -608,5 +608,38 @@ export class UserRepository extends BaseRepository {
       },
     });
   }
+
+  /**
+   * Generate unique practice slug
+   * Uses the slugify utility to normalize the name, then checks for uniqueness
+   * If slug exists, appends incrementing numbers until a unique slug is found
+   * 
+   * @param name - Practice name to generate slug from
+   * @param excludePracticeId - Optional practice ID to exclude from uniqueness check (for updates)
+   * @param options - Repository options (e.g. transaction)
+   * @returns Unique slug string
+   */
+  async generateUniquePracticeSlug(
+    name: string,
+    excludePracticeId?: string,
+    options?: FindOptions
+  ): Promise<string> {
+    const { slugify } = require('@/lib/slug');
+    const base = slugify(name) || 'practice';
+    let slug = base;
+    let iteration = 1;
+
+    while (true) {
+      const existing = await this.findPracticeBySlug(slug, options);
+      
+      // If no existing practice found, or if the existing practice is the one being updated
+      if (!existing || (excludePracticeId && existing.id === excludePracticeId)) {
+        return slug;
+      }
+
+      slug = `${base}-${iteration}`;
+      iteration += 1;
+    }
+  }
 }
 

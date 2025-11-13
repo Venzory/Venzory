@@ -104,6 +104,54 @@ export class InventoryRepository extends BaseRepository {
   }
 
   /**
+   * Count items by practice with optional filters
+   * Uses same filter logic as findItems for consistency
+   */
+  async countItems(
+    practiceId: string,
+    filters?: Partial<InventoryFilters>,
+    options?: FindOptions
+  ): Promise<number> {
+    const client = this.getClient(options?.tx);
+
+    const where: Prisma.ItemWhereInput = {
+      ...this.scopeToPractice(practiceId),
+    };
+
+    // Apply search filter
+    if (filters?.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { sku: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Filter by location (items with stock in that location)
+    if (filters?.locationId) {
+      where.inventory = {
+        some: { locationId: filters.locationId },
+      };
+    }
+
+    // Filter by supplier
+    if (filters?.supplierId) {
+      where.defaultSupplierId = filters.supplierId;
+    }
+
+    // Filter by practice supplier (Phase 2)
+    if (filters?.practiceSupplierId) {
+      where.defaultPracticeSupplierId = filters.practiceSupplierId;
+    }
+
+    // Filter by product (Phase 2: Catalog management)
+    if (filters?.productId) {
+      where.productId = filters.productId;
+    }
+
+    return client.item.count({ where });
+  }
+
+  /**
    * Find item by ID
    */
   async findItemById(

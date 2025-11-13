@@ -153,13 +153,13 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
   const getStatusColor = (status: GoodsReceiptStatus) => {
     switch (status) {
       case GoodsReceiptStatus.DRAFT:
-        return 'bg-amber-900/20 text-amber-300 border-amber-800';
+        return 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800';
       case GoodsReceiptStatus.CONFIRMED:
-        return 'bg-green-900/20 text-green-300 border-green-800';
+        return 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800';
       case GoodsReceiptStatus.CANCELLED:
-        return 'bg-slate-700/20 text-slate-400 border-slate-700';
+        return 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-700/20 dark:text-slate-400 dark:border-slate-700';
       default:
-        return 'bg-slate-700/20 text-slate-400 border-slate-700';
+        return 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-700/20 dark:text-slate-400 dark:border-slate-700';
     }
   };
 
@@ -191,7 +191,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
               <button
                 onClick={handleCancel}
                 disabled={isCancelling}
-                className="flex items-center justify-center gap-2 rounded-lg border border-slate-700 px-6 py-3 font-semibold text-slate-200 transition hover:bg-slate-800 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 style={{ minHeight: '48px' }}
               >
                 <X className="h-5 w-5" />
@@ -329,7 +329,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
                   setSelectedItemId(null);
                   setShowAddForm(true);
                 }}
-                className="flex items-center justify-center gap-2 rounded-lg border border-slate-700 px-6 py-3 font-semibold text-slate-200 transition hover:bg-slate-800"
+                className="flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 style={{ minHeight: '48px' }}
               >
                 <Plus className="h-5 w-5" />

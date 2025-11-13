@@ -299,9 +299,9 @@ export async function searchItemByGtinAction(gtin: string) {
 
     // Search using inventory service
     const { getInventoryService } = await import('@/src/services');
-    const items = await getInventoryService().findItems(ctx, {
+    const { items } = await getInventoryService().findItems(ctx, {
       search: parsed.data.gtin,
-    });
+    }, { limit: 10 });
 
     if (items.length === 0) {
       return { error: 'Item not found' } as const;

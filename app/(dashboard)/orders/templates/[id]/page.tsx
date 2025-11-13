@@ -31,10 +31,11 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
   }
 
   // Fetch available items and suppliers for the add item form
-  const [availableItems, suppliers] = await Promise.all([
-    getInventoryService().findItems(ctx, {}),
+  const [itemsResult, suppliers] = await Promise.all([
+    getInventoryService().findItems(ctx, {}, { limit: 10000 }),
     getInventoryService().getSuppliers(ctx),
   ]);
+  const availableItems = itemsResult.items;
 
   const canManage = hasRole({
     memberships: session.user.memberships,

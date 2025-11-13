@@ -308,19 +308,56 @@ export class ProductService {
 
   /**
    * Find products available to a practice (via their PracticeSuppliers)
-   * Phase 2: Catalog browsing
+   * Phase 2: Catalog browsing with pagination and sorting
    */
   async findProductsForPractice(
     ctx: RequestContext,
-    filters?: Partial<ProductFilters>
-  ): Promise<Product[]> {
+    filters?: Partial<ProductFilters>,
+    options?: {
+      page?: number;
+      limit?: number;
+      sortBy?: 'name' | 'brand' | 'createdAt';
+      sortOrder?: 'asc' | 'desc';
+    }
+  ): Promise<{ products: Product[]; totalCount: number }> {
     // Add practice filter to only show products from linked suppliers
     const practiceFilters = {
       ...filters,
       practiceId: ctx.practiceId,
     };
 
-    return this.productRepository.findProducts(practiceFilters);
+    // Map sortBy to Prisma orderBy
+    let orderBy: any = { name: 'asc' }; // default
+    if (options?.sortBy) {
+      const direction = options.sortOrder ?? 'asc';
+      switch (options.sortBy) {
+        case 'name':
+          orderBy = { name: direction };
+          break;
+        case 'brand':
+          orderBy = { brand: direction };
+          break;
+        case 'createdAt':
+          orderBy = { createdAt: direction };
+          break;
+        default:
+          orderBy = { name: 'asc' };
+      }
+    }
+
+    // Fetch products with pagination and sorting
+    const products = await this.productRepository.findProducts(practiceFilters, {
+      pagination: {
+        page: options?.page ?? 1,
+        limit: options?.limit ?? 50,
+      },
+      orderBy,
+    });
+
+    // Get total count for pagination UI
+    const totalCount = await this.productRepository.countProducts(practiceFilters);
+
+    return { products, totalCount };
   }
 
   /**

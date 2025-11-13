@@ -12,6 +12,7 @@ import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getSettingsService } from '@/src/services/settings';
 import { isDomainError } from '@/src/domain/errors';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
+import { PracticeRole } from '@prisma/client';
 
 const settingsService = getSettingsService();
 
@@ -44,6 +45,55 @@ const updateUserRoleSchema = z.object({
   role: z.enum(['VIEWER', 'STAFF', 'ADMIN']),
 });
 
+const inviteUserSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email format'),
+  role: z.nativeEnum(PracticeRole),
+  name: z.string().optional().transform((value) => value?.trim() || null),
+});
+
+export async function inviteUserAction(
+  _prevState: unknown,
+  formData: FormData,
+) {
+  await verifyCsrfFromHeaders();
+  
+  try {
+    // Build request context
+    const ctx = await buildRequestContext();
+
+    // Parse and validate input
+    const parsed = inviteUserSchema.safeParse({
+      email: formData.get('email'),
+      role: formData.get('role'),
+      name: formData.get('name'),
+    });
+
+    if (!parsed.success) {
+      return { errors: parsed.error.flatten().fieldErrors };
+    }
+
+    const { email, role, name } = parsed.data;
+
+    // Create invite via service
+    await settingsService.createInvite(ctx, {
+      email,
+      role,
+      inviterName: name,
+    });
+
+    revalidatePath('/settings');
+    return { success: `Invitation sent to ${email}` };
+  } catch (error) {
+    console.error('[Settings Actions] Error inviting user:', error);
+    
+    if (isDomainError(error)) {
+      return { error: error.message };
+    }
+    
+    return { error: 'Failed to send invitation' };
+  }
+}
+
 export async function updatePracticeSettingsAction(
   _prevState: unknown,
   formData: FormData,
@@ -67,7 +117,7 @@ export async function updatePracticeSettingsAction(
     });
 
     if (!parsed.success) {
-      return { error: 'Invalid practice settings' } as const;
+      return { errors: parsed.error.flatten().fieldErrors } as const;
     }
 
     const { name, street, city, postalCode, country, contactEmail, contactPhone, logoUrl } = parsed.data;

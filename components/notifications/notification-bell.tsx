@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
+import useSWR from 'swr';
 import { NotificationItem } from './notification-item';
 import { fetcher } from '@/lib/fetcher';
-import { ClientApiError } from '@/lib/client-error';
 
 interface Notification {
   id: string;
@@ -23,33 +23,32 @@ interface NotificationsResponse {
   unreadCount: number;
 }
 
+// SWR fetcher function
+const swrFetcher = (url: string) => fetcher.get<NotificationsResponse>(url);
+
 export function NotificationBell() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = async () => {
-    try {
-      const data = await fetcher.get<NotificationsResponse>('/api/notifications');
-      setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
-    } catch (error) {
-      // Silent failure - don't disrupt user experience for notification polling
-      console.error('Failed to fetch notifications:', error);
+  // Use SWR for automatic polling, deduplication, and focus revalidation
+  const { data, error, mutate } = useSWR(
+    '/api/notifications',
+    swrFetcher,
+    {
+      refreshInterval: 30000,        // Poll every 30 seconds
+      revalidateOnFocus: true,       // Refresh when tab regains focus
+      dedupingInterval: 5000,        // Dedupe requests within 5 seconds
     }
-  };
+  );
 
-  useEffect(() => {
-    // Fetch on mount
-    fetchNotifications();
+  const notifications = data?.notifications ?? [];
+  const unreadCount = data?.unreadCount ?? 0;
 
-    // Poll every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+  // Log errors silently (don't disrupt user experience)
+  if (error) {
+    console.error('Failed to fetch notifications:', error);
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -72,11 +71,8 @@ export function NotificationBell() {
     try {
       await fetcher.patch(`/api/notifications/${id}`);
       
-      // Update local state
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      // Revalidate SWR cache to refresh notifications
+      mutate();
     } catch (error) {
       // Silent failure - don't disrupt user experience
       console.error('Failed to mark notification as read:', error);
@@ -88,9 +84,8 @@ export function NotificationBell() {
     try {
       await fetcher.post('/api/notifications/mark-all-read');
       
-      // Update local state
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      setUnreadCount(0);
+      // Revalidate SWR cache to refresh notifications
+      mutate();
     } catch (error) {
       // Silent failure - don't disrupt user experience
       console.error('Failed to mark all notifications as read:', error);

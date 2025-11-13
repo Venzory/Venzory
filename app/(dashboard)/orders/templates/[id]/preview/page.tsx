@@ -42,10 +42,11 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
     notFound();
   }
 
-  const [allSuppliers, itemsList] = await Promise.all([
+  const [allSuppliers, itemsResult] = await Promise.all([
     getInventoryService().getSuppliers(ctx),
-    getInventoryService().findItems(ctx, {}),
+    getInventoryService().findItems(ctx, {}, { limit: 10000 }),
   ]);
+  const itemsList = itemsResult.items;
 
   // Transform items to match expected format
   const allItems = itemsList.map(item => ({

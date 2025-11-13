@@ -58,6 +58,7 @@ describe('Inventory Operations', () => {
       createInventoryTransfer: vi.fn(),
       findManyItems: vi.fn(),
       findItems: vi.fn(),
+      countItems: vi.fn(),
       adjustStock: vi.fn(),
     };
 
@@ -499,11 +500,13 @@ describe('Inventory Operations', () => {
       ];
 
       mockInventoryRepo.findItems.mockResolvedValue(mockItems);
+      mockInventoryRepo.countItems = vi.fn().mockResolvedValue(mockItems.length);
 
       const result = await inventoryService.findItems(ctx, {});
 
-      expect(result).toEqual(mockItems);
-      expect(result[0].inventory[0].quantity).toBe(10);
+      expect(result.items).toEqual(mockItems);
+      expect(result.totalCount).toBe(mockItems.length);
+      expect(result.items[0].inventory[0].quantity).toBe(10);
     });
 
     it('should filter by locationId correctly', async () => {
@@ -524,12 +527,14 @@ describe('Inventory Operations', () => {
       ];
 
       mockInventoryRepo.findItems.mockResolvedValue(mockItems);
+      mockInventoryRepo.countItems = vi.fn().mockResolvedValue(mockItems.length);
 
       const result = await inventoryService.findItems(ctx, {
         locationId: location1.id,
       });
 
-      expect(result).toEqual(mockItems);
+      expect(result.items).toEqual(mockItems);
+      expect(result.totalCount).toBe(mockItems.length);
     });
 
     it('should handle low stock filter correctly', async () => {
@@ -553,12 +558,14 @@ describe('Inventory Operations', () => {
       ];
 
       mockInventoryRepo.findItems.mockResolvedValue(mockItems);
+      mockInventoryRepo.countItems = vi.fn().mockResolvedValue(mockItems.length);
 
       const result = await inventoryService.findItems(ctx, {
         lowStockOnly: true,
       });
 
-      expect(result).toEqual(mockItems);
+      expect(result.items).toEqual(mockItems);
+      expect(result.totalCount).toBe(mockItems.length);
     });
   });
 });
