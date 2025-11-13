@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getSettingsService } from '@/src/services/settings';
 import { isDomainError } from '@/src/domain/errors';
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const settingsService = getSettingsService();
 
@@ -47,6 +48,8 @@ export async function updatePracticeSettingsAction(
   _prevState: unknown,
   formData: FormData,
 ) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -102,6 +105,8 @@ export async function updateUserRoleAction(
   _prevState: unknown,
   formData: FormData,
 ) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -135,6 +140,8 @@ export async function updateUserRoleAction(
 }
 
 export async function removeUserAction(userId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -155,6 +162,8 @@ export async function removeUserAction(userId: string) {
 }
 
 export async function cancelInviteAction(inviteId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -176,10 +185,12 @@ export async function cancelInviteAction(inviteId: string) {
 
 // Wrapper functions for inline form usage (no return value expected)
 export async function updatePracticeSettingsInlineAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
   await updatePracticeSettingsAction(null, formData);
 }
 
 export async function updateUserRoleInlineAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
   await updateUserRoleAction(null, formData);
 }
 

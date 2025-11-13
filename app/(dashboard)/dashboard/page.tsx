@@ -11,17 +11,18 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { OnboardingReminderCard } from './_components/onboarding-reminder-card';
+import { calculateItemStockInfo } from '@/lib/inventory-utils';
 
 export default async function DashboardPage() {
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
-  // Fetch all data in parallel using services
+  // Fetch data in parallel with safe limits to prevent performance issues
   const [items, orders, adjustments, suppliers, onboardingStatus, practiceSuppliers] = await Promise.all([
-    // Fetch all items with inventory to calculate low stock
-    getInventoryService().findItems(ctx, {}),
-    // Fetch orders for stats and recent orders table
-    getOrderService().findOrders(ctx, {}),
+    // Limit items to 100 for dashboard calculations
+    getInventoryService().findItems(ctx, {}, { page: 1, limit: 100 }),
+    // Limit orders to recent 50 for stats
+    getOrderService().findOrders(ctx, {}, { page: 1, limit: 50 }),
     // Fetch recent stock adjustments
     getInventoryService().getRecentAdjustments(ctx, 5),
     // Fetch all suppliers for links
@@ -32,27 +33,24 @@ export default async function DashboardPage() {
     getSettingsService().getPracticeSuppliers(ctx),
   ]);
 
-  // Calculate low-stock information for each item
-  const lowStockItems = items.filter((item) => {
-    const lowStockLocations = (item.inventory || []).filter(
-      (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
-    );
-    return lowStockLocations.length > 0;
-  });
+  // Calculate low-stock information for each item using shared utility
+  const itemsWithStockInfo = items.map((item) => ({
+    item,
+    stockInfo: calculateItemStockInfo(item),
+  }));
 
-  // Calculate low-stock info with details
-  const lowStockInfoWithDetails = lowStockItems.slice(0, 10).map((item) => {
+  const lowStockItems = itemsWithStockInfo.filter(({ stockInfo }) => stockInfo.isLowStock);
+
+  // Get top 10 low-stock items with details for widget
+  const lowStockInfoWithDetails = lowStockItems.slice(0, 10).map(({ item, stockInfo }) => {
     const lowStockLocations = (item.inventory || []).filter(
       (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
     );
-    const suggestedQuantity = lowStockLocations.reduce((sum, inv) => {
-      return sum + (inv.reorderQuantity || inv.reorderPoint || 1);
-    }, 0);
 
     return {
       item,
       lowStockLocations,
-      suggestedQuantity,
+      suggestedQuantity: stockInfo.suggestedQuantity,
     };
   });
 

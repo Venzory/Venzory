@@ -14,6 +14,7 @@ import { StockAdjustmentForm } from './_components/stock-adjustment-form';
 import { SearchFilters } from './_components/search-filters';
 import { LowStockItemList } from './_components/low-stock-item-list';
 import { deleteItemAction, upsertItemInlineAction } from './actions';
+import { calculateItemStockInfo } from '@/lib/inventory-utils';
 
 interface InventoryPageProps {
   searchParams?: Promise<{
@@ -55,28 +56,13 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     })) || [],
   }));
 
-  // Calculate low-stock information and totals for each item
+  // Calculate low-stock information and totals for each item using shared utility
   const itemsWithStockInfo = transformedItems.map(item => {
-    const totalStock = item.inventory?.reduce((sum, inv) => sum + inv.quantity, 0) || 0;
-    const locationCount = item.inventory?.length || 0;
-    
-    const lowStockLocations = (item.inventory || []).filter(
-      (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
-    );
-    
-    const isLowStock = lowStockLocations.length > 0;
-    
-    const suggestedQuantity = lowStockLocations.reduce((sum, inv) => {
-      return sum + (inv.reorderQuantity || inv.reorderPoint || 1);
-    }, 0);
+    const stockInfo = calculateItemStockInfo(item);
     
     return {
       ...item,
-      totalStock,
-      locationCount,
-      isLowStock,
-      suggestedQuantity,
-      lowStockLocations: lowStockLocations.map(loc => loc.locationId),
+      ...stockInfo,
     };
   });
 

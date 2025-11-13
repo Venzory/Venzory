@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getReceivingService } from '@/src/services/receiving';
 import { isDomainError } from '@/src/domain/errors';
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const receivingService = getReceivingService();
 
@@ -49,6 +50,8 @@ const searchItemByGtinSchema = z.object({
  * Create a new goods receipt
  */
 export async function createGoodsReceiptAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -89,6 +92,8 @@ export async function createGoodsReceiptAction(_prevState: unknown, formData: Fo
  * Add a line item to a goods receipt
  */
 export async function addReceiptLineAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -141,6 +146,8 @@ export async function addReceiptLineAction(_prevState: unknown, formData: FormDa
  * Update a receipt line (quantity, batch, expiry)
  */
 export async function updateReceiptLineAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -182,6 +189,8 @@ export async function updateReceiptLineAction(_prevState: unknown, formData: For
  * Remove a line from a goods receipt
  */
 export async function removeReceiptLineAction(lineId: string) {
+  await verifyCsrfFromHeaders();
+  
   const ctx = await buildRequestContext();
 
   const result = await receivingService.removeReceiptLine(ctx, lineId);
@@ -198,6 +207,8 @@ export async function removeReceiptLineAction(lineId: string) {
  * Confirm a goods receipt (updates inventory)
  */
 export async function confirmGoodsReceiptAction(receiptId: string) {
+  await verifyCsrfFromHeaders();
+  
   let redirectPath = '/receiving';
   
   try {
@@ -241,6 +252,8 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
  * Cancel a goods receipt
  */
 export async function cancelGoodsReceiptAction(receiptId: string) {
+  await verifyCsrfFromHeaders();
+  
   const ctx = await buildRequestContext();
 
   const result = await receivingService.cancelGoodsReceipt(ctx, receiptId);
@@ -257,6 +270,8 @@ export async function cancelGoodsReceiptAction(receiptId: string) {
  * Delete a goods receipt (draft only)
  */
 export async function deleteGoodsReceiptAction(receiptId: string) {
+  await verifyCsrfFromHeaders();
+  
   const ctx = await buildRequestContext();
 
   const result = await receivingService.deleteGoodsReceipt(ctx, receiptId);

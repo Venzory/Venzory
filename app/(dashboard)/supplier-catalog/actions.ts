@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getInventoryService } from '@/src/services';
 import { isDomainError } from '@/src/domain/errors';
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const addToCatalogSchema = z.object({
   productId: z.string().min(1),
@@ -23,6 +24,8 @@ export async function addToCatalogAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ success?: string; error?: string; itemId?: string }> {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 

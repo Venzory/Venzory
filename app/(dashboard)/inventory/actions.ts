@@ -13,6 +13,7 @@ import { getInventoryService } from '@/src/services/inventory';
 import { getOrCreateProductForItem } from '@/lib/integrations';
 import { isDomainError } from '@/src/domain/errors';
 import { UserRepository } from '@/src/repositories/users';
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const inventoryService = getInventoryService();
 // Note: Location and Supplier CRUD operations use UserRepository directly
@@ -103,6 +104,8 @@ const stockAdjustmentSchema = z.object({
  * Create or update item
  */
 export async function upsertItemAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -166,6 +169,8 @@ export async function upsertItemAction(_prevState: unknown, formData: FormData) 
  * Delete item
  */
 export async function deleteItemAction(itemId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
     await inventoryService.deleteItem(ctx, itemId);
@@ -183,6 +188,8 @@ export async function deleteItemAction(itemId: string) {
  * Create or update location
  */
 export async function upsertLocationAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -226,6 +233,8 @@ export async function upsertLocationAction(_prevState: unknown, formData: FormDa
  * Delete location
  */
 export async function deleteLocationAction(locationId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
     await userRepository.deleteLocation(locationId, ctx.practiceId);
@@ -243,6 +252,8 @@ export async function deleteLocationAction(locationId: string) {
  * Create or update supplier
  */
 export async function upsertSupplierAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -283,6 +294,8 @@ export async function upsertSupplierAction(_prevState: unknown, formData: FormDa
  * Delete supplier
  */
 export async function deleteSupplierAction(supplierId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
     await userRepository.deleteSupplier(supplierId, ctx.practiceId);
@@ -301,6 +314,8 @@ export async function deleteSupplierAction(supplierId: string) {
  * Create stock adjustment
  */
 export async function createStockAdjustmentAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -342,6 +357,8 @@ export async function createStockAdjustmentAction(_prevState: unknown, formData:
  * Create orders from low stock items
  */
 export async function createOrdersFromLowStockAction(selectedItemIds: string[]) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
     const { getOrderService } = await import('@/src/services/orders');
@@ -374,14 +391,17 @@ export async function createOrdersFromLowStockAction(selectedItemIds: string[]) 
 
 // Inline wrappers (no return value)
 export async function upsertItemInlineAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
   await upsertItemAction(null, formData);
 }
 
 export async function upsertLocationInlineAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
   await upsertLocationAction(null, formData);
 }
 
 export async function upsertSupplierInlineAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
   await upsertSupplierAction(null, formData);
 }
 

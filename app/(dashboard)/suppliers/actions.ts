@@ -9,6 +9,7 @@ import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
 import { PracticeRole } from '@prisma/client';
 import type { UpdatePracticeSupplierInput } from '@/src/domain/models/suppliers';
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 /**
  * Update practice-specific supplier settings
@@ -17,6 +18,8 @@ export async function updatePracticeSupplierAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ success?: string; error?: string }> {
+  await verifyCsrfFromHeaders();
+  
   try {
     const { session, practiceId } = await requireActivePractice();
 
@@ -69,6 +72,8 @@ export async function updatePracticeSupplierAction(
 export async function unlinkPracticeSupplierAction(
   practiceSupplierId: string
 ): Promise<void> {
+  await verifyCsrfFromHeaders();
+  
   try {
     const { session, practiceId } = await requireActivePractice();
 
@@ -103,6 +108,8 @@ export async function linkGlobalSupplierAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ success?: string; error?: string }> {
+  await verifyCsrfFromHeaders();
+  
   try {
     const { session, practiceId } = await requireActivePractice();
 

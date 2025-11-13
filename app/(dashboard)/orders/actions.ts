@@ -15,6 +15,7 @@ import { isDomainError } from '@/src/domain/errors';
 import { OrderStatus } from '@prisma/client';
 import { sendOrderEmail } from '@/lib/email';
 import { createNotificationForPracticeUsers } from '@/lib/notifications';
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const orderService = getOrderService();
 
@@ -61,6 +62,8 @@ const addOrderItemSchema = z.object({
  * Create a draft order with items
  */
 export async function createDraftOrderAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   let orderId: string | null = null;
   
   try {
@@ -123,6 +126,8 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
  * Update an order item (quantity, price, notes)
  */
 export async function updateOrderItemAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -165,6 +170,8 @@ export async function updateOrderItemAction(formData: FormData) {
  * Add an order item (with form validation)
  */
 export async function addOrderItemAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -204,6 +211,7 @@ export async function addOrderItemAction(_prevState: unknown, formData: FormData
  * Add an order item inline (returns result for client-side handling)
  */
 export async function addOrderItemInlineAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
   const result = await addOrderItemAction(undefined, formData);
   return result;
 }
@@ -212,6 +220,8 @@ export async function addOrderItemInlineAction(formData: FormData) {
  * Remove an item from an order
  */
 export async function removeOrderItemAction(orderId: string, itemId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -234,6 +244,8 @@ export async function removeOrderItemAction(orderId: string, itemId: string) {
  * Update order metadata (notes, reference)
  */
 export async function updateOrderAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -273,6 +285,8 @@ export async function updateOrderAction(formData: FormData) {
  * Delete a draft order
  */
 export async function deleteOrderAction(orderId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -297,6 +311,8 @@ export async function deleteOrderAction(orderId: string) {
  * Send/submit an order to supplier
  */
 export async function sendOrderAction(orderId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     const ctx = await buildRequestContext();
 

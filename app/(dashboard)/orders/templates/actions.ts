@@ -9,6 +9,7 @@ import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getOrderService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const createTemplateSchema = z.object({
   name: z.string().min(1).max(128),
@@ -42,6 +43,8 @@ const updateTemplateItemSchema = z.object({
 });
 
 export async function createTemplateAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
@@ -91,6 +94,8 @@ export async function createTemplateAction(_prevState: unknown, formData: FormDa
 }
 
 export async function updateTemplateAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
@@ -126,6 +131,8 @@ export async function updateTemplateAction(formData: FormData) {
 }
 
 export async function deleteTemplateAction(templateId: string) {
+  await verifyCsrfFromHeaders();
+  
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
@@ -146,6 +153,8 @@ export async function deleteTemplateAction(templateId: string) {
 }
 
 export async function addTemplateItemAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
@@ -187,6 +196,8 @@ export async function addTemplateItemAction(_prevState: unknown, formData: FormD
 }
 
 export async function updateTemplateItemAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
@@ -221,6 +232,8 @@ export async function updateTemplateItemAction(formData: FormData) {
 }
 
 export async function removeTemplateItemAction(templateItemId: string) {
+  await verifyCsrfFromHeaders();
+  
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
@@ -246,6 +259,8 @@ export async function createOrdersFromTemplateAction(
     items: { itemId: string; quantity: number; unitPrice: number | null }[];
   }[]
 ) {
+  await verifyCsrfFromHeaders();
+  
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 

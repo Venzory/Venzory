@@ -12,6 +12,7 @@ import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getProductService } from '@/src/services/products';
 import { isDomainError } from '@/src/domain/errors';
 import { enrichProductWithGs1Data, isValidGtin } from '@/lib/integrations';
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const productService = getProductService();
 
@@ -55,6 +56,8 @@ const updateProductSchema = z.object({
 });
 
 export async function createProductAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -106,6 +109,8 @@ export async function createProductAction(_prevState: unknown, formData: FormDat
 }
 
 export async function updateProductAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -146,6 +151,8 @@ export async function updateProductAction(_prevState: unknown, formData: FormDat
 }
 
 export async function triggerGs1LookupAction(productId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -170,6 +177,8 @@ export async function triggerGs1LookupAction(productId: string) {
 }
 
 export async function deleteProductAction(productId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();

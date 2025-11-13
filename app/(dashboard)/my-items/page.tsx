@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 
 import { CatalogItemList } from './_components/catalog-item-list';
 import { MyCatalogFilters } from './_components/my-catalog-filters';
+import { calculateItemStockInfo } from '@/lib/inventory-utils';
 
 interface MyCatalogPageProps {
   searchParams?: Promise<{
@@ -44,19 +45,13 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
   // Get suppliers for filter
   const suppliers = await inventoryService.getSuppliers(ctx);
 
-  // Calculate low stock info and total stock for each item
+  // Calculate low stock info and total stock for each item using shared utility
   const itemsWithStockInfo = items.map(item => {
-    const totalStock = item.inventory?.reduce((sum, inv) => sum + inv.quantity, 0) || 0;
-    const lowStockLocations = item.inventory?.filter(
-      inv => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
-    ) || [];
-    const isLowStock = lowStockLocations.length > 0;
+    const stockInfo = calculateItemStockInfo(item);
 
     return {
       ...item,
-      totalStock,
-      isLowStock,
-      lowStockLocations: lowStockLocations.map(loc => loc.locationId),
+      ...stockInfo,
     };
   });
 

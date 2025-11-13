@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getInventoryService } from '@/src/services/inventory';
 import { isDomainError } from '@/src/domain/errors';
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const inventoryService = getInventoryService();
 
@@ -35,6 +36,8 @@ const updateCountLineSchema = z.object({
 });
 
 export async function createStockCountSessionAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -72,6 +75,8 @@ export async function createStockCountSessionAction(_prevState: unknown, formDat
 }
 
 export async function addCountLineAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -113,6 +118,8 @@ export async function addCountLineAction(_prevState: unknown, formData: FormData
 }
 
 export async function updateCountLineAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -152,6 +159,8 @@ export async function updateCountLineAction(_prevState: unknown, formData: FormD
 }
 
 export async function removeCountLineAction(lineId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -172,6 +181,8 @@ export async function removeCountLineAction(lineId: string) {
 }
 
 export async function completeStockCountAction(sessionId: string, applyAdjustments: boolean, adminOverride: boolean = false) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -201,6 +212,8 @@ export async function completeStockCountAction(sessionId: string, applyAdjustmen
 }
 
 export async function cancelStockCountAction(sessionId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();
@@ -222,6 +235,8 @@ export async function cancelStockCountAction(sessionId: string) {
 }
 
 export async function deleteStockCountSessionAction(sessionId: string) {
+  await verifyCsrfFromHeaders();
+  
   try {
     // Build request context
     const ctx = await buildRequestContext();

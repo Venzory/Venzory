@@ -348,12 +348,51 @@ export const POST = withCsrfProtection(handler, { bypassCsrf: true });
 
 **Server Actions:**
 
-Next.js server actions already have built-in CSRF protection via:
-- The `Next-Action` header requirement (automatically added by Next.js)
-- Origin header validation
-- POST-only restriction
+All server actions that mutate data are protected with CSRF tokens to prevent cross-site request forgery attacks.
 
-No additional CSRF protection is needed for standard form-based server actions. The utilities in `lib/server-action-csrf.ts` are available for programmatic action calls if needed, but are not required for typical use cases.
+**Adding CSRF Protection to New Server Actions:**
+
+For any server action that creates, updates, or deletes data, add CSRF verification at the start:
+
+```typescript
+'use server';
+
+import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
+
+export async function createItemAction(formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
+  // ... rest of your action code
+}
+```
+
+**Client-Side Usage:**
+
+When calling server actions from client components, the CSRF token is automatically included in the request headers by Next.js when using the standard form action pattern:
+
+```typescript
+'use client';
+
+import { useFormState } from 'react-dom';
+import { createItemAction } from './actions';
+
+export function MyForm() {
+  const [state, formAction] = useFormState(createItemAction, null);
+  
+  return (
+    <form action={formAction}>
+      {/* form fields */}
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+For programmatic action calls outside of forms, ensure the `x-csrf-token` header is set with the token value from the `__Host-csrf` cookie. The CSRF token is automatically available in cookies after middleware sets it on the first request.
+
+**Read-Only Actions:**
+
+Server actions that only fetch data (no mutations) do NOT require CSRF protection and should not call `verifyCsrfFromHeaders()`.
 
 **Testing CSRF Protection:**
 
