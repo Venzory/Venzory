@@ -1,6 +1,5 @@
 import { buildRequestContext } from '@/src/lib/context/context-builder';
-import { UserRepository } from '@/src/repositories/users';
-import { OrderRepository } from '@/src/repositories/orders';
+import { getInventoryService, getOrderService } from '@/src/services';
 import { NewReceiptForm } from './_components/new-receipt-form';
 
 export const metadata = {
@@ -15,16 +14,13 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
   const ctx = await buildRequestContext();
   const { orderId } = await searchParams;
 
-  const userRepo = new UserRepository();
-  const orderRepo = new OrderRepository();
-
   // Fetch locations and suppliers for form dropdowns
   const [locations, suppliers, order] = await Promise.all([
-    userRepo.findLocations(ctx.practiceId),
-    userRepo.findSuppliers(ctx.practiceId),
+    getInventoryService().getLocations(ctx),
+    getInventoryService().getSuppliers(ctx),
     // Fetch order details if orderId is provided
     orderId
-      ? orderRepo.findOrderById(orderId, ctx.practiceId).catch(() => null)
+      ? getOrderService().getOrderById(ctx, orderId).catch(() => null)
       : null,
   ]);
 

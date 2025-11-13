@@ -15,6 +15,9 @@ import { isDomainError } from '@/src/domain/errors';
 import { UserRepository } from '@/src/repositories/users';
 
 const inventoryService = getInventoryService();
+// Note: Location and Supplier CRUD operations use UserRepository directly
+// These are simple CRUD operations without complex business logic
+// TODO: Consider moving to InventoryService or SettingsService in future refactoring
 const userRepository = new UserRepository();
 
 // Validation schemas

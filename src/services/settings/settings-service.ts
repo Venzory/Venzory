@@ -4,6 +4,9 @@
  */
 
 import { UserRepository } from '@/src/repositories/users';
+import { PracticeSupplierRepository } from '@/src/repositories/suppliers';
+import { InventoryRepository } from '@/src/repositories/inventory';
+import { OrderRepository } from '@/src/repositories/orders';
 import { AuditService } from '../audit/audit-service';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
@@ -16,6 +19,7 @@ import {
 import { validateStringLength } from '@/src/domain/validators';
 import { getAuthService } from '../auth';
 import type { PracticeRole, UserInvite } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 export interface UpdatePracticeSettingsInput {
   name: string;
@@ -31,6 +35,9 @@ export interface UpdatePracticeSettingsInput {
 export class SettingsService {
   constructor(
     private userRepository: UserRepository,
+    private practiceSupplierRepository: PracticeSupplierRepository,
+    private inventoryRepository: InventoryRepository,
+    private orderRepository: OrderRepository,
     private auditService: AuditService
   ) {}
 
@@ -292,6 +299,161 @@ export class SettingsService {
   async getPendingInvites(ctx: RequestContext) {
     return this.userRepository.findPendingInvites(ctx.practiceId);
   }
+
+  /**
+   * Get practice suppliers with tenant scoping
+   */
+  async getPracticeSuppliers(ctx: RequestContext) {
+    return this.practiceSupplierRepository.findPracticeSuppliers(ctx.practiceId);
+  }
+
+  /**
+   * Update onboarding status
+   * Can mark as complete, skipped, or reset
+   */
+  async updateOnboardingStatus(
+    ctx: RequestContext,
+    status: 'complete' | 'skip' | 'reset'
+  ): Promise<void> {
+    // No special permissions needed - any user can update their practice onboarding
+
+    return withTransaction(async (tx) => {
+      const updateData: any = {};
+      
+      if (status === 'complete') {
+        updateData.onboardingCompletedAt = new Date();
+        updateData.onboardingSkippedAt = null;
+      } else if (status === 'skip') {
+        updateData.onboardingSkippedAt = new Date();
+      } else if (status === 'reset') {
+        updateData.onboardingCompletedAt = null;
+        updateData.onboardingSkippedAt = null;
+      }
+
+      await this.userRepository.updatePractice(
+        ctx.practiceId,
+        updateData,
+        { tx }
+      );
+
+      // Log audit event
+      await this.auditService.logPracticeSettingsUpdated(
+        ctx,
+        ctx.practiceId,
+        { onboardingStatus: status },
+        tx
+      );
+    });
+  }
+
+  /**
+   * Get practice onboarding status
+   */
+  async getPracticeOnboardingStatus(ctx: RequestContext) {
+    const practice = await this.userRepository.findPracticeById(ctx.practiceId);
+
+    if (!practice) {
+      throw new NotFoundError('Practice not found');
+    }
+
+    return {
+      onboardingCompletedAt: practice.onboardingCompletedAt,
+      onboardingSkippedAt: practice.onboardingSkippedAt,
+    };
+  }
+
+  /**
+   * Get setup progress (counts for suppliers, items, orders)
+   */
+  async getSetupProgress(ctx: RequestContext) {
+    // Use repositories to get counts with proper tenant scoping
+    const [supplierCount, itemCount, orderCount] = await Promise.all([
+      this.practiceSupplierRepository.findPracticeSuppliers(ctx.practiceId).then(s => s.length),
+      this.inventoryRepository.findItems(ctx.practiceId, {}).then(i => i.length),
+      this.orderRepository.findOrders(ctx.practiceId, {}).then(o => o.length),
+    ]);
+
+    return {
+      hasSuppliers: supplierCount > 0,
+      hasItems: itemCount > 0,
+      hasOrders: orderCount > 0,
+      supplierCount,
+      itemCount,
+      orderCount,
+    };
+  }
+
+  /**
+   * Get supplier migration statistics (ADMIN only)
+   * Used by the supplier migration admin page
+   */
+  async getSupplierMigrationStats(ctx: RequestContext) {
+    // Check permissions - only ADMIN can view migration stats
+    requireRole(ctx, 'ADMIN');
+
+    // Fetch statistics using Prisma directly for this admin-only view
+    // This is acceptable because it's an admin diagnostics page
+    const [
+      totalSuppliers,
+      totalGlobalSuppliers,
+      totalPracticeSuppliers,
+      migratedPracticeSuppliers,
+      practices,
+      supplierDetails,
+    ] = await Promise.all([
+      prisma.supplier.count(),
+      prisma.globalSupplier.count(),
+      prisma.practiceSupplier.count(),
+      prisma.practiceSupplier.count({
+        where: {
+          migratedFromSupplierId: {
+            not: null,
+          },
+        },
+      }),
+      prisma.practice.count(),
+      // Get detailed comparison data
+      prisma.supplier.findMany({
+        include: {
+          practice: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      }),
+    ]);
+
+    // Fetch corresponding new architecture data
+    const practiceSupplierLinks = await prisma.practiceSupplier.findMany({
+      where: {
+        migratedFromSupplierId: {
+          not: null,
+        },
+      },
+      include: {
+        globalSupplier: true,
+        practice: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    return {
+      totalSuppliers,
+      totalGlobalSuppliers,
+      totalPracticeSuppliers,
+      migratedPracticeSuppliers,
+      practices,
+      supplierDetails,
+      practiceSupplierLinks,
+    };
+  }
 }
 
 // Singleton instance
@@ -300,8 +462,12 @@ let settingsServiceInstance: SettingsService | null = null;
 export function getSettingsService(): SettingsService {
   if (!settingsServiceInstance) {
     const { getAuditService } = require('../audit/audit-service');
+    const { getPracticeSupplierRepository } = require('@/src/repositories/suppliers');
     settingsServiceInstance = new SettingsService(
       new UserRepository(),
+      getPracticeSupplierRepository(),
+      new InventoryRepository(),
+      new OrderRepository(),
       getAuditService()
     );
   }

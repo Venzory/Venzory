@@ -204,9 +204,7 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
     const ctx = await buildRequestContext();
 
     // Get receipt first to check if it's linked to an order
-    const { ReceivingRepository } = await import('@/src/repositories/receiving');
-    const receivingRepo = new ReceivingRepository();
-    const receipt = await receivingRepo.findGoodsReceiptById(receiptId, ctx.practiceId);
+    const receipt = await receivingService.getGoodsReceiptById(ctx, receiptId);
 
     // Confirm goods receipt using service
     const result = await receivingService.confirmGoodsReceipt(ctx, receiptId);
@@ -284,12 +282,9 @@ export async function searchItemByGtinAction(gtin: string) {
       return { error: 'Invalid GTIN' } as const;
     }
 
-    // Search using inventory repository through service
-    // Note: This is a read operation, so we'll use the repository directly
-    const { InventoryRepository } = await import('@/src/repositories/inventory');
-    const inventoryRepo = new InventoryRepository();
-
-    const items = await inventoryRepo.findItems(ctx.practiceId, {
+    // Search using inventory service
+    const { getInventoryService } = await import('@/src/services');
+    const items = await getInventoryService().findItems(ctx, {
       search: parsed.data.gtin,
     });
 

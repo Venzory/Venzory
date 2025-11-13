@@ -1,5 +1,5 @@
 import { buildRequestContext } from '@/src/lib/context/context-builder';
-import { ReceivingRepository } from '@/src/repositories/receiving';
+import { getReceivingService } from '@/src/services';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { Plus, PackageCheck, Package, MapPin } from 'lucide-react';
@@ -15,13 +15,12 @@ export const metadata = {
 
 export default async function ReceivingPage() {
   const ctx = await buildRequestContext();
-  const receivingRepo = new ReceivingRepository();
 
   // Fetch recent receipts (last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const receipts = await receivingRepo.findGoodsReceipts(ctx.practiceId, {
+  const receipts = await getReceivingService().findGoodsReceipts(ctx, {
     dateFrom: thirtyDaysAgo,
   });
 

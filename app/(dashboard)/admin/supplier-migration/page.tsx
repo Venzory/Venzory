@@ -3,7 +3,8 @@ import { ArrowRight, CheckCircle2, Database, XCircle } from 'lucide-react';
 
 import { requireActivePractice } from '@/lib/auth';
 import { hasRole } from '@/lib/rbac';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getSettingsService } from '@/src/services';
 
 export default async function SupplierMigrationPage() {
   const { session, practiceId } = await requireActivePractice();
@@ -26,57 +27,19 @@ export default async function SupplierMigrationPage() {
     );
   }
 
-  // Fetch statistics
-  const [
+  // Fetch statistics using SettingsService
+  const ctx = buildRequestContextFromSession(session);
+  const stats = await getSettingsService().getSupplierMigrationStats(ctx);
+
+  const {
     totalSuppliers,
     totalGlobalSuppliers,
     totalPracticeSuppliers,
     migratedPracticeSuppliers,
     practices,
     supplierDetails,
-  ] = await Promise.all([
-    prisma.supplier.count(),
-    prisma.globalSupplier.count(),
-    prisma.practiceSupplier.count(),
-    prisma.practiceSupplier.count({
-      where: {
-        migratedFromSupplierId: {
-          not: null,
-        },
-      },
-    }),
-    prisma.practice.count(),
-    // Get detailed comparison data
-    prisma.supplier.findMany({
-      include: {
-        practice: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    }),
-  ]);
-
-  // Fetch corresponding new architecture data
-  const practiceSupplierLinks = await prisma.practiceSupplier.findMany({
-    where: {
-      migratedFromSupplierId: {
-        not: null,
-      },
-    },
-    include: {
-      globalSupplier: true,
-      practice: {
-        select: {
-          name: true,
-        },
-      },
-    },
-  });
+    practiceSupplierLinks,
+  } = stats;
 
   // Map for quick lookup
   const linksByOriginalId = new Map(

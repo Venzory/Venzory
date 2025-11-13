@@ -1,7 +1,5 @@
 import { buildRequestContext } from '@/src/lib/context/context-builder';
-import { ReceivingRepository } from '@/src/repositories/receiving';
-import { InventoryRepository } from '@/src/repositories/inventory';
-import { OrderRepository } from '@/src/repositories/orders';
+import { getReceivingService, getInventoryService, getOrderService } from '@/src/services';
 import { notFound } from 'next/navigation';
 import { ReceiptDetail } from './_components/receipt-detail';
 import { GoodsReceiptStatus } from '@prisma/client';
@@ -14,19 +12,15 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
   const ctx = await buildRequestContext();
   const { id } = await params;
 
-  const receivingRepo = new ReceivingRepository();
-  const inventoryRepo = new InventoryRepository();
-  const orderRepo = new OrderRepository();
-
-  // Fetch the receipt
-  const receipt = await receivingRepo.findGoodsReceiptById(id, ctx.practiceId);
+  // Fetch the receipt using service
+  const receipt = await getReceivingService().getGoodsReceiptById(ctx, id);
 
   if (!receipt) {
     notFound();
   }
 
   // Fetch all items for adding manually
-  const items = await inventoryRepo.findItems(ctx.practiceId);
+  const items = await getInventoryService().findItems(ctx, {});
 
   // If linked to an order, fetch expected items and calculate what's already been received
   let expectedItems: Array<{
@@ -41,11 +35,11 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
 
   if (receipt.orderId) {
     // Fetch the order with its items
-    const order = await orderRepo.findOrderById(receipt.orderId, ctx.practiceId);
+    const order = await getOrderService().getOrderById(ctx, receipt.orderId);
     const orderItems = order.items || [];
 
     // Get all confirmed receipts for this order
-    const confirmedReceipts = await receivingRepo.findGoodsReceipts(ctx.practiceId, {
+    const confirmedReceipts = await getReceivingService().findGoodsReceipts(ctx, {
       orderId: receipt.orderId,
       status: 'CONFIRMED',
     });

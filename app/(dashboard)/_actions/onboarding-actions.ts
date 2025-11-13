@@ -3,22 +3,18 @@
 import { revalidatePath } from 'next/cache';
 
 import { requireActivePractice } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { getSettingsService } from '@/src/services';
 
 /**
  * Mark the practice onboarding as completed
  */
 export async function markOnboardingComplete(): Promise<{ success: boolean; error?: string }> {
   try {
-    const { practiceId } = await requireActivePractice();
+    const { session } = await requireActivePractice();
+    const ctx = buildRequestContextFromSession(session);
 
-    await prisma.practice.update({
-      where: { id: practiceId },
-      data: {
-        onboardingCompletedAt: new Date(),
-        onboardingSkippedAt: null, // Clear skip if they complete it
-      },
-    });
+    await getSettingsService().updateOnboardingStatus(ctx, 'complete');
 
     revalidatePath('/dashboard');
     
@@ -34,14 +30,10 @@ export async function markOnboardingComplete(): Promise<{ success: boolean; erro
  */
 export async function skipOnboarding(): Promise<{ success: boolean; error?: string }> {
   try {
-    const { practiceId } = await requireActivePractice();
+    const { session } = await requireActivePractice();
+    const ctx = buildRequestContextFromSession(session);
 
-    await prisma.practice.update({
-      where: { id: practiceId },
-      data: {
-        onboardingSkippedAt: new Date(),
-      },
-    });
+    await getSettingsService().updateOnboardingStatus(ctx, 'skip');
 
     revalidatePath('/dashboard');
     
@@ -57,15 +49,10 @@ export async function skipOnboarding(): Promise<{ success: boolean; error?: stri
  */
 export async function resetOnboarding(): Promise<{ success: boolean; error?: string }> {
   try {
-    const { practiceId } = await requireActivePractice();
+    const { session } = await requireActivePractice();
+    const ctx = buildRequestContextFromSession(session);
 
-    await prisma.practice.update({
-      where: { id: practiceId },
-      data: {
-        onboardingCompletedAt: null,
-        onboardingSkippedAt: null,
-      },
-    });
+    await getSettingsService().updateOnboardingStatus(ctx, 'reset');
 
     revalidatePath('/dashboard');
     
