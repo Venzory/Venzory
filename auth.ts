@@ -17,9 +17,37 @@ export const {
   signIn,
   signOut,
 } = NextAuth({
-  session: { strategy: 'jwt' },
+  // Session Security:
+  // - 30-day max session lifetime
+  // - Session refreshes every 24h of activity
+  // - TODO: Implement session rotation on privilege changes (role/practice switches)
+  //   See jwt callback for where to trigger rotation via trigger === 'update'
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // Refresh session every 24 hours of activity
+  },
   trustHost: true,
   secret: env.NEXTAUTH_SECRET,
+  // Cookie Security Configuration
+  // - httpOnly: prevents JavaScript access (XSS protection)
+  // - sameSite: 'lax' protects against CSRF while allowing normal navigation
+  // - secure: true in production ensures HTTPS-only transmission
+  // - __Secure- prefix in production enforces secure flag at browser level
+  cookies: {
+    sessionToken: {
+      name:
+        env.NODE_ENV === 'production'
+          ? '__Secure-next-auth.session-token'
+          : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: env.NODE_ENV === 'production',
+        path: '/',
+      },
+    },
+  },
   pages: {
     signIn: '/login',
   },
@@ -65,6 +93,14 @@ export const {
   ],
   callbacks: {
     async jwt({ token, user, trigger }) {
+      // TODO: On role/practice changes, validate and possibly invalidate old token
+      // This would be triggered via trigger === 'update' when calling update() on the session
+      // Example implementation:
+      // if (trigger === 'update' && token.activePracticeId !== updatedPracticeId) {
+      //   // Could force re-authentication or generate new token with updated claims
+      //   // For now, we update the token directly, but consider security implications
+      // }
+      
       if (user) {
         // Store user data in token on initial sign in
         token.userId = user.id;

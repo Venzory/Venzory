@@ -172,7 +172,7 @@ export class ReceivingService {
 
     return withTransaction(async (tx) => {
       // Get line with receipt
-      const line = await this.receivingRepository.findReceiptLineById(lineId, { tx });
+      const line = await this.receivingRepository.findReceiptLineById(lineId, ctx.practiceId, { tx });
 
       if (!line.receipt) {
         throw new BusinessRuleViolationError('Receipt not found');
@@ -189,7 +189,7 @@ export class ReceivingService {
       }
 
       // Update line
-      await this.receivingRepository.updateReceiptLine(lineId, input, { tx });
+      await this.receivingRepository.updateReceiptLine(lineId, ctx.practiceId, input, { tx });
 
       // Return updated receipt
       return this.receivingRepository.findGoodsReceiptById(
@@ -212,7 +212,7 @@ export class ReceivingService {
 
     return withTransaction(async (tx) => {
       // Get line with receipt
-      const line = await this.receivingRepository.findReceiptLineById(lineId, { tx });
+      const line = await this.receivingRepository.findReceiptLineById(lineId, ctx.practiceId, { tx });
 
       if (!line.receipt) {
         throw new BusinessRuleViolationError('Receipt not found');
@@ -231,7 +231,7 @@ export class ReceivingService {
       const receiptId = line.receiptId;
 
       // Remove line
-      await this.receivingRepository.removeReceiptLine(lineId, { tx });
+      await this.receivingRepository.removeReceiptLine(lineId, ctx.practiceId, { tx });
 
       // Return updated receipt
       return this.receivingRepository.findGoodsReceiptById(
@@ -274,6 +274,7 @@ export class ReceivingService {
         const currentInventory = await this.inventoryRepository.getLocationInventory(
           line.itemId,
           receipt.locationId,
+          ctx.practiceId,
           { tx }
         );
 
@@ -286,6 +287,7 @@ export class ReceivingService {
           newQuantity,
           currentInventory?.reorderPoint,
           currentInventory?.reorderQuantity,
+          ctx.practiceId,
           { tx }
         );
 

@@ -242,9 +242,13 @@ export class OrderRepository extends BaseRepository {
   async findOrderItem(
     orderId: string,
     itemId: string,
+    practiceId: string,
     options?: FindOptions
   ): Promise<OrderItem | null> {
     const client = this.getClient(options?.tx);
+
+    // Validate order ownership first
+    await this.findOrderById(orderId, practiceId, options);
 
     const orderItem = await client.orderItem.findUnique({
       where: {
@@ -261,10 +265,14 @@ export class OrderRepository extends BaseRepository {
    */
   async addOrderItem(
     orderId: string,
+    practiceId: string,
     input: AddOrderItemInput,
     options?: RepositoryOptions
   ): Promise<OrderItem> {
     const client = this.getClient(options?.tx);
+
+    // Validate order ownership first
+    await this.findOrderById(orderId, practiceId, options);
 
     const orderItem = await client.orderItem.create({
       data: {
@@ -284,10 +292,14 @@ export class OrderRepository extends BaseRepository {
   async updateOrderItem(
     orderId: string,
     itemId: string,
+    practiceId: string,
     input: UpdateOrderItemInput,
     options?: RepositoryOptions
   ): Promise<OrderItem> {
     const client = this.getClient(options?.tx);
+
+    // Validate order ownership first
+    await this.findOrderById(orderId, practiceId, options);
 
     const orderItem = await client.orderItem.update({
       where: {
@@ -341,9 +353,13 @@ export class OrderRepository extends BaseRepository {
   async removeOrderItem(
     orderId: string,
     itemId: string,
+    practiceId: string,
     options?: RepositoryOptions
   ): Promise<void> {
     const client = this.getClient(options?.tx);
+
+    // Validate order ownership first
+    await this.findOrderById(orderId, practiceId, options);
 
     await client.orderItem.delete({
       where: {

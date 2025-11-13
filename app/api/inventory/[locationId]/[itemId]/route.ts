@@ -18,16 +18,12 @@ export const GET = apiHandlerContext(async (request: Request, { params }: RouteP
   // Initialize repository
   const inventoryRepository = new InventoryRepository();
 
-  // Fetch location inventory
+  // Fetch location inventory with practice validation
   const inventory = await inventoryRepository.getLocationInventory(
     itemId,
-    locationId
+    locationId,
+    practiceId
   );
-
-  // Validate the location belongs to the user's practice
-  if (inventory && inventory.location && inventory.location.practiceId !== practiceId) {
-    throw new ForbiddenError('Unauthorized access to inventory');
-  }
 
   return NextResponse.json({
     quantity: inventory?.quantity ?? 0,

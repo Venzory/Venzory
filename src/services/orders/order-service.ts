@@ -315,6 +315,7 @@ export class OrderService {
       const existing = await this.orderRepository.findOrderItem(
         orderId,
         input.itemId,
+        ctx.practiceId,
         { tx }
       );
 
@@ -323,7 +324,7 @@ export class OrderService {
       }
 
       // Add item
-      await this.orderRepository.addOrderItem(orderId, input, { tx });
+      await this.orderRepository.addOrderItem(orderId, ctx.practiceId, input, { tx });
 
       // Return updated order
       return this.orderRepository.findOrderById(orderId, ctx.practiceId, { tx });
@@ -363,7 +364,7 @@ export class OrderService {
       }
 
       // Update item
-      await this.orderRepository.updateOrderItem(orderId, itemId, input, { tx });
+      await this.orderRepository.updateOrderItem(orderId, itemId, ctx.practiceId, input, { tx });
 
       // Return updated order
       return this.orderRepository.findOrderById(orderId, ctx.practiceId, { tx });
@@ -394,7 +395,7 @@ export class OrderService {
       }
 
       // Remove item
-      await this.orderRepository.removeOrderItem(orderId, itemId, { tx });
+      await this.orderRepository.removeOrderItem(orderId, itemId, ctx.practiceId, { tx });
 
       // Return updated order
       return this.orderRepository.findOrderById(orderId, ctx.practiceId, { tx });

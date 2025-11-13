@@ -244,10 +244,14 @@ export class ReceivingRepository extends BaseRepository {
    */
   async updateReceiptLine(
     lineId: string,
+    practiceId: string,
     input: UpdateGoodsReceiptLineInput,
     options?: RepositoryOptions
   ): Promise<GoodsReceiptLine> {
     const client = this.getClient(options?.tx);
+
+    // Validate receipt ownership first
+    await this.findReceiptLineById(lineId, practiceId, options);
 
     const line = await client.goodsReceiptLine.update({
       where: { id: lineId },
@@ -299,9 +303,13 @@ export class ReceivingRepository extends BaseRepository {
    */
   async removeReceiptLine(
     lineId: string,
+    practiceId: string,
     options?: RepositoryOptions
   ): Promise<void> {
     const client = this.getClient(options?.tx);
+
+    // Validate receipt ownership first
+    await this.findReceiptLineById(lineId, practiceId, options);
 
     await client.goodsReceiptLine.delete({
       where: { id: lineId },
@@ -335,6 +343,7 @@ export class ReceivingRepository extends BaseRepository {
    */
   async findReceiptLineById(
     lineId: string,
+    practiceId: string,
     options?: FindOptions
   ): Promise<GoodsReceiptLine> {
     const client = this.getClient(options?.tx);
@@ -342,11 +351,19 @@ export class ReceivingRepository extends BaseRepository {
     const line = await client.goodsReceiptLine.findUnique({
       where: { id: lineId },
       include: {
-        receipt: true,
+        receipt: {
+          select: { id: true, practiceId: true, status: true, locationId: true },
+        },
+        item: true,
       },
     });
 
-    return this.ensureExists(Promise.resolve(line), 'GoodsReceiptLine', lineId);
+    // Validate receipt belongs to practice
+    if (!line || (line.receipt as any).practiceId !== practiceId) {
+      throw new NotFoundError('GoodsReceiptLine', lineId);
+    }
+
+    return line as GoodsReceiptLine;
   }
 }
 

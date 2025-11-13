@@ -217,6 +217,7 @@ export class InventoryRepository extends BaseRepository {
   async getLocationInventory(
     itemId: string,
     locationId: string,
+    practiceId: string,
     options?: FindOptions
   ): Promise<LocationInventory | null> {
     const client = this.getClient(options?.tx);
@@ -225,8 +226,19 @@ export class InventoryRepository extends BaseRepository {
       where: {
         locationId_itemId: { locationId, itemId },
       },
-      include: options?.include ?? undefined,
+      include: {
+        location: true,
+        item: true,
+        ...(options?.include ?? {}),
+      },
     });
+
+    // Validate both location and item belong to practice
+    if (inventory) {
+      if ((inventory.location as any).practiceId !== practiceId || (inventory.item as any).practiceId !== practiceId) {
+        return null; // Treat as not found for wrong practice
+      }
+    }
 
     return inventory as LocationInventory | null;
   }
@@ -238,11 +250,28 @@ export class InventoryRepository extends BaseRepository {
     locationId: string,
     itemId: string,
     quantity: number,
-    reorderPoint?: number | null,
-    reorderQuantity?: number | null,
+    reorderPoint: number | null | undefined,
+    reorderQuantity: number | null | undefined,
+    practiceId: string,
     options?: RepositoryOptions
   ): Promise<LocationInventory> {
     const client = this.getClient(options?.tx);
+
+    // Validate location ownership
+    const location = await client.location.findUnique({
+      where: { id: locationId, practiceId },
+    });
+    if (!location) {
+      throw new Error(`Location not found or does not belong to practice`);
+    }
+
+    // Validate item ownership
+    const item = await client.item.findUnique({
+      where: { id: itemId, practiceId },
+    });
+    if (!item) {
+      throw new Error(`Item not found or does not belong to practice`);
+    }
 
     const inventory = await client.locationInventory.upsert({
       where: {
@@ -272,9 +301,26 @@ export class InventoryRepository extends BaseRepository {
     locationId: string,
     itemId: string,
     adjustment: number,
+    practiceId: string,
     options?: RepositoryOptions
   ): Promise<{ previousQuantity: number; newQuantity: number }> {
     const client = this.getClient(options?.tx);
+
+    // Validate location ownership
+    const location = await client.location.findUnique({
+      where: { id: locationId, practiceId },
+    });
+    if (!location) {
+      throw new Error(`Location not found or does not belong to practice`);
+    }
+
+    // Validate item ownership
+    const item = await client.item.findUnique({
+      where: { id: itemId, practiceId },
+    });
+    if (!item) {
+      throw new Error(`Item not found or does not belong to practice`);
+    }
 
     // Try atomic update first
     try {

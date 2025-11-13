@@ -311,11 +311,11 @@ model Item {
   goodsReceiptLines       GoodsReceiptLine[]
   stockCountLines         StockCountLine[]
 
+  @@unique([practiceId, name])
   @@index([practiceId])
   @@index([productId])
   @@index([defaultSupplierId])
   @@index([defaultPracticeSupplierId])
-  @@index([practiceId, name])
   @@index([practiceId, sku])
 }
 

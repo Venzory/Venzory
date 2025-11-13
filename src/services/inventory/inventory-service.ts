@@ -302,6 +302,7 @@ export class InventoryService {
       const currentInventory = await this.inventoryRepository.getLocationInventory(
         input.itemId,
         input.locationId,
+        ctx.practiceId,
         { tx }
       );
 
@@ -315,6 +316,7 @@ export class InventoryService {
         input.locationId,
         input.itemId,
         input.quantity,
+        ctx.practiceId,
         { tx }
       );
 
@@ -375,6 +377,7 @@ export class InventoryService {
       const sourceInventory = await this.inventoryRepository.getLocationInventory(
         input.itemId,
         input.fromLocationId,
+        ctx.practiceId,
         { tx }
       );
 
@@ -389,6 +392,7 @@ export class InventoryService {
         input.fromLocationId,
         input.itemId,
         -input.quantity,
+        ctx.practiceId,
         { tx }
       );
 
@@ -397,6 +401,7 @@ export class InventoryService {
         input.toLocationId,
         input.itemId,
         input.quantity,
+        ctx.practiceId,
         { tx }
       );
 
@@ -466,7 +471,8 @@ export class InventoryService {
     // Get current inventory
     const inventory = await this.inventoryRepository.getLocationInventory(
       itemId,
-      locationId
+      locationId,
+      ctx.practiceId
     );
 
     // Update reorder settings
@@ -475,7 +481,8 @@ export class InventoryService {
       itemId,
       inventory?.quantity ?? 0,
       reorderPoint,
-      reorderQuantity
+      reorderQuantity,
+      ctx.practiceId
     );
   }
 
@@ -577,6 +584,7 @@ export class InventoryService {
       const inventory = await this.inventoryRepository.getLocationInventory(
         itemId,
         session.locationId,
+        ctx.practiceId,
         { tx }
       );
 
@@ -597,6 +605,7 @@ export class InventoryService {
           existingLine.id,
           countedQuantity,
           variance,
+          ctx.practiceId,
           notes ?? existingLine.notes,
           { tx }
         );
@@ -664,6 +673,7 @@ export class InventoryService {
       // Verify line exists and session is IN_PROGRESS
       const line = await this.stockCountRepository.findStockCountLineById(
         lineId,
+        ctx.practiceId,
         { tx }
       );
 
@@ -683,6 +693,7 @@ export class InventoryService {
         lineId,
         countedQuantity,
         variance,
+        ctx.practiceId,
         notes ?? line.notes,
         { tx }
       );
@@ -715,6 +726,7 @@ export class InventoryService {
       // Verify line exists and session is IN_PROGRESS
       const line = await this.stockCountRepository.findStockCountLineById(
         lineId,
+        ctx.practiceId,
         { tx }
       );
 
@@ -727,7 +739,7 @@ export class InventoryService {
       }
 
       // Delete line
-      await this.stockCountRepository.deleteStockCountLine(lineId, { tx });
+      await this.stockCountRepository.deleteStockCountLine(lineId, ctx.practiceId, { tx });
 
       await this.auditService.logStockCountLineRemoved(
         ctx,
@@ -840,6 +852,7 @@ export class InventoryService {
           const existingInventory = await this.inventoryRepository.getLocationInventory(
             line.itemId,
             session.locationId,
+            ctx.practiceId,
             { tx }
           );
 
@@ -850,6 +863,7 @@ export class InventoryService {
             line.countedQuantity,
             existingInventory?.reorderPoint,
             existingInventory?.reorderQuantity,
+            ctx.practiceId,
             { tx }
           );
 

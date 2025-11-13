@@ -172,6 +172,7 @@ export class StockCountRepository extends BaseRepository {
    */
   async findStockCountLineById(
     lineId: string,
+    practiceId: string,
     options?: FindOptions
   ): Promise<any> {
     const client = this.getClient(options?.tx);
@@ -179,16 +180,19 @@ export class StockCountRepository extends BaseRepository {
     const line = await client.stockCountLine.findUnique({
       where: { id: lineId },
       include: {
-        session: true,
+        session: {
+          select: { id: true, practiceId: true, status: true, locationId: true },
+        },
         item: true,
       },
     });
 
-    return this.ensureExists(
-      Promise.resolve(line),
-      'StockCountLine',
-      lineId
-    );
+    // Validate session belongs to practice
+    if (!line || (line.session as any).practiceId !== practiceId) {
+      throw new NotFoundError('StockCountLine', lineId);
+    }
+
+    return line;
   }
 
   /**
@@ -246,10 +250,14 @@ export class StockCountRepository extends BaseRepository {
     lineId: string,
     countedQuantity: number,
     variance: number,
+    practiceId: string,
     notes?: string | null,
     options?: RepositoryOptions
   ): Promise<StockCountLine> {
     const client = this.getClient(options?.tx);
+
+    // Validate session ownership first
+    await this.findStockCountLineById(lineId, practiceId, options);
 
     const line = await client.stockCountLine.update({
       where: { id: lineId },
@@ -268,9 +276,13 @@ export class StockCountRepository extends BaseRepository {
    */
   async deleteStockCountLine(
     lineId: string,
+    practiceId: string,
     options?: RepositoryOptions
   ): Promise<void> {
     const client = this.getClient(options?.tx);
+
+    // Validate session ownership first
+    await this.findStockCountLineById(lineId, practiceId, options);
 
     await client.stockCountLine.delete({
       where: { id: lineId },
