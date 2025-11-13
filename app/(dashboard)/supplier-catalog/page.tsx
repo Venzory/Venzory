@@ -52,25 +52,27 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const items = await inventoryService.findItems(ctx, {});
   const itemsByProductId = new Map(items.map(item => [item.productId, item]));
 
-  // For each product, determine if it's in the catalog and get supplier offers
-  let productsWithInfo = await Promise.all(
-    products.map(async (product) => {
-      const offers = await productService.getSupplierOffersForProduct(ctx, product.id);
-      const existingItem = itemsByProductId.get(product.id);
-      const lowestPrice = offers.length > 0
-        ? Math.min(...offers.map(o => o.unitPrice ? Number(o.unitPrice) : Infinity))
-        : null;
-      
-      return {
-        ...product,
-        inCatalog: !!existingItem,
-        itemId: existingItem?.id,
-        supplierCount: offers.length,
-        lowestPrice: lowestPrice !== Infinity ? lowestPrice : null,
-        offers,
-      };
-    })
-  );
+  // Batch fetch all supplier offers for products (avoids N+1 query)
+  const productIds = products.map(p => p.id);
+  const offersByProductId = await productService.getSupplierOffersForProducts(ctx, productIds);
+
+  // For each product, determine if it's in the catalog and attach supplier offers
+  let productsWithInfo = products.map((product) => {
+    const offers = offersByProductId.get(product.id) || [];
+    const existingItem = itemsByProductId.get(product.id);
+    const lowestPrice = offers.length > 0
+      ? Math.min(...offers.map(o => o.unitPrice ? Number(o.unitPrice) : Infinity))
+      : null;
+    
+    return {
+      ...product,
+      inCatalog: !!existingItem,
+      itemId: existingItem?.id,
+      supplierCount: offers.length,
+      lowestPrice: lowestPrice !== Infinity ? lowestPrice : null,
+      offers,
+    };
+  });
 
   // Filter by "Not in my items" if requested
   if (notInItems === 'true') {

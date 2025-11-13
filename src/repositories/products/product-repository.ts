@@ -454,6 +454,46 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
+   * Find catalog entries for multiple products, filtered by practice (Phase 2)
+   * Batch version to avoid N+1 queries
+   * Returns all supplier offers for these products from the practice's linked suppliers
+   */
+  async findCatalogsByProductsForPractice(
+    productIds: string[],
+    practiceId: string,
+    options?: FindOptions
+  ): Promise<SupplierCatalog[]> {
+    const client = this.getClient(options?.tx);
+
+    // Return empty array if no product IDs provided
+    if (!productIds || productIds.length === 0) {
+      return [];
+    }
+
+    const catalogs = await client.supplierCatalog.findMany({
+      where: {
+        productId: { in: productIds },
+        practiceSupplier: {
+          practiceId,
+          isBlocked: false,
+        },
+        isActive: true,
+      },
+      include: {
+        product: true,
+        practiceSupplier: {
+          include: {
+            globalSupplier: true,
+          },
+        },
+      },
+      orderBy: { unitPrice: 'asc' }, // Order by price, lowest first
+    });
+
+    return catalogs as SupplierCatalog[];
+  }
+
+  /**
    * Find catalog entry by practice supplier and product (Phase 2)
    */
   async findCatalogByPracticeSupplierProduct(

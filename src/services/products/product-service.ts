@@ -342,6 +342,40 @@ export class ProductService {
   }
 
   /**
+   * Get supplier offers for multiple products (filtered by practice)
+   * Batch version to avoid N+1 queries
+   * Phase 2: Returns all SupplierCatalog entries grouped by productId
+   */
+  async getSupplierOffersForProducts(
+    ctx: RequestContext,
+    productIds: string[]
+  ): Promise<Map<string, SupplierCatalog[]>> {
+    // Return empty map if no product IDs provided
+    if (!productIds || productIds.length === 0) {
+      return new Map();
+    }
+
+    // Get all catalog entries from practice's suppliers in one query
+    const allCatalogs = await this.productRepository.findCatalogsByProductsForPractice(
+      productIds,
+      ctx.practiceId
+    );
+
+    // Group catalogs by productId for O(1) lookup
+    const catalogsByProductId = new Map<string, SupplierCatalog[]>();
+    
+    for (const catalog of allCatalogs) {
+      const productId = catalog.productId;
+      if (!catalogsByProductId.has(productId)) {
+        catalogsByProductId.set(productId, []);
+      }
+      catalogsByProductId.get(productId)!.push(catalog);
+    }
+
+    return catalogsByProductId;
+  }
+
+  /**
    * Find catalog entries for a practice supplier
    * Phase 2: Get all products offered by a specific supplier
    */
