@@ -25,6 +25,7 @@ import {
   ValidationError,
   BusinessRuleViolationError,
   NotFoundError,
+  ConcurrencyError,
 } from '@/src/domain/errors';
 import {
   validatePositiveQuantity,
@@ -32,6 +33,7 @@ import {
   validateStringLength,
   validateTransferLocations,
 } from '@/src/domain/validators';
+import { checkAndCreateLowStockNotification } from '@/lib/notifications';
 
 export class InventoryService {
   constructor(
@@ -452,10 +454,10 @@ export class InventoryService {
 
     // Validate input
     if (reorderPoint !== null && reorderPoint < 0) {
-      throw new ValidationError('Reorder point cannot be negative');
+      throw new ValidationError(`Reorder point must be non-negative (received: ${reorderPoint})`);
     }
     if (reorderQuantity !== null && reorderQuantity <= 0) {
-      throw new ValidationError('Reorder quantity must be positive');
+      throw new ValidationError(`Reorder quantity must be positive (received: ${reorderQuantity})`);
     }
 
     // Verify item exists
@@ -488,6 +490,11 @@ export class InventoryService {
     // Check permissions
     requireRole(ctx, 'STAFF');
 
+    // Validate user ID is present
+    if (!ctx.userId) {
+      throw new ValidationError('User ID required to create stock count session');
+    }
+
     return withTransaction(async (tx) => {
       // Verify location exists
       const location = await this.locationRepository.findLocationById(
@@ -519,6 +526,18 @@ export class InventoryService {
 
   /**
    * Add count line to session
+   * 
+   * Calculates variance automatically by comparing counted quantity with current
+   * system quantity. If item already exists in count, updates existing line instead
+   * of creating duplicate.
+   * 
+   * @param ctx - Request context with user and practice info
+   * @param sessionId - Stock count session ID
+   * @param itemId - Item being counted
+   * @param countedQuantity - Physical count result (must be non-negative)
+   * @param notes - Optional notes about this count line
+   * @returns Line ID and calculated variance
+   * @throws ValidationError - If quantity is negative or session not IN_PROGRESS
    */
   async addCountLine(
     ctx: RequestContext,
@@ -532,7 +551,7 @@ export class InventoryService {
 
     // Validate input
     if (countedQuantity < 0) {
-      throw new ValidationError('Counted quantity cannot be negative');
+      throw new ValidationError(`Counted quantity must be non-negative (received: ${countedQuantity})`);
     }
 
     return withTransaction(async (tx) => {
@@ -638,7 +657,7 @@ export class InventoryService {
 
     // Validate input
     if (countedQuantity < 0) {
-      throw new ValidationError('Counted quantity cannot be negative');
+      throw new ValidationError(`Counted quantity must be non-negative (received: ${countedQuantity})`);
     }
 
     return withTransaction(async (tx) => {
@@ -723,13 +742,27 @@ export class InventoryService {
   }
 
   /**
-   * Complete stock count session
+   * Complete stock count session and optionally apply adjustments.
+   * 
+   * Concurrency Handling:
+   * - Detects if inventory changed since count lines were created
+   * - STAFF role: blocked if changes detected, must redo count
+   * - ADMIN role: can override with adminOverride=true parameter
+   * 
+   * @param ctx - Request context with user and practice info
+   * @param sessionId - Stock count session ID
+   * @param applyAdjustments - If true, updates LocationInventory
+   * @param adminOverride - If true, allows ADMIN to override concurrency checks
+   * @throws ConcurrencyError - If inventory changed and no override
+   * @throws ValidationError - If session empty or would result in negative inventory
+   * @returns Number of items adjusted and any warnings
    */
   async completeStockCount(
     ctx: RequestContext,
     sessionId: string,
-    applyAdjustments: boolean
-  ): Promise<{ adjustedItems: number }> {
+    applyAdjustments: boolean,
+    adminOverride: boolean = false
+  ): Promise<{ adjustedItems: number; warnings?: string[] }> {
     // Check permissions
     requireRole(ctx, 'STAFF');
 
@@ -749,9 +782,54 @@ export class InventoryService {
         throw new ValidationError('Session must have at least one line');
       }
 
+      const warnings: string[] = [];
       let adjustedItems = 0;
 
+      // Detect concurrency conflicts
+      const inventoryChanges = await this.stockCountRepository.detectInventoryChanges(
+        sessionId,
+        ctx.practiceId,
+        { tx }
+      );
+
+      if (inventoryChanges.hasChanges && applyAdjustments) {
+        if (adminOverride) {
+          // Require ADMIN role for override
+          requireRole(ctx, 'ADMIN');
+          
+          // Log warnings
+          for (const change of inventoryChanges.changes) {
+            const warning = `Item "${change.itemName}": System quantity changed from ${change.systemAtCount} to ${change.systemNow} (${change.difference > 0 ? '+' : ''}${change.difference}) during count`;
+            warnings.push(warning);
+          }
+        } else {
+          // Block completion without override
+          const changeDetails = inventoryChanges.changes.map(c => 
+            `- ${c.itemName}: ${c.systemAtCount} → ${c.systemNow} (${c.difference > 0 ? '+' : ''}${c.difference})`
+          ).join('\n');
+          
+          throw new ConcurrencyError(
+            `Inventory changed during count. Please review changes and redo count, or contact an administrator for override.\n\n${changeDetails}`,
+            { changes: inventoryChanges.changes }
+          );
+        }
+      }
+
       if (applyAdjustments) {
+        // Validate adjustments won't result in negative inventory
+        for (const line of session.lines) {
+          if (line.variance === 0) {
+            continue; // Skip items with no variance
+          }
+
+          const finalQuantity = line.countedQuantity;
+          if (finalQuantity < 0) {
+            throw new BusinessRuleViolationError(
+              `Cannot apply adjustment for item "${line.item.name}": would result in negative inventory (${finalQuantity})`
+            );
+          }
+        }
+
         // Process adjustments
         for (const line of session.lines) {
           if (line.variance === 0) {
@@ -790,8 +868,7 @@ export class InventoryService {
           );
 
           // Check for low stock notifications
-          const checkNotifications = require('@/lib/notifications').checkAndCreateLowStockNotification;
-          await checkNotifications(
+          await checkAndCreateLowStockNotification(
             {
               practiceId: ctx.practiceId,
               itemId: line.itemId,
@@ -831,11 +908,13 @@ export class InventoryService {
           adjustmentsApplied: applyAdjustments,
           adjustedItemCount: adjustedItems,
           totalVariance,
+          adminOverride: adminOverride && inventoryChanges.hasChanges,
+          concurrencyWarnings: warnings.length > 0 ? warnings : undefined,
         },
         tx
       );
 
-      return { adjustedItems };
+      return { adjustedItems, warnings: warnings.length > 0 ? warnings : undefined };
     });
   }
 

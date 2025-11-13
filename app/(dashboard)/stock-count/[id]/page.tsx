@@ -4,6 +4,7 @@ import { getInventoryService } from '@/src/services';
 import { notFound } from 'next/navigation';
 import { CountSessionDetail } from './_components/count-session-detail';
 import { StockCountStatus } from '@prisma/client';
+import { hasRole } from '@/lib/rbac';
 
 interface CountSessionPageProps {
   params: Promise<{ id: string }>;
@@ -13,6 +14,13 @@ export default async function CountSessionPage({ params }: CountSessionPageProps
   const { session: userSession, practiceId } = await requireActivePractice();
   const ctx = await buildRequestContext();
   const { id } = await params;
+
+  // Check if user is ADMIN
+  const isAdmin = hasRole({
+    memberships: userSession.user.memberships ?? [],
+    practiceId,
+    minimumRole: 'ADMIN',
+  });
 
   // Fetch session using InventoryService
   let session;
@@ -79,6 +87,7 @@ export default async function CountSessionPage({ params }: CountSessionPageProps
         items={items as any}
         expectedItems={expectedItems}
         canEdit={canEdit}
+        isAdmin={isAdmin}
       />
     </div>
   );

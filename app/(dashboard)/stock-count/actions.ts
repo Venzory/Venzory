@@ -171,23 +171,24 @@ export async function removeCountLineAction(lineId: string) {
   }
 }
 
-export async function completeStockCountAction(sessionId: string, applyAdjustments: boolean) {
+export async function completeStockCountAction(sessionId: string, applyAdjustments: boolean, adminOverride: boolean = false) {
   try {
     // Build request context
     const ctx = await buildRequestContext();
 
     // Complete stock count via service
-    const { adjustedItems } = await inventoryService.completeStockCount(
+    const { adjustedItems, warnings } = await inventoryService.completeStockCount(
       ctx,
       sessionId,
-      applyAdjustments
+      applyAdjustments,
+      adminOverride
     );
 
     revalidatePath('/stock-count');
     revalidatePath(`/stock-count/${sessionId}`);
     revalidatePath('/inventory');
 
-    return { success: true, adjustedItems } as const;
+    return { success: true, adjustedItems, warnings } as const;
   } catch (error) {
     console.error('[Stock Count Actions] Error completing session:', error);
     

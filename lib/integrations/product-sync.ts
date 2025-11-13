@@ -15,6 +15,7 @@ import { Prisma, IntegrationType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { ProductData, CatalogEntry, SupplierDataFeed, ImportResult } from './types';
 import { lookupGtin, isValidGtin, enrichProductWithGs1Data } from './gs1-lookup';
+import logger from '@/lib/logger';
 
 /**
  * Find an existing Product by GTIN, or create a new one
@@ -54,7 +55,12 @@ export async function findOrCreateProduct(productData: ProductData): Promise<str
     
     // Attempt GS1 enrichment in background (don't wait)
     enrichProductWithGs1Data(product.id).catch(err => {
-      console.error(`[Product Sync] GS1 enrichment failed for ${product.id}:`, err);
+      logger.error({
+        module: 'product-sync',
+        operation: 'syncProductFromGlobal',
+        productId: product.id,
+        error: err instanceof Error ? err.message : String(err),
+      }, 'GS1 enrichment failed');
     });
     
     return product.id;

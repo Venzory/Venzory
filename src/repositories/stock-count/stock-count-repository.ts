@@ -276,5 +276,81 @@ export class StockCountRepository extends BaseRepository {
       where: { id: lineId },
     });
   }
+
+  /**
+   * Detect inventory changes since count lines were created
+   * Compares systemQuantity recorded in lines against current inventory
+   */
+  async detectInventoryChanges(
+    sessionId: string,
+    practiceId: string,
+    options?: FindOptions
+  ): Promise<{
+    hasChanges: boolean;
+    changes: Array<{
+      itemId: string;
+      itemName: string;
+      systemAtCount: number;
+      systemNow: number;
+      difference: number;
+    }>;
+  }> {
+    const client = this.getClient(options?.tx);
+
+    const session = await client.stockCountSession.findUnique({
+      where: { id: sessionId, practiceId },
+      include: {
+        lines: {
+          include: {
+            item: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      return { hasChanges: false, changes: [] };
+    }
+
+    const changes: Array<{
+      itemId: string;
+      itemName: string;
+      systemAtCount: number;
+      systemNow: number;
+      difference: number;
+    }> = [];
+
+    for (const line of session.lines) {
+      // Get current inventory quantity
+      const currentInventory = await client.locationInventory.findUnique({
+        where: {
+          locationId_itemId: {
+            locationId: session.locationId,
+            itemId: line.itemId,
+          },
+        },
+      });
+
+      const systemNow = currentInventory?.quantity ?? 0;
+      const systemAtCount = line.systemQuantity;
+
+      if (systemNow !== systemAtCount) {
+        changes.push({
+          itemId: line.itemId,
+          itemName: line.item.name,
+          systemAtCount,
+          systemNow,
+          difference: systemNow - systemAtCount,
+        });
+      }
+    }
+
+    return {
+      hasChanges: changes.length > 0,
+      changes,
+    };
+  }
 }
 

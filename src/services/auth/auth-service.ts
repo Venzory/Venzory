@@ -12,6 +12,7 @@ import { withTransaction } from '@/src/repositories/base/transaction';
 import { generateUniquePracticeSlug } from '@/lib/slug';
 import { sendPasswordResetEmail, sendUserInviteEmail } from '@/lib/email';
 import { ConflictError, NotFoundError, ValidationError } from '@/src/domain/errors';
+import logger from '@/lib/logger';
 
 /**
  * Result type for practice registration
@@ -225,7 +226,12 @@ class AuthServiceImpl implements IAuthService {
         name: user.name,
       });
     } catch (error) {
-      console.error('[AuthService] Failed to send password reset email:', error);
+      logger.error({
+        module: 'AuthService',
+        operation: 'requestPasswordReset',
+        email: user.email,
+        error: error instanceof Error ? error.message : String(error),
+      }, 'Failed to send password reset email');
     }
 
     return { message };
@@ -533,7 +539,14 @@ class AuthServiceImpl implements IAuthService {
         inviterName: inviter?.name ?? undefined,
       });
     } catch (error) {
-      console.error('[AuthService] Failed to send invite email:', error);
+      logger.error({
+        module: 'AuthService',
+        operation: 'createInvite',
+        email: normalizedEmail,
+        practiceId,
+        role,
+        error: error instanceof Error ? error.message : String(error),
+      }, 'Failed to send invite email');
     }
 
     return invite;

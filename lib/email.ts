@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import type { PracticeRole } from '@prisma/client';
 import { env } from '@/lib/env';
+import logger from '@/lib/logger';
 
 // Initialize Resend client - gracefully handle missing API key during build
 const resend = env.RESEND_API_KEY 
@@ -45,7 +46,11 @@ export async function sendPasswordResetEmail({
 }: SendPasswordResetEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
     if (!resend) {
-      console.error('[sendPasswordResetEmail] Resend client not initialized - missing RESEND_API_KEY');
+      logger.error({
+        module: 'email',
+        operation: 'sendPasswordResetEmail',
+        email,
+      }, 'Resend client not initialized - missing RESEND_API_KEY');
       return {
         success: false,
         error: 'Email service not configured',
@@ -135,7 +140,12 @@ If you didn't request a password reset, you can safely ignore this email. Your p
 
     return { success: true };
   } catch (error) {
-    console.error('[sendPasswordResetEmail]', error);
+    logger.error({
+      module: 'email',
+      operation: 'sendPasswordResetEmail',
+      email,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Failed to send password reset email');
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to send email',
@@ -157,15 +167,17 @@ export async function sendUserInviteEmail({
     const inviter = inviterName || 'An administrator';
 
     if (!resend) {
-      // In dev: log invite details to console instead of crashing
-      console.warn('[sendUserInviteEmail] ⚠️  Resend not configured - logging invite details instead:');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`📧 INVITE EMAIL (would be sent to: ${email})`);
-      console.log(`   Practice: ${practiceName}`);
-      console.log(`   Role: ${roleDisplay}`);
-      console.log(`   Invited by: ${inviter}`);
-      console.log(`   🔗 Invite URL: ${inviteUrl}`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // In dev: log invite details instead of crashing
+      logger.warn({
+        module: 'email',
+        operation: 'sendUserInviteEmail',
+        isDev: true,
+        email,
+        practiceName,
+        role: roleDisplay,
+        invitedBy: inviter,
+        inviteUrl,
+      }, 'Resend not configured - would send invite email in production');
       return { success: true }; // Don't fail in dev
     }
 
@@ -250,7 +262,14 @@ If you didn't expect this invitation, you can safely ignore this email.
 
     return { success: true };
   } catch (error) {
-    console.error('[sendUserInviteEmail]', error);
+    logger.error({
+      module: 'email',
+      operation: 'sendUserInviteEmail',
+      email,
+      practiceName,
+      role,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Failed to send user invite email');
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to send email',
@@ -272,24 +291,26 @@ export async function sendOrderEmail({
     const reference = orderReference || 'No reference';
     
     if (!resend) {
-      // In dev: log order details to console instead of crashing
-      console.warn('[sendOrderEmail] ⚠️  Resend not configured - logging order details instead:');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`📧 ORDER EMAIL (would be sent to: ${supplierEmail})`);
-      console.log(`   Supplier: ${supplierName}`);
-      console.log(`   From Practice: ${practiceName}`);
-      if (practiceAddress) console.log(`   Practice Address: ${practiceAddress}`);
-      console.log(`   Order Reference: ${reference}`);
-      if (orderNotes) console.log(`   Notes: ${orderNotes}`);
-      console.log('');
-      console.log('   Order Items:');
-      orderItems.forEach((item) => {
-        console.log(`     - ${item.name} ${item.sku ? `(${item.sku})` : ''}`);
-        console.log(`       Qty: ${item.quantity}, Unit Price: €${item.unitPrice.toFixed(2)}, Total: €${item.total.toFixed(2)}`);
-      });
-      console.log('');
-      console.log(`   📊 Order Total: €${orderTotal.toFixed(2)}`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // In dev: log order details instead of crashing
+      logger.warn({
+        module: 'email',
+        operation: 'sendOrderEmail',
+        isDev: true,
+        supplierEmail,
+        supplierName,
+        practiceName,
+        practiceAddress,
+        orderReference: reference,
+        orderNotes,
+        orderItems: orderItems.map(item => ({
+          name: item.name,
+          sku: item.sku,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.total,
+        })),
+        orderTotal,
+      }, 'Resend not configured - would send order email in production');
       return { success: true }; // Don't fail in dev
     }
 
@@ -410,7 +431,15 @@ If you have any questions about this order, please contact ${practiceName} direc
 
     return { success: true };
   } catch (error) {
-    console.error('[sendOrderEmail]', error);
+    logger.error({
+      module: 'email',
+      operation: 'sendOrderEmail',
+      supplierEmail,
+      supplierName,
+      practiceName,
+      orderReference,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Failed to send order email');
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to send email',

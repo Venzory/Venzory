@@ -550,6 +550,8 @@ export class AuditService {
       adjustmentsApplied: boolean;
       adjustedItemCount: number;
       totalVariance: number;
+      adminOverride?: boolean;
+      concurrencyWarnings?: string[];
     },
     tx?: TransactionClient
   ): Promise<void> {

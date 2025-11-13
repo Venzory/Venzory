@@ -5,6 +5,8 @@
  * to prevent XSS attacks and other injection vulnerabilities.
  */
 
+import logger from '@/lib/logger';
+
 export interface CSPConfig {
   nonce: string;
   isDevelopment?: boolean;
@@ -113,7 +115,11 @@ export function generateCSP(config: CSPConfig): string {
 
   // Log CSP in development for debugging
   if (isDevelopment) {
-    console.log('[CSP] Generated Content-Security-Policy:', cspString);
+    logger.debug({
+      module: 'csp',
+      operation: 'generateCSP',
+      csp: cspString,
+    }, 'Generated Content-Security-Policy');
   }
 
   return cspString;

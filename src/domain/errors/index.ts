@@ -77,6 +77,13 @@ export class RateLimitError extends DomainError {
   }
 }
 
+export class ConcurrencyError extends DomainError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, 'CONCURRENCY_CONFLICT', 409, details);
+    this.name = 'ConcurrencyError';
+  }
+}
+
 /**
  * Helper to determine if an error is a DomainError
  */

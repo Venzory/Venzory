@@ -15,6 +15,7 @@
  */
 
 import { z } from 'zod';
+import logger from '@/lib/logger';
 
 /**
  * Helper to create a minimum length secret validator
@@ -135,14 +136,23 @@ function parseEnv() {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
+    // Log validation errors with structured logging
+    logger.error({
+      module: 'env',
+      operation: 'parseEnv',
+      errors: parsed.error.issues.map((issue) => ({
+        path: issue.path.join('.'),
+        message: issue.message,
+      })),
+    }, 'Invalid environment variables - see errors for details');
+    
+    // Also output to stderr for visibility during startup
     console.error('❌ Invalid environment variables:');
     console.error('');
-    
     parsed.error.issues.forEach((issue) => {
       const path = issue.path.join('.');
       console.error(`  ${path}: ${issue.message}`);
     });
-    
     console.error('');
     console.error('💡 Fix these issues in your .env.local file or environment configuration.');
     console.error('   See .env.example for a complete list of required variables.');

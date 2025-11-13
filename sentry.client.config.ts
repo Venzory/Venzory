@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import { env } from '@/lib/env';
+import logger from '@/lib/logger';
 
 const SENTRY_DSN = env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -31,8 +32,15 @@ if (SENTRY_DSN) {
     environment: env.NODE_ENV,
   });
 
-  console.log('[Sentry] Client-side error tracking initialized');
+  logger.info({
+    module: 'sentry',
+    runtime: 'client',
+    environment: env.NODE_ENV,
+  }, 'Client-side error tracking initialized');
 } else {
-  console.warn('[Sentry] No NEXT_PUBLIC_SENTRY_DSN found - error tracking disabled');
+  logger.warn({
+    module: 'sentry',
+    runtime: 'client',
+  }, 'No NEXT_PUBLIC_SENTRY_DSN found - error tracking disabled');
 }
 

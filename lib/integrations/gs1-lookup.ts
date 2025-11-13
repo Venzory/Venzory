@@ -10,6 +10,7 @@
 import { Gs1VerificationStatus } from '@prisma/client';
 import { Gs1LookupResponse } from './types';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * Look up product information from GS1 registry
@@ -31,7 +32,11 @@ export async function lookupGtin(gtin: string): Promise<Gs1LookupResponse | null
   
   // For now, return null indicating not found
   // This allows the system to create non-GS1 products
-  console.log(`[GS1 Lookup] Placeholder lookup for GTIN: ${gtin} (no real API call)`);
+  logger.debug({
+    module: 'gs1-lookup',
+    operation: 'lookupGtin',
+    gtin,
+  }, 'Placeholder lookup for GTIN (no real API call)');
   
   return null;
   
@@ -173,7 +178,12 @@ export async function enrichProductWithGs1Data(productId: string): Promise<boole
     }
   } catch (error) {
     // Lookup failed - mark as FAILED
-    console.error(`[GS1 Lookup] Error enriching product ${productId}:`, error);
+    logger.error({
+      module: 'gs1-lookup',
+      operation: 'enrichProductWithGs1Data',
+      productId,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Error enriching product with GS1 data');
     await updateGs1Verification(productId, Gs1VerificationStatus.FAILED);
     return false;
   }

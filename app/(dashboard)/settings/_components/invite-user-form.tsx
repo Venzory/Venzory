@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PracticeRole } from '@prisma/client';
 import { toast } from '@/lib/toast';
-import { fetchWithCsrf } from '@/lib/fetch-with-csrf';
+import { fetcher } from '@/lib/fetcher';
+import { ClientApiError, toUserMessage } from '@/lib/client-error';
 
 type FormState = {
   email: string;
@@ -59,24 +60,14 @@ export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps
     setIsSubmitting(true);
 
     try {
-      const response = await fetchWithCsrf('/api/invites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await fetcher.post('/api/invites', {
+        body: {
           email: state.email,
           role: state.role,
           name: state.name || undefined,
           practiceId,
-        }),
+        },
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to send invitation');
-        setIsSubmitting(false);
-        return;
-      }
 
       // Success - reset form and show success message
       setSuccess(`Invitation sent to ${state.email}`);
@@ -90,7 +81,11 @@ export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps
       // Refresh the page to show the new pending invite
       router.refresh();
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      if (err instanceof ClientApiError) {
+        setError(toUserMessage(err));
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
       setIsSubmitting(false);
     }
   };

@@ -6,6 +6,7 @@ import { checkRouteAccess } from '@/lib/route-guards';
 import { generateCSP } from '@/lib/csp';
 import { createSignedCsrfToken, getCsrfTokenFromCookie, parseAndVerifySignedToken } from '@/lib/csrf';
 import { env } from '@/lib/env';
+import logger from '@/lib/logger';
 
 const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog'];
 const authRoutes = ['/login', '/register'];
@@ -100,7 +101,11 @@ async function applySecurityHeaders(response: NextResponse, nonce: string, reque
     response.headers.set('Content-Security-Policy', csp);
   } catch (error) {
     // CRITICAL: Fail fast if CSP cannot be generated
-    console.error('[SECURITY ERROR] CSP generation failed:', error);
+    logger.error({
+      module: 'middleware',
+      operation: 'generateCSP',
+      error: error instanceof Error ? error.message : String(error),
+    }, 'SECURITY ERROR: CSP generation failed');
     throw new Error(
       `Failed to generate Content-Security-Policy: ${error instanceof Error ? error.message : 'Unknown error'}. ` +
       'This is a critical security error. Build should fail.'

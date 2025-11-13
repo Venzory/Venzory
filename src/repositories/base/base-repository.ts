@@ -7,6 +7,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import type { TransactionClient } from './transaction';
 import { getPrismaClient } from './transaction';
 import { NotFoundError } from '@/src/domain/errors';
+import logger from '@/lib/logger';
 
 /**
  * Base repository class with tenant scoping and common operations
@@ -168,7 +169,12 @@ export abstract class BaseRepository {
       return await operation();
     } catch (error) {
       // Log error for debugging
-      console.error(`Repository operation failed: ${errorMessage ?? 'Unknown error'}`, error);
+      logger.error({
+        module: 'BaseRepository',
+        operation: 'execute',
+        errorMessage: errorMessage ?? 'Unknown error',
+        error: error instanceof Error ? error.message : String(error),
+      }, 'Repository operation failed');
       throw error;
     }
   }

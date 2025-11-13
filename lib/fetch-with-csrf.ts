@@ -5,6 +5,8 @@
  * for mutating operations (POST, PUT, PATCH, DELETE)
  */
 
+import logger from '@/lib/logger';
+
 /**
  * HTTP methods that require CSRF token
  */
@@ -75,7 +77,12 @@ export async function fetchWithCsrf(
     const csrfToken = getCsrfTokenFromCookie();
     
     if (!csrfToken) {
-      console.warn('[fetchWithCsrf] No CSRF token found in cookies');
+      logger.warn({
+        module: 'fetch-with-csrf',
+        operation: 'fetchWithCsrf',
+        method,
+        url: input.toString(),
+      }, 'No CSRF token found in cookies');
       // Still proceed with the request - server will reject it
     }
     

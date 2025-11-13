@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { NotificationItem } from './notification-item';
+import { fetcher } from '@/lib/fetcher';
+import { ClientApiError } from '@/lib/client-error';
 
 interface Notification {
   id: string;
@@ -30,13 +32,11 @@ export function NotificationBell() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications');
-      if (response.ok) {
-        const data: NotificationsResponse = await response.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
-      }
+      const data = await fetcher.get<NotificationsResponse>('/api/notifications');
+      setNotifications(data.notifications);
+      setUnreadCount(data.unreadCount);
     } catch (error) {
+      // Silent failure - don't disrupt user experience for notification polling
       console.error('Failed to fetch notifications:', error);
     }
   };
@@ -70,18 +70,15 @@ export function NotificationBell() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: 'PATCH',
-      });
-
-      if (response.ok) {
-        // Update local state
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      }
+      await fetcher.patch(`/api/notifications/${id}`);
+      
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
+      // Silent failure - don't disrupt user experience
       console.error('Failed to mark notification as read:', error);
     }
   };
@@ -89,16 +86,13 @@ export function NotificationBell() {
   const handleMarkAllAsRead = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/notifications/mark-all-read', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        // Update local state
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-        setUnreadCount(0);
-      }
+      await fetcher.post('/api/notifications/mark-all-read');
+      
+      // Update local state
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
     } catch (error) {
+      // Silent failure - don't disrupt user experience
       console.error('Failed to mark all notifications as read:', error);
     } finally {
       setIsLoading(false);

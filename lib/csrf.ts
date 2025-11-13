@@ -10,6 +10,7 @@
  */
 
 import { env } from '@/lib/env';
+import logger from '@/lib/logger';
 
 /**
  * Get CSRF secret from environment
@@ -95,7 +96,11 @@ export async function verifyToken(token: string, signature: string): Promise<boo
     
     return mismatch === 0;
   } catch (error) {
-    console.error('[CSRF] Token verification error:', error);
+    logger.error({
+      module: 'csrf',
+      operation: 'verifyToken',
+      error: error instanceof Error ? error.message : String(error),
+    }, 'CSRF token verification error');
     return false;
   }
 }
@@ -137,7 +142,11 @@ export async function parseAndVerifySignedToken(signedToken: string): Promise<st
     
     return null;
   } catch (error) {
-    console.error('[CSRF] Token parsing error:', error);
+    logger.error({
+      module: 'csrf',
+      operation: 'parseAndVerifySignedToken',
+      error: error instanceof Error ? error.message : String(error),
+    }, 'CSRF token parsing error');
     return null;
   }
 }
@@ -167,7 +176,11 @@ export function getCsrfTokenFromCookie(request: Request): string | null {
     
     return cookies['__Host-csrf'] || null;
   } catch (error) {
-    console.error('[CSRF] Error extracting token from cookie:', error);
+    logger.error({
+      module: 'csrf',
+      operation: 'getCsrfTokenFromCookie',
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Error extracting CSRF token from cookie');
     return null;
   }
 }
@@ -195,7 +208,11 @@ export async function verifyCsrf(request: Request): Promise<boolean> {
     const cookieToken = getCsrfTokenFromCookie(request);
     
     if (!cookieToken) {
-      console.warn('[CSRF] No CSRF token in cookie');
+      logger.warn({
+        module: 'csrf',
+        operation: 'verifyCsrf',
+        reason: 'no_cookie_token',
+      }, 'No CSRF token in cookie');
       return false;
     }
     
@@ -203,7 +220,11 @@ export async function verifyCsrf(request: Request): Promise<boolean> {
     const verifiedCookieToken = await parseAndVerifySignedToken(cookieToken);
     
     if (!verifiedCookieToken) {
-      console.warn('[CSRF] Invalid CSRF token signature in cookie');
+      logger.warn({
+        module: 'csrf',
+        operation: 'verifyCsrf',
+        reason: 'invalid_signature',
+      }, 'Invalid CSRF token signature in cookie');
       return false;
     }
     
@@ -211,13 +232,21 @@ export async function verifyCsrf(request: Request): Promise<boolean> {
     const headerToken = getCsrfTokenFromHeader(request);
     
     if (!headerToken) {
-      console.warn('[CSRF] No CSRF token in header');
+      logger.warn({
+        module: 'csrf',
+        operation: 'verifyCsrf',
+        reason: 'no_header_token',
+      }, 'No CSRF token in header');
       return false;
     }
     
     // Compare tokens using timing-safe comparison
     if (headerToken.length !== verifiedCookieToken.length) {
-      console.warn('[CSRF] Token length mismatch');
+      logger.warn({
+        module: 'csrf',
+        operation: 'verifyCsrf',
+        reason: 'length_mismatch',
+      }, 'CSRF token length mismatch');
       return false;
     }
     
@@ -228,13 +257,21 @@ export async function verifyCsrf(request: Request): Promise<boolean> {
     }
     
     if (mismatch !== 0) {
-      console.warn('[CSRF] Token mismatch between cookie and header');
+      logger.warn({
+        module: 'csrf',
+        operation: 'verifyCsrf',
+        reason: 'token_mismatch',
+      }, 'CSRF token mismatch between cookie and header');
       return false;
     }
     
     return true;
   } catch (error) {
-    console.error('[CSRF] Verification error:', error);
+    logger.error({
+      module: 'csrf',
+      operation: 'verifyCsrf',
+      error: error instanceof Error ? error.message : String(error),
+    }, 'CSRF verification error');
     return false;
   }
 }

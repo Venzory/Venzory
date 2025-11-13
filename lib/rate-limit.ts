@@ -1,4 +1,5 @@
 import { env } from '@/lib/env';
+import logger from '@/lib/logger';
 
 // Dynamic import for ioredis to avoid Edge Runtime issues
 let Redis: typeof import('ioredis').default | null = null;
@@ -9,7 +10,11 @@ if (typeof process !== 'undefined' && process.versions?.node) {
     // Dynamic import to avoid Edge Runtime bundling issues
     Redis = require('ioredis');
   } catch (error) {
-    console.warn('[RateLimit] ioredis not available, using in-memory fallback');
+    logger.warn({
+      module: 'rate-limit',
+      operation: 'init',
+      error: error instanceof Error ? error.message : String(error),
+    }, 'ioredis not available, using in-memory fallback');
   }
 }
 
@@ -103,7 +108,12 @@ class RedisRateLimiter implements RateLimiter {
         reset,
       };
     } catch (error) {
-      console.error('[RedisRateLimiter] Error:', error);
+      logger.error({
+        module: 'rate-limit',
+        operation: 'check',
+        rateLimitId: this.config.id,
+        error: error instanceof Error ? error.message : String(error),
+      }, 'Redis rate limiter error - failing open');
       // On error, allow the request (fail open)
       return {
         success: true,
@@ -119,7 +129,13 @@ class RedisRateLimiter implements RateLimiter {
     try {
       await this.redis.del(redisKey);
     } catch (error) {
-      console.error('[RedisRateLimiter] Reset error:', error);
+      logger.error({
+        module: 'rate-limit',
+        operation: 'reset',
+        rateLimitId: this.config.id,
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      }, 'Redis rate limiter reset error');
     }
   }
 }
@@ -208,14 +224,29 @@ export function createRateLimiter(config: RateLimitConfig): RateLimiter {
   // Use Redis only if URL is configured AND Redis client is available
   if (redisUrl && Redis) {
     try {
-      console.log(`[RateLimit] Using Redis for rate limiter: ${config.id}`);
+      logger.info({
+        module: 'rate-limit',
+        operation: 'createRateLimiter',
+        rateLimitId: config.id,
+        type: 'redis',
+      }, `Using Redis for rate limiter: ${config.id}`);
       return new RedisRateLimiter(redisUrl, config);
     } catch (error) {
-      console.warn(`[RateLimit] Failed to create Redis rate limiter, falling back to in-memory:`, error);
+      logger.warn({
+        module: 'rate-limit',
+        operation: 'createRateLimiter',
+        rateLimitId: config.id,
+        error: error instanceof Error ? error.message : String(error),
+      }, `Failed to create Redis rate limiter, falling back to in-memory`);
       return new InMemoryRateLimiter(config);
     }
   } else {
-    console.log(`[RateLimit] Using in-memory rate limiter: ${config.id}`);
+    logger.info({
+      module: 'rate-limit',
+      operation: 'createRateLimiter',
+      rateLimitId: config.id,
+      type: 'in-memory',
+    }, `Using in-memory rate limiter: ${config.id}`);
     return new InMemoryRateLimiter(config);
   }
 }

@@ -20,12 +20,20 @@
 //     environment: env.NODE_ENV,
 //   });
 
-//   console.log('[Sentry] Edge runtime error tracking initialized');
+//   logger.info({
+//     module: 'sentry',
+//     runtime: 'edge',
+//     environment: env.NODE_ENV,
+//   }, 'Edge runtime error tracking initialized');
 // } else {
-//   console.warn('[Sentry] No SENTRY_DSN found - error tracking disabled');
+//   logger.warn({
+//     module: 'sentry',
+//     runtime: 'edge',
+//   }, 'No SENTRY_DSN found - error tracking disabled');
 // }
 
-console.log('[Sentry] Edge runtime temporarily disabled for testing');
+// Note: Edge runtime temporarily disabled for testing
+// Uncomment the above code block when ready to enable Sentry in Edge runtime
 
 // Export an empty object to make this a valid module
 export {};

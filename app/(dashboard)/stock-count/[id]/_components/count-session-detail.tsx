@@ -68,9 +68,10 @@ interface CountSessionDetailProps {
   }>;
   expectedItems: ExpectedCountItem[];
   canEdit: boolean;
+  isAdmin: boolean;
 }
 
-export function CountSessionDetail({ session, items, expectedItems, canEdit }: CountSessionDetailProps) {
+export function CountSessionDetail({ session, items, expectedItems, canEdit, isAdmin }: CountSessionDetailProps) {
   const router = useRouter();
   const { isOpen, openScanner, closeScanner } = useScanner();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -95,16 +96,18 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit }: C
     }
   };
 
-  const handleComplete = async (applyAdjustments: boolean) => {
+  const handleComplete = async (applyAdjustments: boolean, adminOverride: boolean = false) => {
     const message = applyAdjustments
-      ? 'Complete this count and apply adjustments to inventory? This cannot be undone.'
+      ? adminOverride
+        ? 'Override concurrency check and apply adjustments? This will force update inventory despite changes.'
+        : 'Complete this count and apply adjustments to inventory? This cannot be undone.'
       : 'Complete this count without applying adjustments?';
 
     const confirmed = await confirm({
-      title: 'Complete Stock Count',
+      title: adminOverride ? 'Admin Override' : 'Complete Stock Count',
       message,
-      confirmLabel: 'Complete',
-      variant: 'neutral',
+      confirmLabel: adminOverride ? 'Force Apply' : 'Complete',
+      variant: adminOverride ? 'danger' : 'neutral',
     });
 
     if (!confirmed) {
@@ -113,12 +116,43 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit }: C
 
     setIsCompleting(true);
     try {
-      await completeStockCountAction(session.id, applyAdjustments);
-      toast.success(applyAdjustments ? 'Count completed and inventory adjusted' : 'Count completed');
+      const result = await completeStockCountAction(session.id, applyAdjustments, adminOverride);
+      
+      if (result.warnings && result.warnings.length > 0) {
+        // Show warnings if admin overrode
+        toast.success('Count completed with warnings');
+        result.warnings.forEach(warning => {
+          console.warn('Stock count warning:', warning);
+        });
+      } else {
+        toast.success(applyAdjustments ? 'Count completed and inventory adjusted' : 'Count completed');
+      }
+      
       router.refresh();
     } catch (error) {
       console.error('Complete error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to complete count');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to complete count';
+      
+      // Check if it's a concurrency error
+      if (errorMessage.includes('Inventory changed during count') && isAdmin && applyAdjustments) {
+        // Show concurrency error dialog with override option
+        const overrideConfirmed = await confirm({
+          title: 'Inventory Changed During Count',
+          message: errorMessage + '\n\nAs an administrator, you can override this check and force apply the adjustments.',
+          confirmLabel: 'Override and Apply',
+          cancelLabel: 'Cancel',
+          variant: 'danger',
+        });
+        
+        if (overrideConfirmed) {
+          // Retry with admin override
+          setIsCompleting(false);
+          await handleComplete(applyAdjustments, true);
+          return;
+        }
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsCompleting(false);
     }
