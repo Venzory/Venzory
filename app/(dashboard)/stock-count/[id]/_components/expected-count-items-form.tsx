@@ -73,7 +73,7 @@ export function ExpectedCountItemsForm({
                   ? 'bg-green-600'
                   : idx === currentIndex
                     ? 'bg-sky-600'
-                    : 'bg-slate-700'
+                    : 'bg-slate-300 dark:bg-slate-700'
               }`}
             />
           ))}
@@ -81,17 +81,17 @@ export function ExpectedCountItemsForm({
       </div>
 
       {/* Current item card */}
-      <div className="rounded-lg border-2 border-sky-600 bg-sky-950/30 p-4">
+      <div className="rounded-lg border-2 border-sky-500 bg-sky-50 p-4 dark:border-sky-600 dark:bg-sky-950/30">
         <div className="mb-3 flex items-start justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-100">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               {currentItem.itemName}
             </h3>
             {currentItem.itemSku && (
-              <p className="text-xs text-slate-400">{currentItem.itemSku}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{currentItem.itemSku}</p>
             )}
             <div className="mt-1">
-              <p className="text-xs font-medium text-sky-400">
+              <p className="text-xs font-medium text-sky-700 dark:text-sky-400">
                 System Quantity: {currentItem.systemQuantity} {currentItem.unit || 'units'}
               </p>
             </div>
@@ -150,7 +150,7 @@ export function ExpectedCountItemsForm({
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label className="mb-2 block text-xs font-medium text-slate-300">
+                <label className="mb-2 block text-xs font-medium text-slate-800 dark:text-slate-300">
                   Counted Quantity *
                 </label>
                 <input
@@ -161,29 +161,29 @@ export function ExpectedCountItemsForm({
                   step="1"
                   defaultValue={currentItem.systemQuantity}
                   autoFocus
-                  className="w-32 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-base text-slate-100 placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-32 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="mb-2 block text-xs font-medium text-slate-300">
+                <label className="mb-2 block text-xs font-medium text-slate-800 dark:text-slate-300">
                   Notes (optional)
                 </label>
                 <input
                   type="text"
                   name="notes"
                   placeholder="e.g. damaged items, expired stock"
-                  className="w-full max-w-lg rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-base text-slate-100 placeholder-slate-500 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full max-w-lg rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-slate-700 pt-3 mt-2">
+            <div className="flex justify-end gap-3 border-t border-slate-200 pt-3 mt-2 dark:border-slate-700">
               {!isLastItem && (
                 <button
                   type="button"
                   onClick={handleSkip}
-                  className="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-800"
+                  className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   Skip for Now
                 </button>

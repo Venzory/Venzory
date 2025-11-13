@@ -186,13 +186,13 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
   const getStatusColor = (status: StockCountStatus) => {
     switch (status) {
       case StockCountStatus.IN_PROGRESS:
-        return 'bg-amber-900/20 text-amber-300 border-amber-800';
+        return 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800';
       case StockCountStatus.COMPLETED:
-        return 'bg-green-900/20 text-green-300 border-green-800';
+        return 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800';
       case StockCountStatus.CANCELLED:
-        return 'bg-slate-700/20 text-slate-400 border-slate-700';
+        return 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-700/20 dark:text-slate-400 dark:border-slate-700';
       default:
-        return 'bg-slate-700/20 text-slate-400 border-slate-700';
+        return 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-700/20 dark:text-slate-400 dark:border-slate-700';
     }
   };
 
@@ -226,7 +226,7 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
               <button
                 onClick={handleCancel}
                 disabled={isCancelling}
-                className="flex items-center justify-center gap-2 rounded-lg border border-slate-700 px-6 py-3 font-semibold text-slate-200 transition hover:bg-slate-800 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 style={{ minHeight: '48px' }}
               >
                 <X className="h-5 w-5" />
@@ -235,7 +235,7 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
               <button
                 onClick={() => handleComplete(false)}
                 disabled={isCompleting}
-                className="flex items-center justify-center gap-2 rounded-lg border border-sky-700 px-6 py-3 font-semibold text-sky-200 transition hover:bg-sky-900 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-lg border border-sky-300 px-6 py-3 font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50 dark:border-sky-700 dark:text-sky-200 dark:hover:bg-sky-900"
                 style={{ minHeight: '48px' }}
               >
                 Complete (No Adjust)
@@ -342,7 +342,7 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
                 setSelectedItemId(null);
                 setShowAddForm(true);
               }}
-              className="flex items-center justify-center gap-2 rounded-lg border border-slate-700 px-6 py-3 font-semibold text-slate-200 transition hover:bg-slate-800"
+              className="flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               style={{ minHeight: '48px' }}
             >
               <Plus className="h-5 w-5" />
