@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface SearchFiltersProps {
   initialSearch?: string;
@@ -23,11 +24,32 @@ export function SearchFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(initialSearch);
+  
+  // Debounce the search term to avoid excessive URL updates
+  const debouncedSearch = useDebounce(search, 300);
 
   // Sync state with URL on mount
   useEffect(() => {
     setSearch(initialSearch);
   }, [initialSearch]);
+
+  // Update URL when debounced search value changes
+  useEffect(() => {
+    // Skip the initial render to avoid unnecessary navigation
+    if (debouncedSearch === initialSearch) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (debouncedSearch) {
+      params.set('q', debouncedSearch);
+    } else {
+      params.delete('q');
+    }
+    
+    router.push(`/inventory?${params.toString()}`);
+  }, [debouncedSearch, router, searchParams, initialSearch]);
 
   const updateSearchParams = useCallback(
     (key: string, value: string) => {
@@ -47,19 +69,6 @@ export function SearchFilters({
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearch(value);
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      updateSearchParams('q', search);
-    }
-  };
-
-  const handleSearchBlur = () => {
-    // Update on blur if value changed
-    if (search !== initialSearch) {
-      updateSearchParams('q', search);
-    }
   };
 
   const handleLocationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -83,8 +92,6 @@ export function SearchFilters({
             placeholder="Search by name or SKU..."
             value={search}
             onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-            onBlur={handleSearchBlur}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
           />
         </div>

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { decimalToNumber } from '@/lib/prisma-transforms';
+import { useDebounce } from '@/hooks/use-debounce';
 
 export interface ItemForSelection {
   id: string;
@@ -39,6 +41,9 @@ export function ItemSelector({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Debounce the search term to reduce expensive filtering operations
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   // Filter items by supplier and search term
   const availableItems = items
     .filter((item) => {
@@ -60,11 +65,11 @@ export function ItemSelector({
       // Filter out already selected items
       const notExcluded = !excludeItemIds.includes(item.id);
       
-      // Filter by search term
+      // Filter by debounced search term
       const matchesSearch =
-        searchTerm === '' ||
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()));
+        debouncedSearchTerm === '' ||
+        item.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (item.sku && item.sku.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
 
       return matchesSupplier && notExcluded && matchesSearch;
     })
@@ -76,7 +81,7 @@ export function ItemSelector({
     if (practiceSupplierId) {
       const supplierItem = item.supplierItems.find((si) => si.practiceSupplierId === practiceSupplierId);
       if (supplierItem?.unitPrice) {
-        return parseFloat(supplierItem.unitPrice.toString());
+        return decimalToNumber(supplierItem.unitPrice) || 0;
       }
     }
     
@@ -84,7 +89,7 @@ export function ItemSelector({
     if (supplierId) {
       const supplierItem = item.supplierItems.find((si) => si.supplierId === supplierId);
       if (supplierItem?.unitPrice) {
-        return parseFloat(supplierItem.unitPrice.toString());
+        return decimalToNumber(supplierItem.unitPrice) || 0;
       }
     }
     

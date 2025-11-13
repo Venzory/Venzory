@@ -89,6 +89,71 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
+   * Count products with optional filters
+   * Uses same filter logic as findProducts for consistency
+   */
+  async countProducts(
+    filters?: Partial<ProductFilters>,
+    options?: FindOptions
+  ): Promise<number> {
+    const client = this.getClient(options?.tx);
+
+    const where: Prisma.ProductWhereInput = {};
+
+    // Search by name, brand, or GTIN
+    if (filters?.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { brand: { contains: filters.search, mode: 'insensitive' } },
+        { gtin: { contains: filters.search } },
+      ];
+    }
+
+    if (filters?.isGs1Product !== undefined) {
+      where.isGs1Product = filters.isGs1Product;
+    }
+
+    if (filters?.gs1VerificationStatus) {
+      where.gs1VerificationStatus = filters.gs1VerificationStatus;
+    }
+
+    // Filter by supplier (products linked via SupplierCatalog)
+    if (filters?.supplierId) {
+      where.supplierCatalogs = {
+        some: {
+          supplierId: filters.supplierId,
+          isActive: true,
+        },
+      };
+    }
+
+    // Filter by practice supplier (Phase 2)
+    if (filters?.practiceSupplierId) {
+      where.supplierCatalogs = {
+        some: {
+          practiceSupplierId: filters.practiceSupplierId,
+          isActive: true,
+        },
+      };
+    }
+
+    // Filter by practice (products available to practice via their PracticeSuppliers)
+    if (filters?.practiceId) {
+      where.supplierCatalogs = {
+        some: {
+          practiceSupplier: {
+            practiceId: filters.practiceId,
+            isBlocked: false,
+          },
+          isActive: true,
+        },
+      };
+    }
+
+    return client.product.count({ where });
+  }
+
+  /**
    * Find product by ID
    */
   async findProductById(
@@ -356,7 +421,7 @@ export class ProductRepository extends BaseRepository {
    */
   async updateGs1Verification(
     productId: string,
-    status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED',
+    status: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED',
     gs1Data?: Record<string, any> | null,
     options?: RepositoryOptions
   ): Promise<Product> {
@@ -512,6 +577,30 @@ export class ProductRepository extends BaseRepository {
     });
 
     return catalog as SupplierCatalog | null;
+  }
+
+  /**
+   * Find products that need GS1 refresh (expired or failed verification)
+   */
+  async findProductsForGs1Refresh(
+    limit: number = 100,
+    options?: FindOptions
+  ): Promise<Product[]> {
+    const client = this.getClient(options?.tx);
+
+    const products = await client.product.findMany({
+      where: {
+        gtin: { not: null },
+        isGs1Product: true,
+        gs1VerificationStatus: {
+          in: ['EXPIRED', 'FAILED'],
+        },
+      },
+      take: limit,
+      select: { id: true, gtin: true, name: true, gs1VerificationStatus: true },
+    });
+
+    return products as Product[];
   }
 }
 

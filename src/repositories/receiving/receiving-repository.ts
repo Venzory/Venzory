@@ -277,13 +277,21 @@ export class ReceivingRepository extends BaseRepository {
   ): Promise<GoodsReceiptLine> {
     const client = this.getClient(options?.tx);
 
-    // Check if line already exists
-    const existing = await this.findReceiptLineByItem(receiptId, itemId, { tx: options?.tx });
+    // Check if line already exists (include receipt to get practiceId)
+    const existing = await this.findReceiptLineByItem(receiptId, itemId, { 
+      tx: options?.tx,
+      include: { receipt: true }
+    });
 
     if (existing) {
       // Update existing line (increment quantity)
+      if (!existing.receipt) {
+        throw new Error('Receipt not found for existing line');
+      }
+      
       return this.updateReceiptLine(
         existing.id,
+        existing.receipt.practiceId,
         {
           quantity: existing.quantity + input.quantity,
           batchNumber: input.batchNumber ?? existing.batchNumber,
