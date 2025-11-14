@@ -33,6 +33,8 @@ const CSP_DIRECTIVES = {
     "'self'",
     // Nonce placeholder - will be replaced dynamically
     "'nonce-{NONCE}'",
+    // Hash for theme script (prevents FOUC) - see app/layout.tsx
+    "'sha256-0lScLMzgnTF/4aEL0Kl3JzVxaxwkLikwLeFx2kRmx3U='",
     // 'strict-dynamic' allows scripts loaded by trusted scripts (CSP Level 3)
     "'strict-dynamic'",
     // Fallback for older browsers (ignored by modern browsers when strict-dynamic is present)
