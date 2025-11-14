@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signOut } from 'next-auth/react';
 
 type UserMenuProps = {
@@ -10,9 +10,26 @@ type UserMenuProps = {
 
 export function UserMenu({ userName, practiceName }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isOpen]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-900 transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500"
