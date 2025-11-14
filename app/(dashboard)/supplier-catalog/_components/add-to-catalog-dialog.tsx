@@ -69,8 +69,14 @@ export function AddToCatalogDialog({
   const selectedOffer = offers.find(o => o.practiceSupplierId === selectedSupplier);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-lg shadow-xl">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={() => setIsOpen(false)}
+    >
+      <div 
+        className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-lg shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-slate-200 dark:border-slate-700">
           <div>
