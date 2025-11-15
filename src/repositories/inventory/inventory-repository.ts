@@ -194,6 +194,34 @@ export class InventoryRepository extends BaseRepository {
   }
 
   /**
+   * Batch check if items exist by IDs (avoids N+1)
+   * Returns array of found item IDs
+   */
+  async findItemIdsByIds(
+    itemIds: string[],
+    practiceId: string,
+    options?: FindOptions
+  ): Promise<string[]> {
+    const client = this.getClient(options?.tx);
+
+    if (itemIds.length === 0) {
+      return [];
+    }
+
+    const items = await client.item.findMany({
+      where: {
+        id: { in: itemIds },
+        practiceId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return items.map(item => item.id);
+  }
+
+  /**
    * Create new item
    */
   async createItem(
@@ -289,6 +317,44 @@ export class InventoryRepository extends BaseRepository {
     }
 
     return inventory as LocationInventory | null;
+  }
+
+  /**
+   * Batch get location inventory for multiple items (avoids N+1)
+   * Returns a Map keyed by itemId for efficient lookups
+   */
+  async getLocationInventoryBatch(
+    itemIds: string[],
+    locationId: string,
+    practiceId: string,
+    options?: FindOptions
+  ): Promise<Map<string, LocationInventory>> {
+    const client = this.getClient(options?.tx);
+
+    if (itemIds.length === 0) {
+      return new Map();
+    }
+
+    const inventories = await client.locationInventory.findMany({
+      where: {
+        locationId,
+        itemId: { in: itemIds },
+        item: { practiceId },
+        location: { practiceId },
+      },
+      include: {
+        location: true,
+        item: true,
+        ...(options?.include ?? {}),
+      },
+    });
+
+    const map = new Map<string, LocationInventory>();
+    for (const inventory of inventories) {
+      map.set(inventory.itemId, inventory as LocationInventory);
+    }
+
+    return map;
   }
 
   /**

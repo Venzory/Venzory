@@ -268,15 +268,19 @@ export class ReceivingService {
 
       const lowStockNotifications: string[] = [];
 
+      // Batch fetch current inventory for all line items (avoids N+1)
+      const lineItemIds = (receipt.lines ?? []).map(line => line.itemId);
+      const inventoryMap = await this.inventoryRepository.getLocationInventoryBatch(
+        lineItemIds,
+        receipt.locationId,
+        ctx.practiceId,
+        { tx }
+      );
+
       // Process each line: update inventory and create stock adjustments
       for (const line of receipt.lines ?? []) {
-        // Get current inventory
-        const currentInventory = await this.inventoryRepository.getLocationInventory(
-          line.itemId,
-          receipt.locationId,
-          ctx.practiceId,
-          { tx }
-        );
+        // Get current inventory from batch-fetched map
+        const currentInventory = inventoryMap.get(line.itemId) ?? null;
 
         const newQuantity = (currentInventory?.quantity ?? 0) + line.quantity;
 
@@ -507,8 +511,8 @@ export class ReceivingService {
   async searchItemByGtin(
     ctx: RequestContext,
     gtin: string
-  ): Promise<{ itemId: string; itemName: string } | null> {
-    // Find product by GTIN
+  ): Promise<{ id: string; name: string; sku: string | null; unit: string | null } | null> {
+    // Find items with matching product GTIN
     const items = await this.inventoryRepository.findItems(ctx.practiceId);
 
     const matchingItem = items.find(
@@ -520,8 +524,10 @@ export class ReceivingService {
     }
 
     return {
-      itemId: matchingItem.id,
-      itemName: matchingItem.name,
+      id: matchingItem.id,
+      name: matchingItem.name,
+      sku: matchingItem.sku,
+      unit: matchingItem.unit,
     };
   }
 }

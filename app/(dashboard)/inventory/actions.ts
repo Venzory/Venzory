@@ -14,6 +14,7 @@ import { getOrCreateProductForItem } from '@/lib/integrations';
 import { isDomainError } from '@/src/domain/errors';
 import { UserRepository } from '@/src/repositories/users';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
+import logger from '@/lib/logger';
 
 const inventoryService = getInventoryService();
 // Note: Location and Supplier CRUD operations use UserRepository directly
@@ -161,7 +162,16 @@ export async function upsertItemAction(_prevState: unknown, formData: FormData) 
     revalidatePath('/inventory');
     return { success: itemId ? 'Item updated' : 'Item created' } as const;
   } catch (error) {
-    console.error('[upsertItemAction]', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'upsertItemAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      itemId: formData.get('itemId'),
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to upsert inventory item');
+    
     if (isDomainError(error)) {
       return { error: error.message } as const;
     }
@@ -180,7 +190,16 @@ export async function deleteItemAction(itemId: string) {
     await inventoryService.deleteItem(ctx, itemId);
     revalidatePath('/inventory');
   } catch (error) {
-    console.error('[deleteItemAction]', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'deleteItemAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      itemId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to delete inventory item');
+    
     if (isDomainError(error)) {
       throw new Error(error.message);
     }
@@ -194,16 +213,16 @@ export async function deleteItemAction(itemId: string) {
 export async function upsertLocationAction(_prevState: unknown, formData: FormData) {
   await verifyCsrfFromHeaders();
   
+  const payload = {
+    locationId: formData.get('locationId') ?? undefined,
+    name: formData.get('name'),
+    code: formData.get('code'),
+    description: formData.get('description'),
+    parentId: formData.get('parentId'),
+  };
+  
   try {
     const ctx = await buildRequestContext();
-
-    const payload = {
-      locationId: formData.get('locationId') ?? undefined,
-      name: formData.get('name'),
-      code: formData.get('code'),
-      description: formData.get('description'),
-      parentId: formData.get('parentId'),
-    };
 
     if (payload.locationId) {
       const parsed = updateLocationSchema.safeParse(payload);
@@ -225,7 +244,16 @@ export async function upsertLocationAction(_prevState: unknown, formData: FormDa
     revalidatePath('/locations');
     return { success: payload.locationId ? 'Location updated' : 'Location created' };
   } catch (error) {
-    console.error('[upsertLocationAction]', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'upsertLocationAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      locationId: payload.locationId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to upsert location');
+    
     if (isDomainError(error)) {
       return { error: error.message };
     }
@@ -244,7 +272,16 @@ export async function deleteLocationAction(locationId: string) {
     await userRepository.deleteLocation(locationId, ctx.practiceId);
     revalidatePath('/locations');
   } catch (error) {
-    console.error('[deleteLocationAction]', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'deleteLocationAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      locationId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to delete location');
+    
     if (isDomainError(error)) {
       throw new Error(error.message);
     }
@@ -286,7 +323,16 @@ export async function upsertSupplierAction(_prevState: unknown, formData: FormDa
     revalidatePath('/inventory');
     return { success: supplierId ? 'Supplier updated' : 'Supplier added' } as const;
   } catch (error) {
-    console.error('[upsertSupplierAction]', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'upsertSupplierAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      supplierId: formData.get('supplierId'),
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to upsert supplier');
+    
     if (isDomainError(error)) {
       return { error: error.message } as const;
     }
@@ -306,7 +352,16 @@ export async function deleteSupplierAction(supplierId: string) {
     revalidatePath('/suppliers');
     revalidatePath('/inventory');
   } catch (error) {
-    console.error('[deleteSupplierAction]', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'deleteSupplierAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      supplierId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to delete supplier');
+    
     if (isDomainError(error)) {
       throw new Error(error.message);
     }

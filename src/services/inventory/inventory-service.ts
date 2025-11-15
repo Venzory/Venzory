@@ -873,19 +873,20 @@ export class InventoryService {
           }
         }
 
-        // Process adjustments
-        for (const line of session.lines) {
-          if (line.variance === 0) {
-            continue; // Skip items with no variance
-          }
+        // Batch fetch existing inventory for all items with variance (avoids N+1)
+        const linesToProcess = session.lines.filter(line => line.variance !== 0);
+        const lineItemIds = linesToProcess.map(line => line.itemId);
+        const inventoryMap = await this.inventoryRepository.getLocationInventoryBatch(
+          lineItemIds,
+          session.locationId,
+          ctx.practiceId,
+          { tx }
+        );
 
-          // Get existing inventory for reorder point
-          const existingInventory = await this.inventoryRepository.getLocationInventory(
-            line.itemId,
-            session.locationId,
-            ctx.practiceId,
-            { tx }
-          );
+        // Process adjustments
+        for (const line of linesToProcess) {
+          // Get existing inventory from batch-fetched map
+          const existingInventory = inventoryMap.get(line.itemId) ?? null;
 
           // Update LocationInventory with counted quantity
           await this.inventoryRepository.upsertLocationInventory(

@@ -16,6 +16,7 @@ import { OrderStatus } from '@prisma/client';
 import { sendOrderEmail } from '@/lib/email';
 import { createNotificationForPracticeUsers } from '@/lib/notifications';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
+import logger from '@/lib/logger';
 
 const orderService = getOrderService();
 
@@ -112,13 +113,26 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
     orderId = result.id;
     revalidatePath('/orders');
   } catch (error: any) {
-    console.error('Failed to create order:', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'createDraftOrderAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      supplierId: formData.get('supplierId'),
+      practiceSupplierId: formData.get('practiceSupplierId'),
+      itemCount: (formData.get('items') as string)?.length || 0,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to create order');
+    
     return { error: error.message || 'Failed to create order' } as const;
   }
   
   // Redirect outside try-catch so it can throw properly
   if (orderId) {
     redirect(`/orders/${orderId}`);
+  } else {
+    return { error: 'Failed to create order - no order ID returned' } as const;
   }
 }
 

@@ -13,6 +13,7 @@ import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getInventoryService } from '@/src/services/inventory';
 import { isDomainError } from '@/src/domain/errors';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
+import logger from '@/lib/logger';
 
 const inventoryService = getInventoryService();
 
@@ -201,7 +202,17 @@ export async function completeStockCountAction(sessionId: string, applyAdjustmen
 
     return { success: true, adjustedItems, warnings } as const;
   } catch (error) {
-    console.error('[Stock Count Actions] Error completing session:', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'completeStockCountAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      sessionId,
+      applyAdjustments,
+      adminOverride,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to complete stock count session');
     
     if (isDomainError(error)) {
       throw new Error(error.message);

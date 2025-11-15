@@ -13,6 +13,7 @@ import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getReceivingService } from '@/src/services/receiving';
 import { isDomainError } from '@/src/domain/errors';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
+import logger from '@/lib/logger';
 
 const receivingService = getReceivingService();
 
@@ -52,6 +53,8 @@ const searchItemByGtinSchema = z.object({
 export async function createGoodsReceiptAction(_prevState: unknown, formData: FormData) {
   await verifyCsrfFromHeaders();
   
+  let receiptId: string | null = null;
+  
   try {
     const ctx = await buildRequestContext();
 
@@ -80,11 +83,27 @@ export async function createGoodsReceiptAction(_prevState: unknown, formData: Fo
       return { error: result.message } as const;
     }
 
+    receiptId = result.id;
     revalidatePath('/receiving');
-    redirect(`/receiving/${result.id}`);
   } catch (error: any) {
-    console.error('Failed to create goods receipt:', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'createGoodsReceiptAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      locationId: formData.get('locationId'),
+      orderId: formData.get('orderId'),
+      supplierId: formData.get('supplierId'),
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to create goods receipt');
+    
     return { error: error.message || 'Failed to create receipt' } as const;
+  }
+  
+  // Redirect outside try-catch so it can throw properly
+  if (receiptId) {
+    redirect(`/receiving/${receiptId}`);
   }
 }
 
@@ -191,16 +210,30 @@ export async function updateReceiptLineAction(_prevState: unknown, formData: For
 export async function removeReceiptLineAction(lineId: string) {
   await verifyCsrfFromHeaders();
   
-  const ctx = await buildRequestContext();
+  try {
+    const ctx = await buildRequestContext();
 
-  const result = await receivingService.removeReceiptLine(ctx, lineId);
+    const result = await receivingService.removeReceiptLine(ctx, lineId);
 
-  if (isDomainError(result)) {
-    throw new Error(result.message);
+    if (isDomainError(result)) {
+      throw new Error(result.message);
+    }
+
+    revalidatePath(`/receiving/${result.id}`);
+    revalidatePath('/receiving');
+  } catch (error) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'removeReceiptLineAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      lineId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to remove receipt line');
+    
+    throw error;
   }
-
-  revalidatePath(`/receiving/${result.id}`);
-  revalidatePath('/receiving');
 }
 
 /**
@@ -235,12 +268,21 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
     revalidatePath('/receiving');
     
     // If linked to an order, redirect to that order page
-    if (receipt.orderId) {
+    if (receipt?.orderId) {
       redirectPath = `/orders/${receipt.orderId}`;
       revalidatePath(redirectPath);
     }
   } catch (error: any) {
-    console.error('Failed to confirm goods receipt:', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'confirmGoodsReceiptAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      receiptId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to confirm goods receipt');
+    
     throw error;
   }
   
@@ -254,16 +296,30 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
 export async function cancelGoodsReceiptAction(receiptId: string) {
   await verifyCsrfFromHeaders();
   
-  const ctx = await buildRequestContext();
+  try {
+    const ctx = await buildRequestContext();
 
-  const result = await receivingService.cancelGoodsReceipt(ctx, receiptId);
+    const result = await receivingService.cancelGoodsReceipt(ctx, receiptId);
 
-  if (isDomainError(result)) {
-    throw new Error(result.message);
+    if (isDomainError(result)) {
+      throw new Error(result.message);
+    }
+
+    revalidatePath(`/receiving/${receiptId}`);
+    revalidatePath('/receiving');
+  } catch (error) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'cancelGoodsReceiptAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      receiptId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to cancel goods receipt');
+    
+    throw error;
   }
-
-  revalidatePath(`/receiving/${receiptId}`);
-  revalidatePath('/receiving');
 }
 
 /**
@@ -272,15 +328,30 @@ export async function cancelGoodsReceiptAction(receiptId: string) {
 export async function deleteGoodsReceiptAction(receiptId: string) {
   await verifyCsrfFromHeaders();
   
-  const ctx = await buildRequestContext();
+  try {
+    const ctx = await buildRequestContext();
 
-  const result = await receivingService.deleteGoodsReceipt(ctx, receiptId);
+    const result = await receivingService.deleteGoodsReceipt(ctx, receiptId);
 
-  if (isDomainError(result)) {
-    throw new Error(result.message);
+    if (isDomainError(result)) {
+      throw new Error(result.message);
+    }
+
+    revalidatePath('/receiving');
+  } catch (error) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'deleteGoodsReceiptAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      receiptId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to delete goods receipt');
+    
+    throw error;
   }
-
-  revalidatePath('/receiving');
+  
   redirect('/receiving');
 }
 
@@ -297,18 +368,13 @@ export async function searchItemByGtinAction(gtin: string) {
       return { error: 'Invalid GTIN' } as const;
     }
 
-    // Search using inventory service
-    const { getInventoryService } = await import('@/src/services');
-    const { items } = await getInventoryService().findItems(ctx, {
-      search: parsed.data.gtin,
-    }, { limit: 10 });
+    // Search using receiving service's GTIN lookup
+    const item = await receivingService.searchItemByGtin(ctx, parsed.data.gtin);
 
-    if (items.length === 0) {
+    if (!item) {
       return { error: 'Item not found' } as const;
     }
 
-    // Return the first matching item
-    const item = items[0];
     return {
       success: true,
       item: {

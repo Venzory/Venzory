@@ -119,9 +119,12 @@ export class OrderService {
     );
 
     return withTransaction(async (tx) => {
-      // Verify all items exist
-      for (const item of input.items) {
-        await this.inventoryRepository.findItemById(item.itemId, ctx.practiceId, { tx });
+      // Verify all items exist (batch validation avoids N+1)
+      const itemIds = input.items.map(item => item.itemId);
+      const foundItemIds = await this.inventoryRepository.findItemIdsByIds(itemIds, ctx.practiceId, { tx });
+      if (foundItemIds.length !== itemIds.length) {
+        const missingIds = itemIds.filter(id => !foundItemIds.includes(id));
+        throw new NotFoundError(`Items not found: ${missingIds.join(', ')}`);
       }
 
       // Create order with resolved supplier IDs

@@ -9,6 +9,11 @@ export default defineConfig({
     include: ['**/__tests__/**/*.test.{ts,tsx}'],
     exclude: ['**/node_modules/**', '**/tests/**'],
     pool: 'threads',
+    // Prevent tests from hanging indefinitely
+    testTimeout: 10000, // 10s default timeout for unit tests
+    hookTimeout: 5000,  // 5s for setup/teardown hooks
+    // Isolate tests for better reliability
+    isolate: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -20,6 +25,8 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.{js,ts}',
         '**/dist/**',
+        '__tests__/**',
+        'tests/**',
       ],
     },
   },

@@ -118,6 +118,14 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
       await confirmGoodsReceiptAction(receipt.id);
       toast.success('Receipt confirmed and inventory updated');
     } catch (error) {
+      // Next.js redirect() throws a special error that should propagate
+      // Check if this is a redirect error and rethrow it
+      if (error && typeof error === 'object' && 'digest' in error && 
+          typeof (error as any).digest === 'string' && 
+          (error as any).digest.startsWith('NEXT_REDIRECT')) {
+        throw error;
+      }
+      
       console.error('Confirm error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to confirm receipt');
       setIsConfirming(false);

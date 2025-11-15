@@ -1,24 +1,39 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { createMockPrismaClient } from './__tests__/mocks/prisma';
 
 /**
  * Set up valid test environment variables
  * This ensures the env validation module passes in test environment
+ * 
+ * Note: DATABASE_URL is a dummy value - unit tests use mocked Prisma client
  */
 Object.assign(process.env, {
   NODE_ENV: 'test',
-  DATABASE_URL: 'postgresql://test:test@localhost:5432/test_db',
+  DATABASE_URL: 'postgresql://mock:mock@localhost:5432/mock_db', // Dummy URL - not used in unit tests
   NEXTAUTH_SECRET: 'a'.repeat(32), // 32 character secret for tests
   CSRF_SECRET: 'b'.repeat(32), // 32 character secret for tests
   NEXTAUTH_URL: 'http://localhost:3000',
   NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
 });
 
+// Mock Prisma client globally for unit tests
+const mockPrisma = createMockPrismaClient();
+
+vi.mock('@/lib/prisma', () => ({
+  prisma: mockPrisma,
+  default: mockPrisma,
+}));
+
 // Mock Next.js server module
 vi.mock('next/server', () => ({
   NextResponse: {
-    json: vi.fn(),
-    redirect: vi.fn(),
+    json: vi.fn((data) => ({ 
+      json: async () => data,
+      ok: true,
+      status: 200,
+    })),
+    redirect: vi.fn((url) => ({ redirect: true, url })),
   },
 }));
 
@@ -40,11 +55,35 @@ vi.mock('./auth', () => ({
   handlers: { GET: vi.fn(), POST: vi.fn() },
 }));
 
+// Mock revalidatePath and redirect from next/cache
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+}));
+
+// Mock logger to prevent open handles/streams
+const mockLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  trace: vi.fn(),
+  fatal: vi.fn(),
+  child: vi.fn(() => mockLogger),
+};
+
+vi.mock('@/lib/logger', () => ({
+  default: mockLogger,
+  createLoggerWithCorrelationId: vi.fn(() => mockLogger),
+}));
+
 import { expect, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // Cleanup after each test
 afterEach(() => {
   cleanup();
+  // Reset all mocks after each test
+  vi.clearAllMocks();
 });
 
