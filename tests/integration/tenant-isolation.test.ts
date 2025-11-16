@@ -167,15 +167,23 @@ describe('Cross-Tenant Access Prevention - Integration Tests', () => {
     ctx1 = {
       requestId: 'test-req-1',
       userId: user1Id,
+      userEmail: 'user1-integration@test.com',
+      userName: 'User 1',
       practiceId: practice1Id,
       role: 'ADMIN',
+      memberships: [],
+      timestamp: new Date(),
     };
 
     ctx2 = {
       requestId: 'test-req-2',
       userId: user2Id,
+      userEmail: 'user2-integration@test.com',
+      userName: 'User 2',
       practiceId: practice2Id,
       role: 'ADMIN',
+      memberships: [],
+      timestamp: new Date(),
     };
   });
 
@@ -297,8 +305,8 @@ describe('Cross-Tenant Access Prevention - Integration Tests', () => {
       // User1 (practice1) tries to create order with practice2's item
       await expect(
         orderService.createOrder(ctx1, {
-          supplierId: null,
-          practiceSupplierId: null,
+          supplierId: undefined,
+          practiceSupplierId: undefined,
           items: [{ itemId: item2Id, quantity: 5 }],
         })
       ).rejects.toThrow();

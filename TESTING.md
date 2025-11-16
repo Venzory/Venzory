@@ -10,7 +10,9 @@ Remcura V2 uses **Vitest** for testing with a clear separation between unit test
 ## Quick Start
 
 ```bash
-# Run unit tests (fast, no database required)
+# Run unit tests (fast, no database required, default)
+npm test
+# or
 npm run test:unit
 
 # Watch mode for development
@@ -19,8 +21,8 @@ npm run test:unit:watch
 # Run with coverage
 npm run test:coverage
 
-# Integration tests (requires test database setup)
-npm run test:integration
+# Integration tests (requires test database setup - see below)
+DATABASE_URL="postgresql://remcura:remcura@localhost:5432/remcura_test" npm run test:integration
 ```
 
 ## Test Structure
@@ -46,7 +48,8 @@ Located in `tests/integration/`, these tests:
 - Use **real PostgreSQL database** connection
 - Test full transaction flows with rollback behavior
 - Verify data persistence and database constraints
-- **Currently excluded** from default test run (require manual setup)
+- Run in CI automatically after unit tests pass
+- Require local database setup for development (see below)
 
 **Categories:**
 - `tests/integration/inventory-transactions.test.ts` - Inventory transaction boundaries
@@ -159,38 +162,56 @@ const service = new InventoryService(mockInventoryRepo, ...);
 
 ## Running Integration Tests
 
-⚠️ **Integration tests are currently excluded and require manual setup.**
+Integration tests use a **real PostgreSQL database** and are kept separate from unit tests. They run in CI automatically but require local setup for development.
 
-### Prerequisites
+### Local Setup (One-Time)
 
-1. **PostgreSQL Test Database**
+1. **Start PostgreSQL**
    ```bash
-   # Create test database
-   createdb remcura_test
+   # Using docker-compose
+   docker compose up -d postgres
+   ```
+
+2. **Create Test Database**
+   ```bash
+   # Create remcura_test database alongside remcura_v2
+   docker exec -it remcura-postgres createdb -U remcura remcura_test
+   ```
+
+3. **Apply Migrations**
+   ```bash
+   # Set DATABASE_URL to point at test database
+   export DATABASE_URL="postgresql://remcura:remcura@localhost:5432/remcura_test"
    
-   # Set environment variable
-   export DATABASE_URL="postgresql://user:password@localhost:5432/remcura_test"
+   # Run migrations (production-style)
+   npm run db:migrate:deploy
    ```
 
-2. **Run Migrations**
-   ```bash
-   npx prisma migrate deploy
-   ```
+### Running Integration Tests
 
-3. **Update Vitest Config**
-   
-   Edit `vitest.config.ts` to include integration tests:
-   ```typescript
-   include: [
-     '**/__tests__/**/*.test.{ts,tsx}',
-     '**/tests/integration/**/*.test.{ts,tsx}'
-   ]
-   ```
+```bash
+# Set DATABASE_URL to test database
+export DATABASE_URL="postgresql://remcura:remcura@localhost:5432/remcura_test"
 
-4. **Run Tests**
-   ```bash
-   npm run test:integration
-   ```
+# Run integration tests
+npm run test:integration
+```
+
+**Important:**
+- Integration tests use `vitest.integration.config.ts` (separate from unit tests)
+- They use the **real Prisma client** (no mocks)
+- Each test creates and cleans up its own data
+- Tests run in Node environment (not jsdom)
+- Longer timeout (30s) to accommodate database operations
+
+### CI Behavior
+
+Integration tests run automatically in GitHub Actions:
+- Triggered after unit tests pass
+- Uses dedicated `integration-tests` job
+- Spins up Postgres service
+- Runs migrations before tests
+- Fails the pipeline if tests fail
 
 ### Integration Test Best Practices
 
@@ -268,27 +289,62 @@ Coverage reports are generated in `coverage/` directory.
 
 ## CI/CD Integration
 
-### GitHub Actions Example
+### GitHub Actions Workflow
+
+The CI workflow (`.github/workflows/ci.yml`) includes two test jobs:
+
+1. **Unit Tests Job** (`test`)
+   - Runs lint, typecheck, unit tests, and build
+   - Fast feedback (uses mocked dependencies)
+   - Must pass before integration tests run
+
+2. **Integration Tests Job** (`integration-tests`)
+   - Runs after unit tests pass (`needs: test`)
+   - Spins up PostgreSQL service
+   - Applies migrations with `npm run db:migrate:deploy`
+   - Runs integration tests with `npm run test:integration`
+   - Fails the pipeline if tests fail
 
 ```yaml
-- name: Run unit tests
-  run: npm run test:unit
+# Example from .github/workflows/ci.yml
+integration-tests:
+  runs-on: ubuntu-latest
+  needs: test
   
-- name: Run integration tests (if DB available)
-  run: npm run test:integration
-  env:
-    DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+  services:
+    postgres:
+      image: postgres:15
+      # ... postgres config
+  
+  steps:
+    - name: Run database migrations
+      run: npm run db:migrate:deploy
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/remcura_test
+    
+    - name: Run integration tests
+      run: npm run test:integration
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/remcura_test
 ```
 
 ## FAQ
 
-**Q: Why are integration tests excluded by default?**
+**Q: Why are integration tests separate from unit tests?**
 
-A: Integration tests require a PostgreSQL database setup which isn't always available in development environments. Unit tests provide fast feedback without infrastructure dependencies.
+A: Integration tests require a PostgreSQL database setup and take longer to run. Unit tests provide fast feedback without infrastructure dependencies and remain the default for local development.
 
 **Q: Can I run both unit and integration tests together?**
 
-A: Yes, but you need to set up the test database first. Then update `vitest.config.ts` to include both directories.
+A: Yes, run them sequentially:
+```bash
+npm run test:unit
+DATABASE_URL="postgresql://remcura:remcura@localhost:5432/remcura_test" npm run test:integration
+```
+
+**Q: Do integration tests run in CI automatically?**
+
+A: Yes! The `integration-tests` job runs automatically after unit tests pass on all PRs and pushes to `main`.
 
 **Q: How do I test server actions?**
 
