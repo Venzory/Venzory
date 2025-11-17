@@ -14,6 +14,7 @@ import { UserRepository } from '@/src/repositories/users';
 import { AuditService } from '@/src/services/audit/audit-service';
 import { AuditRepository } from '@/src/repositories/audit';
 import type { RequestContext } from '@/src/lib/context/request-context';
+import { createTestContext } from '@/src/lib/context/request-context';
 
 const prisma = new PrismaClient();
 
@@ -22,6 +23,7 @@ describe('Practice Catalog Integration', () => {
   let testUserId: string;
   let testGlobalSupplierId: string;
   let testPracticeSupplierId: string;
+  let testSupplierId: string;
   let testProductId: string;
   let ctx: RequestContext;
   let service: InventoryService;
@@ -55,6 +57,16 @@ describe('Practice Catalog Integration', () => {
       },
     });
 
+    // Create legacy supplier (required for SupplierCatalog)
+    const supplier = await prisma.supplier.create({
+      data: {
+        practiceId: testPracticeId,
+        name: 'Test Legacy Supplier',
+        email: 'legacy@test.com',
+      },
+    });
+    testSupplierId = supplier.id;
+
     // Create global supplier
     const globalSupplier = await prisma.globalSupplier.create({
       data: {
@@ -87,6 +99,7 @@ describe('Practice Catalog Integration', () => {
     // Create supplier catalog entry
     await prisma.supplierCatalog.create({
       data: {
+        supplierId: testSupplierId,
         practiceSupplierId: testPracticeSupplierId,
         productId: testProductId,
         supplierSku: 'SUP-001',
@@ -97,16 +110,11 @@ describe('Practice Catalog Integration', () => {
       },
     });
 
-    ctx = {
+    ctx = createTestContext({
       userId: testUserId,
-      userEmail: `test-${Date.now()}@test.com`,
-      userName: 'Test User',
       practiceId: testPracticeId,
       role: 'STAFF',
-      memberships: [],
-      timestamp: new Date(),
-      requestId: 'test-req',
-    };
+    });
 
     // Create service with real repositories
     service = new InventoryService(
@@ -245,6 +253,7 @@ describe('Practice Catalog Integration', () => {
 
     await prisma.supplierCatalog.create({
       data: {
+        supplierId: testSupplierId,
         practiceSupplierId: testPracticeSupplierId,
         productId: product2.id,
         supplierSku: 'SUP-002',

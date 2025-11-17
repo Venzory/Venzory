@@ -431,7 +431,7 @@ export class OrderService {
         selectedItemIds.includes(item.id)
       );
 
-      // Group by supplier
+      // Group by practice supplier (Phase 2)
       const supplierGroups = new Map<
         string,
         {
@@ -443,8 +443,8 @@ export class OrderService {
       const skippedItems: string[] = [];
 
       for (const item of selectedItems) {
-        // Skip items without default supplier
-        if (!item.defaultSupplier) {
+        // Skip items without default practice supplier (Phase 2)
+        if (!item.defaultPracticeSupplier) {
           skippedItems.push(item.name);
           continue;
         }
@@ -466,37 +466,42 @@ export class OrderService {
           continue;
         }
 
-        // Get unit price from SupplierItem if available
-        const supplierId = item.defaultSupplier.id;
+        // Get unit price from SupplierItem if available (using practiceSupplierId)
+        const practiceSupplierId = item.defaultPracticeSupplier.id;
         const matchingSupplierItem = (item as any).supplierItems?.find(
-          (si: any) => si.supplierId === supplierId
+          (si: any) => si.practiceSupplierId === practiceSupplierId
         );
         const unitPrice = decimalToNumber(matchingSupplierItem?.unitPrice);
 
+        // Get supplier name (prefer custom label, fallback to global supplier name)
+        const supplierName = item.defaultPracticeSupplier.customLabel 
+          || item.defaultPracticeSupplier.globalSupplier?.name 
+          || 'Unknown';
+
         // Add to supplier group
-        if (!supplierGroups.has(supplierId)) {
-          supplierGroups.set(supplierId, {
-            supplierName: item.defaultSupplier.name,
+        if (!supplierGroups.has(practiceSupplierId)) {
+          supplierGroups.set(practiceSupplierId, {
+            supplierName,
             items: [],
           });
         }
 
-        supplierGroups.get(supplierId)!.items.push({
+        supplierGroups.get(practiceSupplierId)!.items.push({
           itemId: item.id,
           quantity: totalQuantity,
           unitPrice,
         });
       }
 
-      // Create one draft order per supplier
+      // Create one draft order per practice supplier
       const createdOrders: Array<{ id: string; supplierName: string }> = [];
 
-      for (const [supplierId, group] of supplierGroups.entries()) {
+      for (const [practiceSupplierId, group] of supplierGroups.entries()) {
         const order = await this.orderRepository.createOrder(
           ctx.userId,
           {
             practiceId: ctx.practiceId,
-            supplierId,
+            practiceSupplierId,
             notes: 'Created from low-stock items',
             items: group.items,
           },
@@ -552,8 +557,15 @@ export class OrderService {
                 id: true,
                 name: true,
                 sku: true,
+                defaultSupplierId: true,
                 defaultSupplier: {
                   select: { id: true, name: true },
+                },
+                supplierItems: {
+                  select: {
+                    supplierId: true,
+                    unitPrice: true,
+                  },
                 },
               },
             },
@@ -833,14 +845,102 @@ export class OrderService {
   }
 
   /**
+   * Create orders from template using default quantities and suppliers
+   * This is a convenience method that fetches the template, groups items by supplier,
+   * and calls createOrdersFromTemplate with the default data
+   */
+  async createOrdersFromTemplateWithDefaults(
+    ctx: RequestContext,
+    templateId: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    orders?: Array<{ id: string; supplierName: string }>;
+  }> {
+    // Check permissions (will be checked again in createOrdersFromTemplate, but fail fast)
+    requireRole(ctx, 'STAFF');
+
+    // Fetch template with full item details
+    const template = await this.getTemplateById(ctx, templateId);
+
+    if (!template.items || template.items.length === 0) {
+      throw new ValidationError('Template has no items');
+    }
+
+    // Group items by practice supplier (Phase 2)
+    const supplierGroups = new Map<
+      string,
+      Array<{ itemId: string; quantity: number; unitPrice: number | null }>
+    >();
+
+    for (const templateItem of template.items) {
+      // Determine supplier: prefer explicit templateItem.supplierId (legacy), fallback to item's defaultPracticeSupplierId (Phase 2)
+      let practiceSupplierId: string | null = null;
+      
+      // If template has legacy supplierId, find the corresponding PracticeSupplier
+      if (templateItem.supplierId) {
+        const practiceSupplier = await this.practiceSupplierRepository.findPracticeSupplierByMigratedId(
+          ctx.practiceId,
+          templateItem.supplierId
+        );
+        practiceSupplierId = practiceSupplier?.id || null;
+      }
+      
+      // Fallback to item's defaultPracticeSupplierId
+      if (!practiceSupplierId) {
+        practiceSupplierId = templateItem.item?.defaultPracticeSupplierId || null;
+      }
+
+      if (!practiceSupplierId) {
+        // Skip items without a practice supplier
+        logger.warn({
+          templateId,
+          itemId: templateItem.itemId,
+          itemName: templateItem.item?.name,
+        }, 'Skipping template item without practice supplier');
+        continue;
+      }
+
+      // Get unit price from supplier items if available (using practiceSupplierId)
+      const supplierItem = (templateItem.item as any)?.supplierItems?.find(
+        (si: any) => si.practiceSupplierId === practiceSupplierId
+      );
+      const unitPrice = supplierItem?.unitPrice ? decimalToNumber(supplierItem.unitPrice) : null;
+
+      if (!supplierGroups.has(practiceSupplierId)) {
+        supplierGroups.set(practiceSupplierId, []);
+      }
+
+      supplierGroups.get(practiceSupplierId)!.push({
+        itemId: templateItem.itemId,
+        quantity: templateItem.defaultQuantity,
+        unitPrice,
+      });
+    }
+
+    if (supplierGroups.size === 0) {
+      throw new ValidationError('No valid items with suppliers found in template');
+    }
+
+    // Convert Map to array format for createOrdersFromTemplate
+    const orderData = Array.from(supplierGroups.entries()).map(([practiceSupplierId, items]) => ({
+      practiceSupplierId,
+      items,
+    }));
+
+    // Delegate to existing method for validation, transaction handling, and order creation
+    return this.createOrdersFromTemplate(ctx, templateId, orderData);
+  }
+
+  /**
    * Create orders from template
-   * Groups template items by supplier and creates one draft order per supplier
+   * Groups template items by practice supplier and creates one draft order per practice supplier
    */
   async createOrdersFromTemplate(
     ctx: RequestContext,
     templateId: string,
     orderData: {
-      supplierId: string;
+      practiceSupplierId: string;
       items: Array<{ itemId: string; quantity: number; unitPrice: number | null }>;
     }[]
   ): Promise<{
@@ -865,7 +965,7 @@ export class OrderService {
         throw new ValidationError('No orders to create');
       }
 
-      // Create one draft order per supplier
+      // Create one draft order per practice supplier
       const createdOrders: Array<{ id: string; supplierName: string }> = [];
 
       for (const supplierGroup of orderData) {
@@ -873,19 +973,30 @@ export class OrderService {
           continue;
         }
 
-        // Verify supplier belongs to practice
-        const supplier = await tx.supplier.findUnique({
-          where: { id: supplierGroup.supplierId, practiceId: ctx.practiceId },
+        // Verify PracticeSupplier exists and belongs to this practice
+        const practiceSupplier = await tx.practiceSupplier.findUnique({
+          where: {
+            id: supplierGroup.practiceSupplierId,
+            practiceId: ctx.practiceId,
+          },
+          include: {
+            globalSupplier: true,
+          },
         });
 
-        if (!supplier) {
-          continue; // Skip invalid suppliers
+        if (!practiceSupplier) {
+          // Skip if PracticeSupplier not found
+          logger.warn({
+            templateId,
+            practiceSupplierId: supplierGroup.practiceSupplierId,
+          }, 'PracticeSupplier not found - skipping order creation');
+          continue;
         }
 
         const order = await tx.order.create({
           data: {
             practiceId: ctx.practiceId,
-            supplierId: supplierGroup.supplierId,
+            practiceSupplierId: practiceSupplier.id,
             status: 'DRAFT',
             createdById: ctx.userId,
             notes: `Created from template: ${template.name}`,
@@ -901,7 +1012,7 @@ export class OrderService {
 
         createdOrders.push({
           id: order.id,
-          supplierName: supplier.name,
+          supplierName: practiceSupplier.customLabel || practiceSupplier.globalSupplier.name,
         });
       }
 

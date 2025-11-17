@@ -16,6 +16,7 @@ describe('OrderRepository - Tenant Isolation', () => {
   let item1Id: string;
   let item2Id: string;
   let product1Id: string;
+  let practiceSupplier1Id: string;
 
   beforeAll(async () => {
     orderRepo = new OrderRepository();
@@ -30,6 +31,19 @@ describe('OrderRepository - Tenant Isolation', () => {
       data: { name: 'Practice 2', slug: 'practice-2-test-order-isolation' },
     });
     practice2Id = practice2.id;
+
+    // Create a global supplier and practice supplier
+    const globalSupplier = await prisma.globalSupplier.create({
+      data: { name: 'Test Global Supplier Order Isolation' },
+    });
+
+    const practiceSupplier1 = await prisma.practiceSupplier.create({
+      data: {
+        practiceId: practice1Id,
+        globalSupplierId: globalSupplier.id,
+      },
+    });
+    practiceSupplier1Id = practiceSupplier1.id;
 
     // Create a product
     const product = await prisma.product.create({
@@ -62,6 +76,7 @@ describe('OrderRepository - Tenant Isolation', () => {
     const order = await prisma.order.create({
       data: {
         practiceId: practice1Id,
+        practiceSupplierId: practiceSupplier1Id,
         status: 'DRAFT',
       },
     });

@@ -380,8 +380,9 @@ describe('Environment Variable Validation', () => {
       try {
         await importEnvWithConfig(config);
         expect.fail('Should have thrown error');
-      } catch (error: any) {
-        expect(error.message).toContain('Environment validation failed');
+      } catch (error: unknown) {
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toContain('Environment validation failed');
       }
     });
 

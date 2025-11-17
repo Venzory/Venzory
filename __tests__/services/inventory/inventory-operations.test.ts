@@ -512,7 +512,7 @@ describe('Inventory Operations', () => {
 
       expect(result.items).toEqual(mockItems);
       expect(result.totalCount).toBe(mockItems.length);
-      expect(result.items[0].inventory[0].quantity).toBe(10);
+      expect(result.items[0]?.inventory?.[0]?.quantity).toBe(10);
     });
 
     it('should filter by locationId correctly', async () => {

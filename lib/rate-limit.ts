@@ -52,7 +52,7 @@ interface RateLimiter {
  * Redis-based rate limiter implementation
  */
 class RedisRateLimiter implements RateLimiter {
-  private redis: any;
+  private redis: import('ioredis').default;
   private config: RateLimitConfig;
 
   constructor(redisUrl: string, config: RateLimitConfig) {

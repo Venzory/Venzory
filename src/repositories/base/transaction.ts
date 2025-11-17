@@ -53,7 +53,9 @@ export async function transactionAll<T extends readonly any[]>(
  * Check if we're currently in a transaction
  * Useful for conditional logic in repositories
  */
-export function isInTransaction(client: any): client is TransactionClient {
+export function isInTransaction(
+  client: PrismaClient | TransactionClient
+): client is TransactionClient {
   // Prisma transaction clients have a different prototype than the main client
   return client !== prisma;
 }

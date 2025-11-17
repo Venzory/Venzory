@@ -9,6 +9,7 @@ import { hasRole } from '@/lib/rbac';
 import { Button } from '@/components/ui/button';
 
 import { DeleteTemplateButton } from './_components/delete-template-button';
+import { QuickOrderButton } from '../_components/quick-order-button';
 
 export default async function TemplatesPage() {
   const { session, practiceId } = await requireActivePractice();
@@ -36,7 +37,7 @@ export default async function TemplatesPage() {
           </div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Order Templates</h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Create reusable order templates for quick ordering.
+            Create reusable order templates for quick ordering. Quick order creates one draft per supplier.
           </p>
         </div>
         {canManage ? (
@@ -143,9 +144,16 @@ function TemplateCard({
         </Link>
         {canManage ? (
           <>
+            <QuickOrderButton
+              templateId={template.id}
+              templateName={template.name}
+              size="sm"
+              variant="primary"
+              className="flex-1"
+            />
             <Link href={`/orders/templates/${template.id}/preview`} className="flex-1">
-              <Button variant="primary" size="sm" className="w-full">
-                Create Order
+              <Button variant="secondary" size="sm" className="w-full">
+                Review & create
               </Button>
             </Link>
             <DeleteTemplateButton templateId={template.id} />

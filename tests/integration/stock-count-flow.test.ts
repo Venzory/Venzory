@@ -20,7 +20,8 @@ import { AuditService } from '@/src/services/audit/audit-service';
 import { AuditRepository } from '@/src/repositories/audit';
 import { prisma } from '@/lib/prisma';
 import { BusinessRuleViolationError, ValidationError } from '@/src/domain/errors';
-import type { RequestContext } from '@/src/lib/context/types';
+import type { RequestContext } from '@/src/lib/context/request-context';
+import { createTestContext } from '@/src/lib/context/request-context';
 
 describe('Stock Count Flow Integration', () => {
   let inventoryService: InventoryService;
@@ -28,6 +29,7 @@ describe('Stock Count Flow Integration', () => {
   let testLocationId: string;
   let testUserId: string;
   let testItemId: string;
+  let testProductId: string;
   let ctx: RequestContext;
 
   beforeEach(async () => {
@@ -68,7 +70,7 @@ describe('Stock Count Flow Integration', () => {
     testUserId = user.id;
 
     // Create practice membership for user
-    await prisma.practiceMembership.create({
+    await prisma.practiceUser.create({
       data: {
         practiceId: testPracticeId,
         userId: testUserId,
@@ -76,13 +78,21 @@ describe('Stock Count Flow Integration', () => {
       },
     });
 
+    // Create test product
+    const product = await prisma.product.create({
+      data: {
+        name: 'Test Product',
+        gtin: `${Date.now()}`,
+      },
+    });
+    testProductId = product.id;
+
     // Create test location
     const location = await prisma.location.create({
       data: {
         practiceId: testPracticeId,
         name: 'Test Location',
         code: `LOC-${Date.now()}`,
-        type: 'CLINIC',
       },
     });
     testLocationId = location.id;
@@ -91,6 +101,7 @@ describe('Stock Count Flow Integration', () => {
     const item = await prisma.item.create({
       data: {
         practiceId: testPracticeId,
+        productId: testProductId,
         name: 'Test Item',
         sku: `ITEM-${Date.now()}`,
         unit: 'unit',
@@ -101,7 +112,6 @@ describe('Stock Count Flow Integration', () => {
     // Set initial inventory
     await prisma.locationInventory.create({
       data: {
-        practiceId: testPracticeId,
         locationId: testLocationId,
         itemId: testItemId,
         quantity: 10,
@@ -109,11 +119,11 @@ describe('Stock Count Flow Integration', () => {
     });
 
     // Create request context
-    ctx = {
+    ctx = createTestContext({
       practiceId: testPracticeId,
       userId: testUserId,
       role: 'STAFF',
-    };
+    });
   });
 
   afterEach(async () => {
@@ -121,11 +131,11 @@ describe('Stock Count Flow Integration', () => {
     await prisma.stockAdjustment.deleteMany({ where: { practiceId: testPracticeId } });
     await prisma.stockCountLine.deleteMany({ where: { session: { practiceId: testPracticeId } } });
     await prisma.stockCountSession.deleteMany({ where: { practiceId: testPracticeId } });
-    await prisma.locationInventory.deleteMany({ where: { practiceId: testPracticeId } });
+    await prisma.locationInventory.deleteMany({ where: { location: { practiceId: testPracticeId } } });
     await prisma.item.deleteMany({ where: { practiceId: testPracticeId } });
     await prisma.location.deleteMany({ where: { practiceId: testPracticeId } });
     await prisma.auditLog.deleteMany({ where: { practiceId: testPracticeId } });
-    await prisma.practiceMembership.deleteMany({ where: { practiceId: testPracticeId } });
+    await prisma.practiceUser.deleteMany({ where: { practiceId: testPracticeId } });
     await prisma.user.deleteMany({ where: { id: testUserId } });
     await prisma.practice.deleteMany({ where: { id: testPracticeId } });
   });
@@ -262,6 +272,7 @@ describe('Stock Count Flow Integration', () => {
     const item2 = await prisma.item.create({
       data: {
         practiceId: testPracticeId,
+        productId: testProductId,
         name: 'Test Item 2',
         sku: `ITEM2-${Date.now()}`,
         unit: 'unit',
@@ -271,6 +282,7 @@ describe('Stock Count Flow Integration', () => {
     const item3 = await prisma.item.create({
       data: {
         practiceId: testPracticeId,
+        productId: testProductId,
         name: 'Test Item 3',
         sku: `ITEM3-${Date.now()}`,
         unit: 'unit',
@@ -280,7 +292,6 @@ describe('Stock Count Flow Integration', () => {
     // Set initial inventory
     await prisma.locationInventory.create({
       data: {
-        practiceId: testPracticeId,
         locationId: testLocationId,
         itemId: item2.id,
         quantity: 5,
@@ -289,7 +300,6 @@ describe('Stock Count Flow Integration', () => {
 
     await prisma.locationInventory.create({
       data: {
-        practiceId: testPracticeId,
         locationId: testLocationId,
         itemId: item3.id,
         quantity: 15,

@@ -123,8 +123,8 @@ describe('API CSRF Protection', () => {
       const handler = vi.fn(() => NextResponse.json({ success: true }));
       const wrappedHandler = withCsrfProtection(handler);
 
-      const signedToken = createSignedCsrfToken();
-      const rawToken = parseAndVerifySignedToken(signedToken);
+      const signedToken = await createSignedCsrfToken();
+      const rawToken = await parseAndVerifySignedToken(signedToken);
 
       const request = new Request('http://localhost/api/test', {
         method: 'POST',
@@ -148,7 +148,7 @@ describe('API CSRF Protection', () => {
       const handler = vi.fn(() => NextResponse.json({ success: true }));
       const wrappedHandler = withCsrfProtection(handler);
 
-      const signedToken = createSignedCsrfToken();
+      const signedToken = await createSignedCsrfToken();
 
       const request = new Request('http://localhost/api/test', {
         method: 'POST',
@@ -172,9 +172,9 @@ describe('API CSRF Protection', () => {
       const handler = vi.fn(() => NextResponse.json({ success: true }));
       const wrappedHandler = withCsrfProtection(handler);
 
-      const signedToken1 = createSignedCsrfToken();
-      const signedToken2 = createSignedCsrfToken();
-      const rawToken2 = parseAndVerifySignedToken(signedToken2);
+      const signedToken1 = await createSignedCsrfToken();
+      const signedToken2 = await createSignedCsrfToken();
+      const rawToken2 = await parseAndVerifySignedToken(signedToken2);
 
       const request = new Request('http://localhost/api/test', {
         method: 'POST',
@@ -254,8 +254,8 @@ describe('API CSRF Protection', () => {
       });
       const wrappedHandler = withCsrfProtectionContext(handler);
 
-      const signedToken = createSignedCsrfToken();
-      const rawToken = parseAndVerifySignedToken(signedToken);
+      const signedToken = await createSignedCsrfToken();
+      const rawToken = await parseAndVerifySignedToken(signedToken);
 
       const request = new Request('http://localhost/api/items/123', {
         method: 'PATCH',
@@ -322,8 +322,8 @@ describe('API CSRF Protection', () => {
       const wrappedHandler = withCsrfProtection(handler);
 
       // Simulate middleware generating and setting cookie
-      const signedToken = createSignedCsrfToken();
-      const rawToken = parseAndVerifySignedToken(signedToken);
+      const signedToken = await createSignedCsrfToken();
+      const rawToken = await parseAndVerifySignedToken(signedToken);
 
       // Client makes request with token
       const request = new Request('http://localhost/api/test', {
@@ -344,7 +344,7 @@ describe('API CSRF Protection', () => {
       const handler = vi.fn(() => NextResponse.json({ success: true }));
       const wrappedHandler = withCsrfProtection(handler);
 
-      const signedToken = createSignedCsrfToken();
+      const signedToken = await createSignedCsrfToken();
       const [token] = signedToken.split('.');
       const tamperedToken = `${token}.tampered-signature`;
       

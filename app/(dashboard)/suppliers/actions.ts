@@ -68,15 +68,15 @@ export async function updatePracticeSupplierAction(
     revalidatePath('/dashboard');
 
     return { success: 'Supplier settings updated successfully.' };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update practice supplier:', error);
     
     // Handle specific error cases
-    if (error?.code === 'P2025') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       return { error: 'Supplier not found. It may have been removed.' };
     }
     
-    if (error?.message?.includes('not found') || error?.name === 'NotFoundError') {
+    if (error instanceof Error && (error.message.includes('not found') || error.name === 'NotFoundError')) {
       return { error: 'Supplier not found in your practice.' };
     }
     
@@ -113,15 +113,15 @@ export async function unlinkPracticeSupplierAction(
     revalidatePath('/suppliers');
     revalidatePath('/inventory');
     revalidatePath('/dashboard');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to unlink practice supplier:', error);
     
     // Provide clearer error messages
-    if (error?.code === 'P2025') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
       throw new Error('Supplier not found. It may have already been removed.');
     }
     
-    if (error?.message?.includes('not found') || error?.name === 'NotFoundError') {
+    if (error instanceof Error && (error.message.includes('not found') || error.name === 'NotFoundError')) {
       throw new Error('Supplier not found in your practice.');
     }
     
@@ -192,7 +192,7 @@ export async function linkGlobalSupplierAction(
       
       throw linkError;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to link global supplier:', error);
     return { error: 'Failed to link supplier. Please try again.' };
   }

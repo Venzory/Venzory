@@ -25,6 +25,8 @@ describe('Cross-Tenant Access Prevention - Integration Tests', () => {
   let item1Id: string;
   let item2Id: string;
   let product1Id: string;
+  let globalSupplier1Id: string;
+  let practiceSupplier1Id: string;
   let order1Id: string;
   let receipt1Id: string;
   let receiptLine1Id: string;
@@ -127,10 +129,27 @@ describe('Cross-Tenant Access Prevention - Integration Tests', () => {
       },
     });
 
+    // Create GlobalSupplier and PracticeSupplier for practice1
+    const globalSupplier1 = await prisma.globalSupplier.create({
+      data: {
+        name: 'Global Supplier 1',
+      },
+    });
+    globalSupplier1Id = globalSupplier1.id;
+
+    const practiceSupplier1 = await prisma.practiceSupplier.create({
+      data: {
+        practiceId: practice1Id,
+        globalSupplierId: globalSupplier1Id,
+      },
+    });
+    practiceSupplier1Id = practiceSupplier1.id;
+
     // Create an order for practice1
     const order = await prisma.order.create({
       data: {
         practiceId: practice1Id,
+        practiceSupplierId: practiceSupplier1Id,
         status: 'DRAFT',
       },
     });
@@ -212,6 +231,12 @@ describe('Cross-Tenant Access Prevention - Integration Tests', () => {
     });
     await prisma.product.deleteMany({
       where: { id: product1Id },
+    });
+    await prisma.practiceSupplier.deleteMany({
+      where: { practiceId: { in: [practice1Id, practice2Id] } },
+    });
+    await prisma.globalSupplier.deleteMany({
+      where: { id: globalSupplier1Id },
     });
     await prisma.practiceUser.deleteMany({
       where: { practiceId: { in: [practice1Id, practice2Id] } },
@@ -305,8 +330,7 @@ describe('Cross-Tenant Access Prevention - Integration Tests', () => {
       // User1 (practice1) tries to create order with practice2's item
       await expect(
         orderService.createOrder(ctx1, {
-          supplierId: undefined,
-          practiceSupplierId: undefined,
+          practiceSupplierId: practiceSupplier1Id,
           items: [{ itemId: item2Id, quantity: 5 }],
         })
       ).rejects.toThrow();

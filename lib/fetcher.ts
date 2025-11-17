@@ -15,7 +15,7 @@ import { ClientApiError, asClientError } from '@/lib/client-error';
  * Fetcher options (extends standard RequestInit)
  */
 export interface FetcherOptions extends Omit<RequestInit, 'body'> {
-  body?: any; // Allow any type, will be JSON.stringify'd if object
+  body?: unknown; // Allow any type, will be JSON.stringify'd if object
 }
 
 /**
@@ -56,14 +56,15 @@ export async function fetcher<T = any>(
   url: string,
   options?: FetcherOptions
 ): Promise<T> {
-  // Prepare options
+  // Prepare options - exclude body initially to avoid type conflicts
+  const { body, ...restOptions } = options || {};
   const fetchOptions: RequestInit = {
-    ...options,
+    ...restOptions,
   };
 
   // Auto-stringify body if it's an object
-  if (options?.body && typeof options.body === 'object') {
-    fetchOptions.body = JSON.stringify(options.body);
+  if (body && typeof body === 'object') {
+    fetchOptions.body = JSON.stringify(body);
     
     // Set Content-Type if not already set
     if (!fetchOptions.headers) {
@@ -74,8 +75,8 @@ export async function fetcher<T = any>(
       headers.set('Content-Type', 'application/json');
     }
     fetchOptions.headers = headers;
-  } else if (options?.body) {
-    fetchOptions.body = options.body;
+  } else if (typeof body === 'string') {
+    fetchOptions.body = body;
   }
 
   // Make request with CSRF protection

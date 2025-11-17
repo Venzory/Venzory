@@ -13,6 +13,7 @@ import { OrderRepository } from '@/src/repositories/orders';
 import { AuditService } from '@/src/services/audit/audit-service';
 import { AuditRepository } from '@/src/repositories/audit';
 import type { RequestContext } from '@/src/lib/context/request-context';
+import { createTestContext } from '@/src/lib/context/request-context';
 import { BusinessRuleViolationError } from '@/src/domain/errors';
 
 describe('Receiving Service - Transaction Integration Tests', () => {
@@ -100,16 +101,11 @@ describe('Receiving Service - Transaction Integration Tests', () => {
       },
     });
 
-    ctx = {
+    ctx = createTestContext({
       userId: testUserId,
-      userEmail: `test-${Date.now()}@test.com`,
-      userName: 'Test User',
       practiceId: testPracticeId,
       role: 'STAFF',
-      memberships: [],
-      timestamp: new Date(),
-      requestId: 'test-req',
-    };
+    });
 
     // Create service with real repositories
     service = new ReceivingService(

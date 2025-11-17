@@ -265,14 +265,15 @@ export async function deleteStockCountSessionAction(sessionId: string) {
 
     revalidatePath('/stock-count');
     redirect('/stock-count');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Stock Count Actions] Error deleting session:', error);
     
     if (isDomainError(error)) {
       throw new Error(error.message);
     }
     
-    throw new Error(error.message || 'Failed to delete stock count session');
+    const message = error instanceof Error ? error.message : 'Failed to delete stock count session';
+    throw new Error(message);
   }
 }
 

@@ -14,6 +14,7 @@ import { UserRepository } from '@/src/repositories/users';
 import { AuditService } from '@/src/services/audit/audit-service';
 import { AuditRepository } from '@/src/repositories/audit';
 import type { RequestContext } from '@/src/lib/context/request-context';
+import { createTestContext } from '@/src/lib/context/request-context';
 import { BusinessRuleViolationError, ConcurrencyError } from '@/src/domain/errors';
 
 // Mock the notification check
@@ -97,16 +98,11 @@ describe('Inventory Service - Transaction Integration Tests', () => {
       },
     });
 
-    ctx = {
+    ctx = createTestContext({
       userId: testUserId,
-      userEmail: `test-${Date.now()}@test.com`,
-      userName: 'Test User',
       practiceId: testPracticeId,
       role: 'STAFF',
-      memberships: [],
-      timestamp: new Date(),
-      requestId: 'test-req',
-    };
+    });
 
     // Create service with real repositories
     service = new InventoryService(

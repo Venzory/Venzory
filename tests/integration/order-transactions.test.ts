@@ -13,6 +13,7 @@ import { PracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { AuditService } from '@/src/services/audit/audit-service';
 import { AuditRepository } from '@/src/repositories/audit';
 import type { RequestContext } from '@/src/lib/context/request-context';
+import { createTestContext } from '@/src/lib/context/request-context';
 import { ValidationError } from '@/src/domain/errors';
 
 describe('Order Service - Transaction Integration Tests', () => {
@@ -25,6 +26,10 @@ describe('Order Service - Transaction Integration Tests', () => {
   let testProductId: string;
   let testSupplier1Id: string;
   let testSupplier2Id: string;
+  let testGlobalSupplier1Id: string;
+  let testGlobalSupplier2Id: string;
+  let testPracticeSupplier1Id: string;
+  let testPracticeSupplier2Id: string;
   let ctx: RequestContext;
 
   beforeEach(async () => {
@@ -88,6 +93,39 @@ describe('Order Service - Transaction Integration Tests', () => {
     });
     testSupplier2Id = supplier2.id;
 
+    // Create GlobalSuppliers and PracticeSuppliers
+    const globalSupplier1 = await prisma.globalSupplier.create({
+      data: {
+        name: 'Global Supplier A',
+      },
+    });
+    testGlobalSupplier1Id = globalSupplier1.id;
+
+    const globalSupplier2 = await prisma.globalSupplier.create({
+      data: {
+        name: 'Global Supplier B',
+      },
+    });
+    testGlobalSupplier2Id = globalSupplier2.id;
+
+    const practiceSupplier1 = await prisma.practiceSupplier.create({
+      data: {
+        practiceId: testPracticeId,
+        globalSupplierId: testGlobalSupplier1Id,
+        migratedFromSupplierId: testSupplier1Id,
+      },
+    });
+    testPracticeSupplier1Id = practiceSupplier1.id;
+
+    const practiceSupplier2 = await prisma.practiceSupplier.create({
+      data: {
+        practiceId: testPracticeId,
+        globalSupplierId: testGlobalSupplier2Id,
+        migratedFromSupplierId: testSupplier2Id,
+      },
+    });
+    testPracticeSupplier2Id = practiceSupplier2.id;
+
     const item1 = await prisma.item.create({
       data: {
         practiceId: testPracticeId,
@@ -96,6 +134,7 @@ describe('Order Service - Transaction Integration Tests', () => {
         sku: 'LOW-001',
         unit: 'unit',
         defaultSupplierId: testSupplier1Id,
+        defaultPracticeSupplierId: testPracticeSupplier1Id,
       },
     });
     testItem1Id = item1.id;
@@ -108,6 +147,7 @@ describe('Order Service - Transaction Integration Tests', () => {
         sku: 'LOW-002',
         unit: 'unit',
         defaultSupplierId: testSupplier2Id,
+        defaultPracticeSupplierId: testPracticeSupplier2Id,
       },
     });
     testItem2Id = item2.id;
@@ -133,16 +173,11 @@ describe('Order Service - Transaction Integration Tests', () => {
       },
     });
 
-    ctx = {
+    ctx = createTestContext({
       userId: testUserId,
-      userEmail: `test-${Date.now()}@test.com`,
-      userName: 'Test User',
       practiceId: testPracticeId,
       role: 'STAFF',
-      memberships: [],
-      timestamp: new Date(),
-      requestId: 'test-req',
-    };
+    });
 
     // Create service with real repositories
     service = new OrderService(
@@ -174,8 +209,14 @@ describe('Order Service - Transaction Integration Tests', () => {
     await prisma.product.deleteMany({
       where: { id: testProductId },
     });
+    await prisma.practiceSupplier.deleteMany({
+      where: { practiceId: testPracticeId },
+    });
     await prisma.supplier.deleteMany({
       where: { practiceId: testPracticeId },
+    });
+    await prisma.globalSupplier.deleteMany({
+      where: { id: { in: [testGlobalSupplier1Id, testGlobalSupplier2Id] } },
     });
     await prisma.location.deleteMany({
       where: { practiceId: testPracticeId },
@@ -215,14 +256,14 @@ describe('Order Service - Transaction Integration Tests', () => {
       expect(orders).toHaveLength(2);
 
       // Verify first order
-      expect(orders[0].supplierId).toBe(testSupplier1Id);
+      expect(orders[0].practiceSupplierId).toBe(testPracticeSupplier1Id);
       expect(orders[0].status).toBe('DRAFT');
       expect(orders[0].items).toHaveLength(1);
       expect(orders[0].items[0].itemId).toBe(testItem1Id);
       expect(orders[0].items[0].quantity).toBe(20); // reorderQuantity
 
       // Verify second order
-      expect(orders[1].supplierId).toBe(testSupplier2Id);
+      expect(orders[1].practiceSupplierId).toBe(testPracticeSupplier2Id);
       expect(orders[1].status).toBe('DRAFT');
       expect(orders[1].items).toHaveLength(1);
       expect(orders[1].items[0].itemId).toBe(testItem2Id);
@@ -243,7 +284,10 @@ describe('Order Service - Transaction Integration Tests', () => {
       // Update item2 to use same supplier as item1
       await prisma.item.update({
         where: { id: testItem2Id },
-        data: { defaultSupplierId: testSupplier1Id },
+        data: {
+          defaultSupplierId: testSupplier1Id,
+          defaultPracticeSupplierId: testPracticeSupplier1Id,
+        },
       });
 
       // Create orders from low stock items
@@ -403,6 +447,7 @@ describe('Order Service - Transaction Integration Tests', () => {
           sku: 'LOW-003',
           unit: 'unit',
           defaultSupplierId: testSupplier1Id, // Same as item1
+          defaultPracticeSupplierId: testPracticeSupplier1Id,
         },
       });
 
@@ -430,7 +475,7 @@ describe('Order Service - Transaction Integration Tests', () => {
       const supplier1Order = await prisma.order.findFirst({
         where: {
           practiceId: testPracticeId,
-          supplierId: testSupplier1Id,
+          practiceSupplierId: testPracticeSupplier1Id,
         },
         include: { items: true },
       });
@@ -444,7 +489,7 @@ describe('Order Service - Transaction Integration Tests', () => {
       const supplier2Order = await prisma.order.findFirst({
         where: {
           practiceId: testPracticeId,
-          supplierId: testSupplier2Id,
+          practiceSupplierId: testPracticeSupplier2Id,
         },
         include: { items: true },
       });
@@ -460,7 +505,6 @@ describe('Order Service - Transaction Integration Tests', () => {
       const globalSupplier = await prisma.globalSupplier.create({
         data: {
           name: 'Test Global Supplier',
-          country: 'IE',
         },
       });
 
@@ -506,7 +550,6 @@ describe('Order Service - Transaction Integration Tests', () => {
       const globalSupplier = await prisma.globalSupplier.create({
         data: {
           name: 'Test Global Supplier',
-          country: 'IE',
         },
       });
 
@@ -549,7 +592,6 @@ describe('Order Service - Transaction Integration Tests', () => {
       const globalSupplier = await prisma.globalSupplier.create({
         data: {
           name: 'Test Global Supplier',
-          country: 'IE',
         },
       });
 
@@ -579,7 +621,6 @@ describe('Order Service - Transaction Integration Tests', () => {
       const globalSupplier = await prisma.globalSupplier.create({
         data: {
           name: 'Test Global Supplier',
-          country: 'IE',
         },
       });
 

@@ -16,7 +16,9 @@ import { UserRepository } from '@/src/repositories/users';
 import { AuditService } from '@/src/services/audit/audit-service';
 import { AuditRepository } from '@/src/repositories/audit';
 import type { RequestContext } from '@/src/lib/context/request-context';
+import { createTestContext } from '@/src/lib/context/request-context';
 import { BusinessRuleViolationError } from '@/src/domain/errors';
+import assert from 'assert';
 
 describe('Service Layer - Constraint Validation', () => {
   let service: InventoryService;
@@ -65,16 +67,11 @@ describe('Service Layer - Constraint Validation', () => {
     testProductId = product.id;
 
     // Set up request context
-    ctx = {
+    ctx = createTestContext({
       userId: testUserId,
-      userEmail: `test-${Date.now()}@test.com`,
-      userName: 'Test User',
       practiceId: testPracticeId,
       role: 'STAFF',
-      memberships: [],
-      timestamp: new Date(),
-      requestId: 'test-req',
-    };
+    });
 
     // Initialize services
     service = new InventoryService(
@@ -162,7 +159,7 @@ describe('Service Layer - Constraint Validation', () => {
           unit: null,
           defaultSupplierId: null,
         });
-        fail('Should have thrown an error');
+        assert.fail('Should have thrown an error');
       } catch (error) {
         // Error should be caught by service layer
         expect(error).toBeDefined();

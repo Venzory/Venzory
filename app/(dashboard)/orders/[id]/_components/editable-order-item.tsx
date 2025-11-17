@@ -52,11 +52,12 @@ export function EditableOrderItem({
       
       try {
         await updateOrderItemAction(formData);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Rollback on error
         setOptimisticQuantity(previousQuantity);
         console.error('Failed to update quantity:', error);
-        toast.error(error?.message || 'Failed to update quantity');
+        const message = error instanceof Error ? error.message : 'Failed to update quantity';
+        toast.error(message);
       }
     });
   };
@@ -79,11 +80,12 @@ export function EditableOrderItem({
       
       try {
         await updateOrderItemAction(formData);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Rollback on error
         setOptimisticUnitPrice(previousPrice);
         console.error('Failed to update price:', error);
-        toast.error(error?.message || 'Failed to update price');
+        const message = error instanceof Error ? error.message : 'Failed to update price';
+        toast.error(message);
       }
     });
   };
@@ -104,9 +106,10 @@ export function EditableOrderItem({
     try {
       await removeOrderItemAction(orderId, itemId);
       toast.success('Item removed from order');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to remove item:', error);
-      toast.error(error?.message || 'Failed to remove item');
+      const message = error instanceof Error ? error.message : 'Failed to remove item';
+      toast.error(message);
       setIsRemoving(false);
     }
   };

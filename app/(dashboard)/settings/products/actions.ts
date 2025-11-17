@@ -187,14 +187,15 @@ export async function deleteProductAction(productId: string) {
     await productService.deleteProduct(ctx, productId);
 
     revalidatePath('/settings/products');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Product Actions] Error deleting product:', error);
     
     if (isDomainError(error)) {
       throw new Error(error.message);
     }
     
-    throw new Error(error.message || 'Failed to delete product');
+    const message = error instanceof Error ? error.message : 'Failed to delete product';
+    throw new Error(message);
   }
 }
 

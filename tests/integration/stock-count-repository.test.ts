@@ -13,6 +13,7 @@ describe('StockCountRepository', () => {
   let testPracticeId: string;
   let testLocationId: string;
   let testUserId: string;
+  let testProductId: string;
 
   beforeEach(async () => {
     repository = new StockCountRepository();
@@ -35,13 +36,21 @@ describe('StockCountRepository', () => {
     });
     testUserId = user.id;
 
+    // Create test product
+    const product = await prisma.product.create({
+      data: {
+        name: 'Test Product',
+        gtin: `${Date.now()}`,
+      },
+    });
+    testProductId = product.id;
+
     // Create test location
     const location = await prisma.location.create({
       data: {
         practiceId: testPracticeId,
         name: 'Test Location',
         code: `LOC-${Date.now()}`,
-        type: 'CLINIC',
       },
     });
     testLocationId = location.id;
@@ -141,7 +150,6 @@ describe('StockCountRepository', () => {
           practiceId: otherPractice.id,
           name: 'Other Location',
           code: `OTHER-${Date.now()}`,
-          type: 'CLINIC',
         },
       });
 
@@ -217,6 +225,7 @@ describe('StockCountRepository', () => {
       const item = await prisma.item.create({
         data: {
           practiceId: testPracticeId,
+          productId: testProductId,
           name: 'Test Item',
           sku: 'TEST-001',
           unit: 'unit',

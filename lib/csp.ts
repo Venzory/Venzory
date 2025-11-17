@@ -13,6 +13,21 @@ export interface CSPConfig {
 }
 
 /**
+ * CSP directive key type
+ */
+type CspDirectiveKey = 
+  | 'default-src'
+  | 'script-src'
+  | 'style-src'
+  | 'img-src'
+  | 'font-src'
+  | 'connect-src'
+  | 'frame-ancestors'
+  | 'base-uri'
+  | 'form-action'
+  | 'upgrade-insecure-requests';
+
+/**
  * CSP directive definitions
  * 
  * STRICT BASELINE POLICY:
@@ -27,7 +42,7 @@ export interface CSPConfig {
  * - form-action 'self': Only allow form submissions to same origin
  * - upgrade-insecure-requests: Upgrade HTTP to HTTPS
  */
-const CSP_DIRECTIVES = {
+const CSP_DIRECTIVES: Record<CspDirectiveKey, readonly string[]> = {
   'default-src': ["'self'"],
   'script-src': [
     "'self'",
@@ -40,7 +55,7 @@ const CSP_DIRECTIVES = {
     // Fallback for older browsers (ignored by modern browsers when strict-dynamic is present)
     // This is a standard pattern and does NOT weaken security in modern browsers
     "'unsafe-inline'",
-  ] as const,
+  ],
   'style-src': [
     "'self'",
     "'nonce-{NONCE}'",
@@ -69,7 +84,7 @@ const CSP_DIRECTIVES = {
   'base-uri': ["'self'"],
   'form-action': ["'self'"],
   'upgrade-insecure-requests': [],
-} as const;
+};
 
 /**
  * Generates the Content-Security-Policy header value
@@ -89,15 +104,17 @@ export function generateCSP(config: CSPConfig): string {
     );
   }
 
-  // Clone directives and add development-specific settings
-  const directives = { ...CSP_DIRECTIVES };
+  // Build directives with development-specific settings
+  const directives: Record<CspDirectiveKey, string[]> = {} as Record<CspDirectiveKey, string[]>;
+  
+  // Copy all directives from the base configuration
+  for (const key of Object.keys(CSP_DIRECTIVES) as CspDirectiveKey[]) {
+    directives[key] = [...CSP_DIRECTIVES[key]];
+  }
   
   // In development, add 'unsafe-eval' for Next.js HMR and React Refresh
   if (isDevelopment) {
-    directives['script-src'] = [
-      ...(CSP_DIRECTIVES['script-src'] as string[]),
-      "'unsafe-eval'",
-    ];
+    directives['script-src'].push("'unsafe-eval'");
   }
 
   // Build CSP directives

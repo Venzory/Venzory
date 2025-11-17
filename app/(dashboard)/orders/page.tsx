@@ -12,6 +12,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Package } from 'lucide-react';
 import { calculateOrderTotal } from '@/lib/prisma-transforms';
+import { selectQuickTemplates } from './_utils/quick-reorder';
+import { QuickOrderButton } from './_components/quick-order-button';
 
 export default async function OrdersPage() {
   const { session, practiceId } = await requireActivePractice();
@@ -24,6 +26,13 @@ export default async function OrdersPage() {
     practiceId,
     minimumRole: PracticeRole.STAFF,
   });
+
+  // Fetch templates for quick reorder (only if user can manage orders)
+  let quickTemplates: any[] = [];
+  if (canManage) {
+    const allTemplates = await getOrderService().findTemplates(ctx);
+    quickTemplates = selectQuickTemplates(allTemplates, 5);
+  }
 
   return (
     <section className="space-y-8">
@@ -45,6 +54,10 @@ export default async function OrdersPage() {
           )}
         </div>
       </div>
+
+      {canManage && quickTemplates.length > 0 && (
+        <QuickReorderSection templates={quickTemplates} />
+      )}
 
       <OrdersList orders={orders} canManage={canManage} />
     </section>
@@ -177,5 +190,54 @@ function StatusBadge({ status }: { status: OrderStatus }) {
   };
 
   return <Badge variant={variantMap[status]}>{status.replace('_', ' ')}</Badge>;
+}
+
+function QuickReorderSection({ templates }: { templates: any[] }) {
+  return (
+    <Card className="p-6">
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Quick Reorder</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Reorder from your recent templates
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {templates.map((template) => (
+            <div
+              key={template.id}
+              className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-4 transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700"
+            >
+              <div className="flex-1 min-w-0 mr-3">
+                <Link
+                  href={`/orders/templates/${template.id}`}
+                  className="block font-medium text-slate-900 hover:text-sky-600 dark:text-white dark:hover:text-sky-400 truncate"
+                >
+                  {template.name}
+                </Link>
+                <p className="text-xs text-slate-500 dark:text-slate-500">
+                  {template.items.length} {template.items.length === 1 ? 'item' : 'items'}
+                </p>
+              </div>
+              <QuickOrderButton
+                templateId={template.id}
+                templateName={template.name}
+                size="sm"
+                variant="primary"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="text-center">
+          <Link
+            href="/orders/templates"
+            className="text-sm text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+          >
+            View all templates →
+          </Link>
+        </div>
+      </div>
+    </Card>
+  );
 }
 

@@ -3,6 +3,7 @@ import { getReceivingService, getInventoryService, getOrderService } from '@/src
 import { notFound } from 'next/navigation';
 import { ReceiptDetail } from './_components/receipt-detail';
 import { GoodsReceiptStatus } from '@prisma/client';
+import type { GoodsReceiptWithRelations } from '@/src/domain/models';
 
 interface ReceiptPageProps {
   params: Promise<{ id: string }>;
@@ -57,7 +58,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
       const orderItems = order.items;
 
       // Get all confirmed receipts for this order
-      let confirmedReceipts: Awaited<ReturnType<typeof getReceivingService>>['findGoodsReceipts'] extends Promise<infer T> ? T : never;
+      let confirmedReceipts: GoodsReceiptWithRelations[] = [];
       try {
         confirmedReceipts = await getReceivingService().findGoodsReceipts(ctx, {
           orderId: receipt.orderId,

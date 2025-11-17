@@ -11,6 +11,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import assert from 'assert';
 
 describe('Database Unique Constraints', () => {
   let testPractice1Id: string;
@@ -126,7 +127,7 @@ describe('Database Unique Constraints', () => {
             sku: 'SKU-003',
           },
         });
-        fail('Should have thrown an error');
+        assert.fail('Should have thrown an error');
       } catch (error) {
         expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
         expect((error as Prisma.PrismaClientKnownRequestError).code).toBe('P2002');
@@ -208,7 +209,7 @@ describe('Database Unique Constraints', () => {
             sku: 'DUP-SKU',
           },
         });
-        fail('Should have thrown an error');
+        assert.fail('Should have thrown an error');
       } catch (error) {
         expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
         expect((error as Prisma.PrismaClientKnownRequestError).code).toBe('P2002');
@@ -318,7 +319,7 @@ describe('Database Unique Constraints', () => {
             code: 'DUP-CODE',
           },
         });
-        fail('Should have thrown an error');
+        assert.fail('Should have thrown an error');
       } catch (error) {
         expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
         expect((error as Prisma.PrismaClientKnownRequestError).code).toBe('P2002');
@@ -428,7 +429,7 @@ describe('Database Unique Constraints', () => {
             status: 'SUSPENDED',
           },
         });
-        fail('Should have thrown an error');
+        assert.fail('Should have thrown an error');
       } catch (error) {
         expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
         expect((error as Prisma.PrismaClientKnownRequestError).code).toBe('P2002');

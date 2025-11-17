@@ -14,6 +14,8 @@ import { OnboardingReminderCard } from './_components/onboarding-reminder-card';
 import { calculateItemStockInfo } from '@/lib/inventory-utils';
 import { calculateOrderTotal } from '@/lib/prisma-transforms';
 import { getOrderSupplierDisplay } from './_utils/order-display';
+import { calculateAwaitingReceiptCount, AWAITING_RECEIPT_LINK } from './_utils/kpi-utils';
+import { buildLowStockOrderHref } from './_utils/low-stock-actions';
 
 export default async function DashboardPage() {
   const { session, practiceId } = await requireActivePractice();
@@ -62,7 +64,7 @@ export default async function DashboardPage() {
   // Calculate KPIs
   const lowStockCount = lowStockItems.length;
   const draftOrdersCount = orders.filter((o) => o.status === OrderStatus.DRAFT).length;
-  const sentOrdersCount = orders.filter((o) => o.status === OrderStatus.SENT).length;
+  const awaitingReceiptCount = calculateAwaitingReceiptCount(orders);
   const receivedOrdersCount = orders.filter((o) => o.status === OrderStatus.RECEIVED).length;
 
   // Calculate total stock value (disabled - type mismatch)
@@ -144,10 +146,16 @@ export default async function DashboardPage() {
           </p>
         </Card>
         <Card>
-          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Sent Orders</h2>
-          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{sentOrdersCount}</p>
+          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Awaiting receipt</h2>
+          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{awaitingReceiptCount}</p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {sentOrdersCount > 0 ? 'Awaiting delivery' : 'No orders in transit'}
+            {awaitingReceiptCount > 0 ? (
+              <Link href={AWAITING_RECEIPT_LINK} className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
+                Go to Receiving →
+              </Link>
+            ) : (
+              'No orders awaiting receipt'
+            )}
           </p>
         </Card>
         <Card>
@@ -322,6 +330,15 @@ export default async function DashboardPage() {
                     <p className="text-xs text-amber-800 dark:text-amber-300">
                       Suggested order quantity: {suggestedQuantity}
                     </p>
+                  )}
+                  {canManage && (
+                    <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
+                      <Link href={buildLowStockOrderHref(item)}>
+                        <Button variant="secondary" size="sm" className="w-full text-xs">
+                          Order
+                        </Button>
+                      </Link>
+                    </div>
                   )}
                 </div>
               </div>

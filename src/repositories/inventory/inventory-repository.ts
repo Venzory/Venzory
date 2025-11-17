@@ -476,9 +476,12 @@ export class InventoryRepository extends BaseRepository {
         previousQuantity: updated.quantity - adjustment,
         newQuantity: updated.quantity,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If record doesn't exist, create it
-      if (error.code === 'P2025' || error.message?.includes('Record to update not found')) {
+      if (
+        (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') ||
+        (error instanceof Error && error.message.includes('Record to update not found'))
+      ) {
         const initialQuantity = adjustment;
 
         if (initialQuantity < 0) {

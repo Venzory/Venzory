@@ -189,13 +189,14 @@ export async function batchProcessSupplierFeeds(
           name: product.name,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       result.failed++;
+      const message = error instanceof Error ? error.message : 'Unknown error';
       result.errors.push({
         index: i,
         supplierSku: feed.catalog.supplierSku,
         gtin: feed.product.gtin,
-        message: error.message || 'Unknown error',
+        message,
         details: error,
       });
     }

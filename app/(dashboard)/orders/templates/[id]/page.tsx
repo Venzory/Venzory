@@ -14,6 +14,7 @@ import { AddTemplateItemForm } from './_components/add-template-item-form';
 import { EditTemplateItemForm } from './_components/edit-template-item-form';
 import { RemoveTemplateItemButton } from './_components/remove-template-item-button';
 import { DeleteTemplateButton } from './_components/delete-template-button';
+import { QuickOrderButton } from '../../_components/quick-order-button';
 
 interface TemplateDetailPageProps {
   params: Promise<{ id: string }>;
@@ -68,7 +69,11 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">{template.name}</h1>
           {template.description ? (
             <p className="text-sm text-slate-600 dark:text-slate-300">{template.description}</p>
-          ) : null}
+          ) : (
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Quick order creates one draft per supplier
+            </p>
+          )}
           <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-500 pt-1">
             <span>
               Created by {template.createdBy.name || template.createdBy.email}
@@ -81,13 +86,27 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
         </div>
         <div className="flex items-center gap-2">
           {canManage ? (
-            <DeleteTemplateButton templateId={template.id} />
-          ) : null}
-          <Link href={`/orders/templates/${template.id}/preview`}>
-            <Button variant="primary" size="md">
-              Create Order from Template
-            </Button>
-          </Link>
+            <>
+              <DeleteTemplateButton templateId={template.id} />
+              <QuickOrderButton
+                templateId={template.id}
+                templateName={template.name}
+                size="md"
+                variant="primary"
+              />
+              <Link href={`/orders/templates/${template.id}/preview`}>
+                <Button variant="secondary" size="md">
+                  Review & create
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <Link href={`/orders/templates/${template.id}/preview`}>
+              <Button variant="primary" size="md">
+                View Details
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

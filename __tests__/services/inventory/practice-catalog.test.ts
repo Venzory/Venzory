@@ -112,10 +112,10 @@ describe('Practice Catalog', () => {
       });
 
       expect(result.items).toHaveLength(1);
-      expect(result.items[0].defaultPracticeSupplierId).toBe(practiceSupplierId);
-      expect(result.items[0].defaultPracticeSupplier?.customLabel).toBe('Test Supplier');
-      expect(result.items[0].supplierItems).toHaveLength(1);
-      expect(result.items[0].supplierItems[0].practiceSupplierId).toBe(practiceSupplierId);
+      expect(result.items[0]?.defaultPracticeSupplierId).toBe(practiceSupplierId);
+      expect(result.items[0]?.defaultPracticeSupplier?.customLabel).toBe('Test Supplier');
+      expect(result.items[0]?.supplierItems).toHaveLength(1);
+      expect(result.items[0]?.supplierItems?.[0]?.practiceSupplierId).toBe(practiceSupplierId);
       expect(mockInventoryRepo.findItems).toHaveBeenCalledWith(
         ctx.practiceId,
         expect.objectContaining({ practiceSupplierId }),

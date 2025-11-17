@@ -81,7 +81,7 @@ describe('Server Actions CSRF Protection', () => {
 
     it('should reject action when header token is missing', async () => {
       const { headers } = await import('next/headers');
-      const signedToken = createSignedCsrfToken();
+      const signedToken = await createSignedCsrfToken();
       
       // Mock headers with cookie but no header token
       vi.mocked(headers).mockResolvedValue({
@@ -121,7 +121,7 @@ describe('Server Actions CSRF Protection', () => {
   describe('Invalid CSRF Token', () => {
     it('should reject action when tokens do not match', async () => {
       const { headers } = await import('next/headers');
-      const signedToken = createSignedCsrfToken();
+      const signedToken = await createSignedCsrfToken();
       const wrongToken = 'wrong-token';
       
       // Mock headers with mismatched tokens

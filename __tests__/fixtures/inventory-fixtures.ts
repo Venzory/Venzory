@@ -5,6 +5,7 @@
 
 import { PracticeRole, StockCountStatus } from '@prisma/client';
 import type { RequestContext } from '@/src/lib/context/request-context';
+import { createTestContext as createContextFromModule } from '@/src/lib/context/request-context';
 
 // Unique ID generators for tests
 let practiceCounter = 0;
@@ -58,13 +59,13 @@ export function createTestContext(overrides?: Partial<RequestContext>): RequestC
   const practice = createTestPractice();
   const user = createTestUser();
   
-  return {
+  return createContextFromModule({
     userId: overrides?.userId ?? user.id,
     practiceId: overrides?.practiceId ?? practice.id,
     role: overrides?.role ?? 'STAFF',
     requestId: overrides?.requestId ?? `req-${Date.now()}`,
     ...overrides,
-  };
+  });
 }
 
 // Location fixtures

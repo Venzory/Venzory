@@ -95,7 +95,7 @@ export async function createGoodsReceiptAction(_prevState: unknown, formData: Fo
 
     receiptId = result.id;
     revalidatePath('/receiving');
-  } catch (error: any) {
+  } catch (error: unknown) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
       action: 'createGoodsReceiptAction',
@@ -108,7 +108,8 @@ export async function createGoodsReceiptAction(_prevState: unknown, formData: Fo
       stack: error instanceof Error ? error.stack : undefined,
     }, 'Failed to create goods receipt');
     
-    return { error: error.message || 'Failed to create receipt' } as const;
+    const message = error instanceof Error ? error.message : 'Failed to create receipt';
+    return { error: message } as const;
   }
   
   // Redirect outside try-catch so it can throw properly
@@ -171,7 +172,7 @@ export async function addReceiptLineAction(_prevState: unknown, formData: FormDa
 
     revalidatePath(`/receiving/${receiptId}`);
     return { success: 'Item added to receipt' } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
       action: 'addReceiptLineAction',
@@ -182,7 +183,8 @@ export async function addReceiptLineAction(_prevState: unknown, formData: FormDa
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     }, 'Failed to add receipt line');
-    return { error: error.message || 'Failed to add item' } as const;
+    const message = error instanceof Error ? error.message : 'Failed to add item';
+    return { error: message } as const;
   }
 }
 
@@ -223,7 +225,7 @@ export async function updateReceiptLineAction(_prevState: unknown, formData: For
 
     revalidatePath(`/receiving/${result.id}`);
     return { success: 'Line updated' } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
       action: 'updateReceiptLineAction',
@@ -233,7 +235,8 @@ export async function updateReceiptLineAction(_prevState: unknown, formData: For
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     }, 'Failed to update receipt line');
-    return { error: error.message || 'Failed to update line' } as const;
+    const message = error instanceof Error ? error.message : 'Failed to update line';
+    return { error: message } as const;
   }
 }
 
@@ -313,7 +316,7 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
       redirectTo: result.orderId ? `/orders/${result.orderId}` : '/receiving',
       lowStockWarnings: result.lowStockNotifications || [],
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
       action: 'confirmGoodsReceiptAction',
@@ -438,7 +441,7 @@ export async function searchItemByGtinAction(gtin: string) {
         unit: item.unit,
       },
     } as const;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
       action: 'searchItemByGtinAction',
@@ -448,7 +451,8 @@ export async function searchItemByGtinAction(gtin: string) {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     }, 'Failed to search item by GTIN');
-    return { error: error.message || 'Failed to search item' } as const;
+    const message = error instanceof Error ? error.message : 'Failed to search item';
+    return { error: message } as const;
   }
 }
 

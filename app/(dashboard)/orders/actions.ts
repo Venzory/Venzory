@@ -111,7 +111,7 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
     orderId = result.id;
     revalidatePath('/orders');
     revalidatePath('/dashboard');
-  } catch (error: any) {
+  } catch (error: unknown) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
       action: 'createDraftOrderAction',
@@ -122,7 +122,8 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
       stack: error instanceof Error ? error.stack : undefined,
     }, 'Failed to create order');
     
-    return { error: error.message || 'Failed to create order' };
+    const message = error instanceof Error ? error.message : 'Failed to create order';
+    return { error: message };
   }
   
   // Redirect outside try-catch so it can throw properly
@@ -172,7 +173,7 @@ export async function updateOrderItemAction(formData: FormData) {
     revalidatePath(`/orders/${orderId}`);
     revalidatePath('/orders');
     revalidatePath('/dashboard');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update order item:', error);
     throw error;
   }
@@ -215,9 +216,10 @@ export async function addOrderItemAction(_prevState: FormState, formData: FormDa
     revalidatePath('/orders');
     revalidatePath('/dashboard');
     return { success: 'Item added to order' };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to add order item:', error);
-    return { error: error.message || 'Failed to add item' };
+    const message = error instanceof Error ? error.message : 'Failed to add item';
+    return { error: message };
   }
 }
 
@@ -249,7 +251,7 @@ export async function removeOrderItemAction(orderId: string, itemId: string) {
     revalidatePath(`/orders/${orderId}`);
     revalidatePath('/orders');
     revalidatePath('/dashboard');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to remove order item:', error);
     throw error;
   }
@@ -290,7 +292,7 @@ export async function updateOrderAction(formData: FormData) {
 
     revalidatePath(`/orders/${orderId}`);
     revalidatePath('/orders');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update order:', error);
     throw error;
   }
@@ -316,9 +318,10 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     revalidatePath('/orders');
     revalidatePath('/dashboard');
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to delete order:', error);
-    return { success: false, error: error.message || 'Failed to delete order' };
+    const message = error instanceof Error ? error.message : 'Failed to delete order';
+    return { success: false, error: message };
   }
 }
 
@@ -368,9 +371,10 @@ export async function sendOrderAction(orderId: string): Promise<{ success: boole
     revalidatePath('/orders');
     revalidatePath('/dashboard');
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to send order:', error);
-    return { success: false, error: error.message || 'Failed to send order' };
+    const message = error instanceof Error ? error.message : 'Failed to send order';
+    return { success: false, error: message };
   }
 }
 

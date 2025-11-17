@@ -88,8 +88,9 @@ export async function createTemplateAction(_prevState: unknown, formData: FormDa
 
     revalidatePath('/orders/templates');
     redirect(`/orders/templates/${template.id}`);
-  } catch (error: any) {
-    return { error: error.message || 'Failed to create template' } as const;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to create template';
+    return { error: message } as const;
   }
 }
 
@@ -190,8 +191,9 @@ export async function addTemplateItemAction(_prevState: unknown, formData: FormD
 
     revalidatePath(`/orders/templates/${templateId}`);
     return { success: 'Item added to template' } as const;
-  } catch (error: any) {
-    return { error: error.message || 'Failed to add item' } as const;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to add item';
+    return { error: message } as const;
   }
 }
 
@@ -255,7 +257,7 @@ export async function removeTemplateItemAction(templateItemId: string) {
 export async function createOrdersFromTemplateAction(
   templateId: string,
   orderData: {
-    supplierId: string;
+    supplierId: string; // Legacy supplierId from templates
     items: { itemId: string; quantity: number; unitPrice: number | null }[];
   }[]
 ) {
@@ -279,16 +281,91 @@ export async function createOrdersFromTemplateAction(
   }
 
   try {
-    const result = await getOrderService().createOrdersFromTemplate(ctx, templateId, orderData);
+    // Map legacy supplierId to practiceSupplierId
+    const { getPracticeSupplierRepository } = await import('@/src/repositories/suppliers');
+    const practiceSupplierRepo = getPracticeSupplierRepository();
+    
+    const mappedOrderData = [];
+    for (const group of orderData) {
+      // Find PracticeSupplier for this legacy Supplier
+      const practiceSupplier = await practiceSupplierRepo.findPracticeSupplierByMigratedId(
+        practiceId,
+        group.supplierId
+      );
+      
+      if (practiceSupplier) {
+        mappedOrderData.push({
+          practiceSupplierId: practiceSupplier.id,
+          items: group.items,
+        });
+      }
+    }
+    
+    if (mappedOrderData.length === 0) {
+      return { error: 'No valid suppliers found for the selected items' } as const;
+    }
+    
+    const result = await getOrderService().createOrdersFromTemplate(ctx, templateId, mappedOrderData);
 
     revalidatePath('/orders');
     revalidatePath('/orders/templates');
     revalidatePath('/dashboard');
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating orders:', error);
-    return { error: error.message || 'Failed to create orders. Please try again.' } as const;
+    const message = error instanceof Error ? error.message : 'Failed to create orders. Please try again.';
+    return { error: message } as const;
+  }
+}
+
+/**
+ * Quick create orders from template using default quantities and suppliers
+ * One-click action that creates draft orders and redirects to the order detail page
+ */
+export async function quickCreateOrderFromTemplateAction(templateId: string) {
+  await verifyCsrfFromHeaders();
+  
+  const { session, practiceId } = await requireActivePractice();
+  const ctx = buildRequestContextFromSession(session);
+
+  if (
+    !hasRole({
+      memberships: session.user.memberships,
+      practiceId,
+      minimumRole: PracticeRole.STAFF,
+    })
+  ) {
+    throw new Error('Insufficient permissions');
+  }
+
+  try {
+    const result = await getOrderService().createOrdersFromTemplateWithDefaults(ctx, templateId);
+
+    revalidatePath('/orders');
+    revalidatePath('/orders/templates');
+    revalidatePath('/dashboard');
+
+    // Single order - redirect directly to the order detail page
+    if (result.orders && result.orders.length === 1) {
+      redirect(`/orders/${result.orders[0].id}`);
+    } else if (result.orders && result.orders.length > 1) {
+      // Multiple orders - redirect to summary page with order IDs
+      const orderIds = result.orders.map(o => o.id).join(',');
+      redirect(`/orders/quick-summary?templateId=${templateId}&orderIds=${orderIds}`);
+    } else {
+      // Fallback - shouldn't happen but handle gracefully
+      redirect('/orders');
+    }
+  } catch (error: unknown) {
+    // redirect() throws a special NEXT_REDIRECT error that should propagate
+    // Only catch and handle actual errors
+    if (error && typeof error === 'object' && 'digest' in error && typeof error.digest === 'string' && error.digest.startsWith('NEXT_REDIRECT')) {
+      throw error; // Re-throw redirect errors
+    }
+    console.error('Error creating orders from template:', error);
+    const message = error instanceof Error ? error.message : 'Failed to create orders from template. Please try again.';
+    throw new Error(message);
   }
 }
 

@@ -276,7 +276,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('itemId', 'test-item-id');
       formData.append('quantity', '5');
       
-      const result = await addOrderItemAction(null, formData);
+      const result = await addOrderItemAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Item added to order');

@@ -53,10 +53,11 @@ async function runValidationQueries() {
           console.log(JSON.stringify(results, null, 2));
           console.log('\n---\n');
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Some queries might fail if tables are empty or syntax issues
-        if (!error.message.includes('does not exist')) {
-          console.error(`❌ Error in query ${i + 1}:`, error.message);
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes('does not exist')) {
+          console.error(`❌ Error in query ${i + 1}:`, message);
         }
       }
     }

@@ -13,6 +13,7 @@ import { OrderRepository } from '@/src/repositories/orders';
 import { AuditService } from '@/src/services/audit/audit-service';
 import { AuditRepository } from '@/src/repositories/audit';
 import type { RequestContext } from '@/src/lib/context/request-context';
+import { createTestContext } from '@/src/lib/context/request-context';
 
 describe('Receiving Service - Order Status Transitions', () => {
   let service: ReceivingService;
@@ -23,6 +24,8 @@ describe('Receiving Service - Order Status Transitions', () => {
   let testItem2Id: string;
   let testProductId: string;
   let testSupplierId: string;
+  let testGlobalSupplierId: string;
+  let testPracticeSupplierId: string;
   let testOrderId: string;
   let ctx: RequestContext;
 
@@ -101,11 +104,28 @@ describe('Receiving Service - Order Status Transitions', () => {
     });
     testSupplierId = supplier.id;
 
+    // Create GlobalSupplier and PracticeSupplier
+    const globalSupplier = await prisma.globalSupplier.create({
+      data: {
+        name: 'Global Test Supplier',
+      },
+    });
+    testGlobalSupplierId = globalSupplier.id;
+
+    const practiceSupplier = await prisma.practiceSupplier.create({
+      data: {
+        practiceId: testPracticeId,
+        globalSupplierId: testGlobalSupplierId,
+        migratedFromSupplierId: testSupplierId,
+      },
+    });
+    testPracticeSupplierId = practiceSupplier.id;
+
     // Create an order with two items
     const order = await prisma.order.create({
       data: {
         practiceId: testPracticeId,
-        supplierId: testSupplierId,
+        practiceSupplierId: testPracticeSupplierId,
         status: 'SENT',
         reference: 'TEST-ORDER-001',
         createdById: testUserId,
@@ -141,16 +161,11 @@ describe('Receiving Service - Order Status Transitions', () => {
       ],
     });
 
-    ctx = {
+    ctx = createTestContext({
       userId: testUserId,
-      userEmail: `test-order-status-${Date.now()}@test.com`,
-      userName: 'Test User',
       practiceId: testPracticeId,
       role: 'STAFF',
-      memberships: [],
-      timestamp: new Date(),
-      requestId: 'test-req',
-    };
+    });
 
     // Create service with real repositories
     service = new ReceivingService(
@@ -191,8 +206,14 @@ describe('Receiving Service - Order Status Transitions', () => {
     await prisma.product.deleteMany({
       where: { id: testProductId },
     });
+    await prisma.practiceSupplier.deleteMany({
+      where: { practiceId: testPracticeId },
+    });
     await prisma.supplier.deleteMany({
       where: { practiceId: testPracticeId },
+    });
+    await prisma.globalSupplier.deleteMany({
+      where: { id: testGlobalSupplierId },
     });
     await prisma.location.deleteMany({
       where: { practiceId: testPracticeId },

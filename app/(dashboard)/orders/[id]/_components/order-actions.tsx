@@ -41,9 +41,10 @@ export function OrderActions({ orderId, canEdit, canReceive }: OrderActionsProps
       } else {
         toast.error(result.error || 'Failed to send order');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to send order:', error);
-      toast.error(error?.message || 'Failed to send order');
+      const message = error instanceof Error ? error.message : 'Failed to send order';
+      toast.error(message);
     } finally {
       setIsSending(false);
     }
@@ -72,9 +73,10 @@ export function OrderActions({ orderId, canEdit, canReceive }: OrderActionsProps
         toast.error(result.error || 'Failed to delete order');
         setIsDeleting(false);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete order:', error);
-      toast.error(error?.message || 'Failed to delete order');
+      const message = error instanceof Error ? error.message : 'Failed to delete order';
+      toast.error(message);
       setIsDeleting(false);
     }
   };
