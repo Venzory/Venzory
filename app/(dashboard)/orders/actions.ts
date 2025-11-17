@@ -118,7 +118,6 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
       userId: ctx?.userId,
       practiceId: ctx?.practiceId,
       practiceSupplierId: formData.get('practiceSupplierId'),
-      itemCount: items.length,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     }, 'Failed to create order');

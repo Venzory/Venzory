@@ -40,7 +40,7 @@ const CSP_DIRECTIVES = {
     // Fallback for older browsers (ignored by modern browsers when strict-dynamic is present)
     // This is a standard pattern and does NOT weaken security in modern browsers
     "'unsafe-inline'",
-  ],
+  ] as const,
   'style-src': [
     "'self'",
     "'nonce-{NONCE}'",
@@ -95,7 +95,7 @@ export function generateCSP(config: CSPConfig): string {
   // In development, add 'unsafe-eval' for Next.js HMR and React Refresh
   if (isDevelopment) {
     directives['script-src'] = [
-      ...CSP_DIRECTIVES['script-src'],
+      ...(CSP_DIRECTIVES['script-src'] as string[]),
       "'unsafe-eval'",
     ];
   }

@@ -24,14 +24,10 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
       : Promise.resolve(null),
   ]);
 
-  // Get supplier name from order (support both legacy and PracticeSupplier)
+  // Get supplier name from order
   let supplierName = 'Unknown';
-  if (order) {
-    if (order.practiceSupplier) {
-      supplierName = order.practiceSupplier.customLabel || order.practiceSupplier.globalSupplier?.name || 'Unknown';
-    } else if (order.supplier) {
-      supplierName = order.supplier.name;
-    }
+  if (order?.practiceSupplier) {
+    supplierName = order.practiceSupplier.customLabel || order.practiceSupplier.globalSupplier?.name || 'Unknown';
   }
 
   return (
@@ -53,7 +49,7 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
         order={order ? {
           id: order.id,
           reference: order.reference,
-          supplierId: order.supplierId,
+          supplierId: order.practiceSupplierId,
           supplierName,
           items: (order.items || []).map(item => ({
             id: item.id,

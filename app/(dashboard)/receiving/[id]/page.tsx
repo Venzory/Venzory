@@ -57,7 +57,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
       const orderItems = order.items;
 
       // Get all confirmed receipts for this order
-      let confirmedReceipts;
+      let confirmedReceipts: Awaited<ReturnType<typeof getReceivingService>>['findGoodsReceipts'] extends Promise<infer T> ? T : never;
       try {
         confirmedReceipts = await getReceivingService().findGoodsReceipts(ctx, {
           orderId: receipt.orderId,

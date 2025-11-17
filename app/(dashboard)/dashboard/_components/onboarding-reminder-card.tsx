@@ -91,7 +91,7 @@ export function OnboardingReminderCard({ hasLocations, hasSuppliers, hasItems, h
             </div>
           </div>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={handleExpand}
             disabled={isPending}
