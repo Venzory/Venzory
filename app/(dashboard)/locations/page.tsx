@@ -10,6 +10,22 @@ import { CreateLocationForm } from './_components/create-location-form';
 import { EmptyState } from '@/components/ui/empty-state';
 import { deleteLocationAction, upsertLocationInlineAction } from '../inventory/actions';
 
+// Type for location with inventory and hierarchy relations
+type LocationWithInventory = {
+  id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  parent: { id: string; name: string } | null;
+  children: { id: string; name: string }[];
+  inventory: {
+    itemId: string;
+    quantity: number;
+    reorderPoint: number | null;
+    item: { id: string; name: string; sku: string | null };
+  }[];
+};
+
 export default async function LocationsPage() {
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
@@ -54,7 +70,7 @@ function LocationList({
   locations,
   canManage,
 }: {
-  locations: any;
+  locations: LocationWithInventory[];
   canManage: boolean;
 }) {
   if (locations.length === 0) {
@@ -73,8 +89,16 @@ function LocationList({
 
   return (
     <div className="space-y-4">
-      {locations.map((location: any) => {
-        const totalQuantity = location.inventory.reduce((sum: number, row: any) => sum + row.quantity, 0);
+      {locations.map((location) => {
+        // Safely compute total quantity with null-safety
+        const inventory = location.inventory ?? [];
+        const totalQuantity = inventory.reduce((sum, row) => sum + row.quantity, 0);
+        const children = location.children ?? [];
+        
+        // Check if location can be safely deleted
+        const hasInventory = totalQuantity > 0;
+        const hasChildLocations = children.length > 0;
+        const canDelete = !hasInventory && !hasChildLocations;
 
         return (
           <div key={location.id} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
@@ -101,9 +125,9 @@ function LocationList({
                 {location.description ? (
                   <p className="text-sm text-slate-700 dark:text-slate-300">{location.description}</p>
                 ) : null}
-                {location.children.length ? (
+                {children.length > 0 ? (
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Sub-locations: {location.children.map((child: any) => child.name).join(', ')}
+                    Sub-locations: {children.map((child) => child.name).join(', ')}
                   </p>
                 ) : null}
               </div>
@@ -112,7 +136,17 @@ function LocationList({
                 <form action={deleteLocationAction.bind(null, location.id)} className="self-start">
                   <button
                     type="submit"
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-rose-500 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-rose-500 dark:hover:text-rose-300"
+                    disabled={!canDelete}
+                    title={
+                      !canDelete
+                        ? hasInventory && hasChildLocations
+                          ? 'Move inventory and remove sub-locations before deleting'
+                          : hasInventory
+                          ? 'Move inventory before deleting'
+                          : 'Remove sub-locations before deleting'
+                        : 'Delete this location'
+                    }
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-rose-500 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-slate-300 disabled:hover:text-slate-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-rose-500 dark:hover:text-rose-300 dark:disabled:hover:border-slate-700 dark:disabled:hover:text-slate-300"
                   >
                     Delete
                   </button>
@@ -125,10 +159,10 @@ function LocationList({
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">Inventory Summary</h3>
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {location.inventory.length} {location.inventory.length === 1 ? 'item' : 'items'}
+                    {inventory.length} {inventory.length === 1 ? 'item' : 'items'}
                   </span>
                 </div>
-                {location.inventory.length ? (
+                {inventory.length > 0 ? (
                   <>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="rounded-lg bg-emerald-50 px-3 py-2 dark:bg-emerald-950/30">
@@ -137,21 +171,21 @@ function LocationList({
                       </div>
                       <div className="rounded-lg bg-blue-50 px-3 py-2 dark:bg-blue-950/30">
                         <div className="text-xs text-blue-700 dark:text-blue-400">Item Types</div>
-                        <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">{location.inventory.length}</div>
+                        <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">{inventory.length}</div>
                       </div>
                       <div className="rounded-lg bg-amber-50 px-3 py-2 dark:bg-amber-950/30">
                         <div className="text-xs text-amber-700 dark:text-amber-400">Low Stock</div>
                         <div className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-                          {location.inventory.filter((row: any) => row.reorderPoint && row.quantity <= row.reorderPoint).length}
+                          {inventory.filter((row) => row.reorderPoint && row.quantity <= row.reorderPoint).length}
                         </div>
                       </div>
                     </div>
                     <details className="group mt-2">
                       <summary className="cursor-pointer text-xs text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
-                        View all items ({location.inventory.length})
+                        View all items ({inventory.length})
                       </summary>
                       <ul className="mt-2 space-y-1 rounded-lg border border-slate-200 bg-slate-50/50 p-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300">
-                        {location.inventory.map((row: any) => {
+                        {inventory.map((row) => {
                           const isLowStock = row.reorderPoint && row.quantity <= row.reorderPoint;
                           return (
                             <li key={row.itemId} className="flex items-center justify-between rounded px-2 py-1 hover:bg-white dark:hover:bg-slate-900">
@@ -218,8 +252,8 @@ function LocationList({
                         >
                           <option value="none">Top level</option>
                           {locations
-                            .filter((candidate: any) => candidate.id !== location.id)
-                            .map((candidate: any) => (
+                            .filter((candidate) => candidate.id !== location.id)
+                            .map((candidate) => (
                               <option key={candidate.id} value={candidate.id}>
                                 {candidate.name}
                               </option>

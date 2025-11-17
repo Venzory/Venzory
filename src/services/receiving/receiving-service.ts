@@ -309,10 +309,11 @@ export class ReceivingService {
           { tx }
         );
 
-        // Check for low stock notification
+        // Check for low stock notification (guard against null/undefined)
         if (
           currentInventory?.reorderPoint !== null &&
-          newQuantity < currentInventory!.reorderPoint
+          currentInventory?.reorderPoint !== undefined &&
+          newQuantity < currentInventory.reorderPoint
         ) {
           lowStockNotifications.push(line.item?.name ?? 'Unknown item');
         }
@@ -364,6 +365,7 @@ export class ReceivingService {
         linesProcessed: receipt.lines?.length ?? 0,
         inventoryUpdated: true,
         lowStockNotifications,
+        orderId: receipt.orderId,
       };
     });
   }
@@ -512,11 +514,10 @@ export class ReceivingService {
     ctx: RequestContext,
     gtin: string
   ): Promise<{ id: string; name: string; sku: string | null; unit: string | null } | null> {
-    // Find items with matching product GTIN
-    const items = await this.inventoryRepository.findItems(ctx.practiceId);
-
-    const matchingItem = items.find(
-      (item) => item.product?.gtin === gtin
+    // Use dedicated GTIN lookup to bypass pagination limits
+    const matchingItem = await this.inventoryRepository.findItemByProductGtin(
+      gtin,
+      ctx.practiceId
     );
 
     if (!matchingItem) {

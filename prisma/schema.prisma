@@ -244,7 +244,6 @@ model Supplier {
   practice                  Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
   items                     SupplierItem[]
   defaultItems              Item[]              @relation("ItemDefaultSupplier")
-  orders                    Order[]
   orderTemplateItems        OrderTemplateItem[]
   supplierCatalogs          SupplierCatalog[]
   goodsReceipts             GoodsReceipt[]
@@ -359,8 +358,7 @@ model SupplierItem {
 model Order {
   id                 String      @id @default(cuid())
   practiceId         String
-  supplierId         String?
-  practiceSupplierId String? // Phase 2: optional PracticeSupplier reference
+  practiceSupplierId String
   status             OrderStatus @default(DRAFT)
   createdById        String?
   reference          String?
@@ -371,15 +369,13 @@ model Order {
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
-  practice         Practice          @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  supplier         Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
-  createdBy        User?             @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  practice         Practice         @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  practiceSupplier PracticeSupplier @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
+  createdBy        User?            @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   items            OrderItem[]
   goodsReceipts    GoodsReceipt[]
 
   @@index([practiceId])
-  @@index([supplierId])
   @@index([practiceSupplierId])
   @@index([practiceId, status, createdAt])
 }

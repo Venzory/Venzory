@@ -6,6 +6,7 @@ This directory contains technical documentation for the RemcuraV2 inventory mana
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Overall system architecture and design patterns
 - **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - High-level implementation summary
+- **[STYLE_GUIDE.md](./STYLE_GUIDE.md)** - Design tokens, components, and UI patterns reference
 
 ## Migration Guides
 

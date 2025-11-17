@@ -2,6 +2,7 @@
 
 import { useConfirm } from '@/hooks/use-confirm';
 import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 import { deleteTemplateAction } from '../../actions';
 
 export function DeleteTemplateButton({ templateId }: { templateId: string }) {
@@ -28,13 +29,15 @@ export function DeleteTemplateButton({ templateId }: { templateId: string }) {
   };
 
   return (
-    <button
+    <Button
       onClick={handleDelete}
-      className="rounded-lg border border-rose-700 bg-rose-900/20 px-4 py-2 text-sm font-medium text-rose-300 transition hover:bg-rose-900/30"
+      variant="secondary"
+      size="md"
       title="Delete template"
+      className="text-rose-600 hover:text-rose-700 border-rose-300 hover:border-rose-400 dark:text-rose-400 dark:hover:text-rose-300 dark:border-rose-600 dark:hover:border-rose-500"
     >
       Delete Template
-    </button>
+    </Button>
   );
 }
 

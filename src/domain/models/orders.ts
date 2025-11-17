@@ -14,8 +14,7 @@ export type OrderStatus = 'DRAFT' | 'SENT' | 'PARTIALLY_RECEIVED' | 'RECEIVED' |
  */
 export interface Order extends BaseEntity {
   practiceId: string;
-  supplierId: string | null;
-  practiceSupplierId: string | null; // Phase 2: optional PracticeSupplier reference
+  practiceSupplierId: string;
   status: OrderStatus;
   createdById: string | null;
   reference: string | null;
@@ -29,8 +28,7 @@ export interface Order extends BaseEntity {
  * Order with related entities
  */
 export interface OrderWithRelations extends Order {
-  supplier?: Supplier;
-  practiceSupplier?: PracticeSupplierWithRelations; // Phase 2: includes practice-specific supplier info with global supplier
+  practiceSupplier?: PracticeSupplierWithRelations;
   items?: OrderItem[];
   createdBy?: {
     id: string;
@@ -78,12 +76,10 @@ export interface OrderTemplateItem {
 
 /**
  * Input type for creating an order
- * Either supplierId OR practiceSupplierId must be provided
  */
 export interface CreateOrderInput {
   practiceId: string;
-  supplierId?: string; // Legacy supplier (made optional for Phase 2)
-  practiceSupplierId?: string | null; // Phase 2: new supplier system (preferred over supplierId)
+  practiceSupplierId: string;
   reference?: string | null;
   notes?: string | null;
   expectedAt?: Date | null;
@@ -132,8 +128,7 @@ export interface AddOrderItemInput {
  */
 export interface OrderFilters {
   practiceId: string;
-  supplierId?: string;
-  practiceSupplierId?: string; // Phase 2: filter by PracticeSupplier
+  practiceSupplierId?: string;
   status?: OrderStatus;
   createdById?: string;
   dateFrom?: Date;

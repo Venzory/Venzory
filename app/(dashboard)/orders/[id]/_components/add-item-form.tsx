@@ -11,8 +11,7 @@ const initialState: FormState = {};
 
 interface AddItemFormProps {
   orderId: string;
-  supplierId?: string | null;
-  practiceSupplierId?: string | null;
+  practiceSupplierId: string;
   items: Array<{
     id: string;
     name: string;
@@ -28,7 +27,7 @@ interface AddItemFormProps {
   }>;
 }
 
-export function AddItemForm({ orderId, supplierId, practiceSupplierId, items }: AddItemFormProps) {
+export function AddItemForm({ orderId, practiceSupplierId, items }: AddItemFormProps) {
   const [state, formAction] = useActionState(addOrderItemAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const itemSelectorKeyRef = useRef(0);
@@ -70,8 +69,7 @@ export function AddItemForm({ orderId, supplierId, practiceSupplierId, items }: 
             <ItemSelector
               key={itemSelectorKeyRef.current}
               items={items as ItemForSelection[]}
-              supplierId={supplierId || undefined}
-              practiceSupplierId={practiceSupplierId || undefined}
+              practiceSupplierId={practiceSupplierId}
               onSelect={(itemId) => {
                 // Update hidden input with selected item ID
                 const hiddenInput = formRef.current?.querySelector('input[name="itemId"]') as HTMLInputElement;

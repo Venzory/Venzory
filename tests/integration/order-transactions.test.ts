@@ -453,5 +453,168 @@ describe('Order Service - Transaction Integration Tests', () => {
       expect(supplier2Order?.items[0].itemId).toBe(testItem2Id);
     });
   });
+
+  describe('createOrder and sendOrder - Core Order Flows', () => {
+    it('should create a draft order with PracticeSupplier and items', async () => {
+      // Create a PracticeSupplier
+      const globalSupplier = await prisma.globalSupplier.create({
+        data: {
+          name: 'Test Global Supplier',
+          country: 'IE',
+        },
+      });
+
+      const practiceSupplier = await prisma.practiceSupplier.create({
+        data: {
+          practiceId: testPracticeId,
+          globalSupplierId: globalSupplier.id,
+          customLabel: 'My Test Supplier',
+        },
+      });
+
+      // Create order with PracticeSupplier
+      const order = await service.createOrder(ctx, {
+        practiceSupplierId: practiceSupplier.id,
+        notes: 'Test order',
+        reference: 'PO-001',
+        items: [
+          { itemId: testItem1Id, quantity: 10, unitPrice: 5.99 },
+          { itemId: testItem2Id, quantity: 5, unitPrice: 3.50 },
+        ],
+      });
+
+      // Verify order created
+      expect(order.id).toBeDefined();
+      expect(order.status).toBe('DRAFT');
+      expect(order.practiceSupplierId).toBe(practiceSupplier.id);
+      expect(order.notes).toBe('Test order');
+      expect(order.reference).toBe('PO-001');
+
+      // Verify items created
+      const dbOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+        include: { items: true },
+      });
+
+      expect(dbOrder?.items).toHaveLength(2);
+      expect(dbOrder?.items.find(i => i.itemId === testItem1Id)?.quantity).toBe(10);
+      expect(dbOrder?.items.find(i => i.itemId === testItem2Id)?.quantity).toBe(5);
+    });
+
+    it('should send a draft order and update status to SENT', async () => {
+      // Create a PracticeSupplier
+      const globalSupplier = await prisma.globalSupplier.create({
+        data: {
+          name: 'Test Global Supplier',
+          country: 'IE',
+        },
+      });
+
+      const practiceSupplier = await prisma.practiceSupplier.create({
+        data: {
+          practiceId: testPracticeId,
+          globalSupplierId: globalSupplier.id,
+        },
+      });
+
+      // Create draft order
+      const order = await service.createOrder(ctx, {
+        practiceSupplierId: practiceSupplier.id,
+        items: [
+          { itemId: testItem1Id, quantity: 10, unitPrice: 5.99 },
+        ],
+      });
+
+      expect(order.status).toBe('DRAFT');
+
+      // Send the order
+      const sentOrder = await service.sendOrder(ctx, order.id);
+
+      // Verify status changed
+      expect(sentOrder.status).toBe('SENT');
+      expect(sentOrder.sentAt).toBeDefined();
+      expect(sentOrder.sentAt).toBeInstanceOf(Date);
+
+      // Verify in database
+      const dbOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+      });
+
+      expect(dbOrder?.status).toBe('SENT');
+      expect(dbOrder?.sentAt).toBeDefined();
+    });
+
+    it('should prevent sending an order with no items', async () => {
+      // Create a PracticeSupplier
+      const globalSupplier = await prisma.globalSupplier.create({
+        data: {
+          name: 'Test Global Supplier',
+          country: 'IE',
+        },
+      });
+
+      const practiceSupplier = await prisma.practiceSupplier.create({
+        data: {
+          practiceId: testPracticeId,
+          globalSupplierId: globalSupplier.id,
+        },
+      });
+
+      // Create order
+      const order = await prisma.order.create({
+        data: {
+          practiceId: testPracticeId,
+          practiceSupplierId: practiceSupplier.id,
+          status: 'DRAFT',
+          createdById: testUserId,
+        },
+      });
+
+      // Try to send order with no items
+      await expect(service.sendOrder(ctx, order.id)).rejects.toThrow();
+    });
+
+    it('should prevent editing a SENT order', async () => {
+      // Create a PracticeSupplier
+      const globalSupplier = await prisma.globalSupplier.create({
+        data: {
+          name: 'Test Global Supplier',
+          country: 'IE',
+        },
+      });
+
+      const practiceSupplier = await prisma.practiceSupplier.create({
+        data: {
+          practiceId: testPracticeId,
+          globalSupplierId: globalSupplier.id,
+        },
+      });
+
+      // Create and send order
+      const order = await service.createOrder(ctx, {
+        practiceSupplierId: practiceSupplier.id,
+        items: [
+          { itemId: testItem1Id, quantity: 10, unitPrice: 5.99 },
+        ],
+      });
+
+      await service.sendOrder(ctx, order.id);
+
+      // Try to update the sent order
+      await expect(
+        service.updateOrder(ctx, order.id, { notes: 'Updated notes' })
+      ).rejects.toThrow('Cannot edit orders that have been sent or received');
+
+      // Try to add item to sent order
+      await expect(
+        service.addOrderItem(ctx, order.id, { itemId: testItem2Id, quantity: 5 })
+      ).rejects.toThrow('Cannot edit orders that have been sent or received');
+
+      // Try to delete sent order
+      await expect(
+        service.deleteOrder(ctx, order.id)
+      ).rejects.toThrow('Can only delete draft orders');
+    });
+  });
 });
 

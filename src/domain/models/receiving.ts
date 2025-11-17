@@ -123,5 +123,6 @@ export interface ConfirmGoodsReceiptResult {
   linesProcessed: number;
   inventoryUpdated: boolean;
   lowStockNotifications: string[];
+  orderId?: string | null;
 }
 

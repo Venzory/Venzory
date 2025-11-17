@@ -112,25 +112,25 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
 
     setIsConfirming(true);
     try {
-      // The action now handles the redirect automatically
-      // If linked to an order, redirects to /orders/{orderId}
-      // Otherwise redirects to /receiving
-      await confirmGoodsReceiptAction(receipt.id);
+      const result = await confirmGoodsReceiptAction(receipt.id);
+      
+      // Show success message
       toast.success('Receipt confirmed and inventory updated');
-    } catch (error) {
-      // Next.js redirect() throws a special error that should propagate
-      // Check if this is a redirect error and rethrow it
-      if (error && typeof error === 'object' && 'digest' in error && 
-          typeof (error as any).digest === 'string' && 
-          (error as any).digest.startsWith('NEXT_REDIRECT')) {
-        throw error;
+      
+      // Show low stock warnings if any
+      if (result.lowStockWarnings && result.lowStockWarnings.length > 0) {
+        result.lowStockWarnings.forEach((itemName) => {
+          toast.info(`Low stock: ${itemName}`);
+        });
       }
       
+      // Navigate to the appropriate page
+      router.push(result.redirectTo);
+    } catch (error) {
       console.error('Confirm error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to confirm receipt');
       setIsConfirming(false);
     }
-    // Don't set isConfirming to false here - the redirect will happen
   };
 
   const handleCancel = async () => {

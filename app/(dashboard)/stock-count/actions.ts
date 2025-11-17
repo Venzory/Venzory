@@ -146,7 +146,12 @@ export async function updateCountLineAction(_prevState: unknown, formData: FormD
       notes
     );
 
+    // Extract sessionId from the line to revalidate specific session page
+    const sessionIdFromForm = formData.get('sessionId') as string | null;
     revalidatePath(`/stock-count`);
+    if (sessionIdFromForm) {
+      revalidatePath(`/stock-count/${sessionIdFromForm}`);
+    }
     return { success: true, variance } as const;
   } catch (error) {
     console.error('[Stock Count Actions] Error updating line:', error);
@@ -170,6 +175,7 @@ export async function removeCountLineAction(lineId: string) {
     await inventoryService.removeCountLine(ctx, lineId);
 
     revalidatePath('/stock-count');
+    // Note: Session-specific revalidation handled by calling component via router.refresh()
   } catch (error) {
     console.error('[Stock Count Actions] Error removing line:', error);
     
@@ -199,6 +205,8 @@ export async function completeStockCountAction(sessionId: string, applyAdjustmen
     revalidatePath('/stock-count');
     revalidatePath(`/stock-count/${sessionId}`);
     revalidatePath('/inventory');
+    revalidatePath('/dashboard');
+    revalidatePath('/locations');
 
     return { success: true, adjustedItems, warnings } as const;
   } catch (error) {

@@ -83,6 +83,7 @@ export class InventoryRepository extends BaseRepository {
           select: {
             id: true,
             supplierId: true,
+            practiceSupplierId: true,
             unitPrice: true,
             currency: true,
             minOrderQty: true,
@@ -713,6 +714,54 @@ export class InventoryRepository extends BaseRepository {
     return client.item.count({
       where: { productId },
     });
+  }
+
+  /**
+   * Find item by product GTIN (for barcode scanning)
+   * Bypasses pagination to ensure reliable lookup
+   */
+  async findItemByProductGtin(
+    gtin: string,
+    practiceId: string,
+    options?: FindOptions
+  ): Promise<ItemWithRelations | null> {
+    const client = this.getClient(options?.tx);
+
+    const item = await client.item.findFirst({
+      where: {
+        practiceId,
+        product: {
+          gtin,
+        },
+      },
+      include: {
+        product: true,
+        defaultSupplier: true,
+        defaultPracticeSupplier: {
+          include: {
+            globalSupplier: true,
+          },
+        },
+        supplierItems: {
+          select: {
+            id: true,
+            supplierId: true,
+            practiceSupplierId: true,
+            unitPrice: true,
+            currency: true,
+            minOrderQty: true,
+            supplierSku: true,
+          },
+        },
+        inventory: {
+          include: {
+            location: true,
+          },
+        },
+      },
+    });
+
+    return item as ItemWithRelations | null;
   }
 }
 

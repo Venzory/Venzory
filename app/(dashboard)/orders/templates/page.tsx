@@ -6,6 +6,7 @@ import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getOrderService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
+import { Button } from '@/components/ui/button';
 
 import { DeleteTemplateButton } from './_components/delete-template-button';
 
@@ -39,11 +40,10 @@ export default async function TemplatesPage() {
           </p>
         </div>
         {canManage ? (
-          <Link
-            href="/orders/templates/new"
-            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
-          >
-            New Template
+          <Link href="/orders/templates/new">
+            <Button variant="primary" size="md">
+              New Template
+            </Button>
           </Link>
         ) : null}
       </div>
@@ -75,11 +75,10 @@ function TemplatesList({
             Create your first order template to streamline ordering.
           </p>
           {canManage ? (
-            <Link
-              href="/orders/templates/new"
-              className="inline-block rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
-            >
-              Create Template
+            <Link href="/orders/templates/new">
+              <Button variant="primary" size="md">
+                Create Template
+              </Button>
             </Link>
           ) : null}
         </div>
@@ -123,9 +122,9 @@ function TemplateCard({
         ) : null}
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-500">
+      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
         <div className="flex items-center gap-1">
-          <span className="font-medium text-slate-900 dark:text-slate-300">
+          <span className="font-medium text-slate-900 dark:text-slate-200">
             {template.items.length}
           </span>
           <span>{template.items.length === 1 ? 'item' : 'items'}</span>
@@ -137,28 +136,25 @@ function TemplateCard({
       </div>
 
       <div className="flex items-center gap-2 pt-2">
-        <Link
-          href={`/orders/templates/${template.id}`}
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          View
+        <Link href={`/orders/templates/${template.id}`} className="flex-1">
+          <Button variant="secondary" size="sm" className="w-full">
+            View
+          </Button>
         </Link>
         {canManage ? (
           <>
-            <Link
-              href={`/orders/templates/${template.id}/preview`}
-              className="flex-1 rounded-lg bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-sky-700"
-            >
-              Create Order
+            <Link href={`/orders/templates/${template.id}/preview`} className="flex-1">
+              <Button variant="primary" size="sm" className="w-full">
+                Create Order
+              </Button>
             </Link>
             <DeleteTemplateButton templateId={template.id} />
           </>
         ) : (
-          <Link
-            href={`/orders/templates/${template.id}/preview`}
-            className="flex-1 rounded-lg bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-sky-700"
-          >
-            View Details
+          <Link href={`/orders/templates/${template.id}/preview`} className="flex-1">
+            <Button variant="primary" size="sm" className="w-full">
+              View Details
+            </Button>
           </Link>
         )}
       </div>

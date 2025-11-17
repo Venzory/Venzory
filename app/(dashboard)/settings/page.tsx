@@ -16,6 +16,16 @@ import {
   cancelInviteAction,
 } from './actions';
 
+// Helper to safely format role labels
+function formatRoleLabel(role: string | null | undefined): string {
+  if (!role || typeof role !== 'string') return 'Viewer';
+  const normalized = role.toUpperCase();
+  if (normalized === 'ADMIN') return 'Admin';
+  if (normalized === 'STAFF') return 'Staff';
+  if (normalized === 'VIEWER') return 'Viewer';
+  return 'Viewer'; // Default fallback
+}
+
 export default async function SettingsPage() {
   const session = await auth();
 
@@ -41,35 +51,76 @@ export default async function SettingsPage() {
     );
   }
 
-  // Build request context
-  const ctx = buildRequestContextFromSession(session);
+  // Defensive defaults for memberships
+  const memberships = session.user.memberships ?? [];
 
-  // Check if user is admin
+  // Check if user is admin (treat missing membership as no privileges)
   const isAdmin = hasRole({
-    memberships: session.user.memberships,
+    memberships,
     practiceId: activePracticeId,
     minimumRole: PracticeRole.ADMIN,
   });
 
-  // Fetch practice details with members using SettingsService
-  const practice = await getSettingsService().getPracticeSettings(ctx);
-  const users = await getSettingsService().getPracticeUsers(ctx);
-  const invites = await getSettingsService().getPendingInvites(ctx);
+  // Fetch practice details with null-safe error handling
+  let practice: any = null;
+  let users: any[] = [];
+  let invites: any[] = [];
+  let fetchError: string | null = null;
 
-  // Transform practice data to match the previous structure (if needed)
-  const practiceWithMembers = {
-    ...practice,
-    users,
-    invites,
-    _count: { users: users.length },
-  };
+  try {
+    const ctx = buildRequestContextFromSession(session);
+    
+    // Fetch data with individual try/catch for partial failures
+    try {
+      practice = await getSettingsService().getPracticeSettings(ctx);
+    } catch (err) {
+      console.error('[Settings] Failed to fetch practice settings:', err);
+      fetchError = 'Failed to load practice settings';
+    }
 
-  // Alias for backward compatibility
-  const practiceData = practiceWithMembers;
+    try {
+      const rawUsers = await getSettingsService().getPracticeUsers(ctx);
+      users = Array.isArray(rawUsers) ? rawUsers : [];
+    } catch (err) {
+      console.error('[Settings] Failed to fetch practice users:', err);
+      users = [];
+    }
+
+    try {
+      const rawInvites = await getSettingsService().getPendingInvites(ctx);
+      invites = Array.isArray(rawInvites) ? rawInvites : [];
+    } catch (err) {
+      console.error('[Settings] Failed to fetch pending invites:', err);
+      invites = [];
+    }
+  } catch (err) {
+    console.error('[Settings] Failed to build request context:', err);
+    fetchError = 'Unable to load settings';
+  }
+
+  // If we couldn't load practice at all, show error state
+  if (!practice && fetchError) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Settings</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Manage your practice settings, users, and preferences.
+          </p>
+        </div>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 dark:border-rose-800 dark:bg-rose-900/20">
+          <p className="text-sm font-medium text-rose-900 dark:text-rose-200">{fetchError}</p>
+          <p className="mt-1 text-sm text-rose-700 dark:text-rose-300">
+            Please try refreshing the page or contact support if the problem persists.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Defensive defaults for practice metadata
+  const practiceName = practice?.name ?? 'your practice';
   const pendingInvites = invites;
-
-  // Continue with existing code structure...
-  const members = practiceWithMembers.users || [];
 
   return (
     <div className="space-y-8">
@@ -81,7 +132,7 @@ export default async function SettingsPage() {
       </div>
 
       {/* Practice Settings Section - Only for admins */}
-      {isAdmin && (
+      {isAdmin && practice && (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Practice Settings</h2>
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
@@ -124,63 +175,74 @@ export default async function SettingsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {users.map((membership: any) => (
-                  <tr key={membership.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">
-                      {membership.user.name || '-'}
-                      {membership.user.id === session.user.id && (
-                        <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">(You)</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">
-                      {membership.user.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {isAdmin && membership.user.id !== session.user.id ? (
-                        <UserRoleSelector
-                          userId={membership.user.id}
-                          currentRole={membership.role}
-                          updateRoleAction={updateUserRoleInlineAction}
-                        />
-                      ) : (
-                        <span
-                          className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                            membership.role === 'ADMIN'
-                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-                              : membership.role === 'STAFF'
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                                : 'bg-slate-200 text-slate-700 dark:bg-slate-800/30 dark:text-slate-300'
-                          }`}
-                        >
-                          {membership.role.charAt(0) + membership.role.slice(1).toLowerCase()}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                          membership.status === 'ACTIVE'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                            : membership.status === 'INVITED'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                              : 'bg-slate-200 text-slate-700 dark:bg-slate-800/30 dark:text-slate-400'
-                        }`}
-                      >
-                        {membership.status.charAt(0) + membership.status.slice(1).toLowerCase()}
-                      </span>
-                    </td>
-                    {isAdmin && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {membership.user.id !== session.user.id && (
-                          <RemoveUserButton 
-                            userId={membership.user.id} 
-                            userName={membership.user.name || membership.user.email}
-                          />
+                {users.map((membership: any) => {
+                  // Safe guards for partial membership data
+                  const user = membership?.user ?? {};
+                  const userId = user.id ?? '';
+                  const userName = user.name || '-';
+                  const userEmail = user.email || '-';
+                  const membershipRole = membership?.role ?? 'VIEWER';
+                  const membershipStatus = membership?.status ?? 'ACTIVE';
+                  const membershipId = membership?.id ?? `unknown-${Math.random()}`;
+
+                  return (
+                    <tr key={membershipId} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">
+                        {userName}
+                        {userId && userId === session.user.id && (
+                          <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">(You)</span>
                         )}
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">
+                        {userEmail}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {isAdmin && userId && userId !== session.user.id ? (
+                          <UserRoleSelector
+                            userId={userId}
+                            currentRole={membershipRole}
+                            updateRoleAction={updateUserRoleInlineAction}
+                          />
+                        ) : (
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                              membershipRole === 'ADMIN'
+                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                                : membershipRole === 'STAFF'
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                  : 'bg-slate-200 text-slate-700 dark:bg-slate-800/30 dark:text-slate-300'
+                            }`}
+                          >
+                            {formatRoleLabel(membershipRole)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span
+                          className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                            membershipStatus === 'ACTIVE'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                              : membershipStatus === 'INVITED'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                : 'bg-slate-200 text-slate-700 dark:bg-slate-800/30 dark:text-slate-400'
+                          }`}
+                        >
+                          {membershipStatus ? membershipStatus.charAt(0) + membershipStatus.slice(1).toLowerCase() : 'Unknown'}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {userId && userId !== session.user.id && (
+                            <RemoveUserButton 
+                              userId={userId} 
+                              userName={userName !== '-' ? userName : userEmail}
+                            />
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -215,34 +277,47 @@ export default async function SettingsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {pendingInvites.map((invite: any) => (
-                    <tr key={invite.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">
-                        {invite.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                          {invite.role.charAt(0) + invite.role.slice(1).toLowerCase()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
-                        {new Date(invite.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
-                        {new Date(invite.expiresAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <form action={cancelInviteAction.bind(null, invite.id)} className="inline">
-                          <button
-                            type="submit"
-                            className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 text-xs font-medium"
-                          >
-                            Cancel
-                          </button>
-                        </form>
-                      </td>
-                    </tr>
-                  ))}
+                  {pendingInvites.map((invite: any) => {
+                    // Safe guards for partial invite data
+                    const inviteId = invite?.id ?? `unknown-${Math.random()}`;
+                    const inviteEmail = invite?.email ?? '-';
+                    const inviteRole = invite?.role ?? 'VIEWER';
+                    const createdAt = invite?.createdAt;
+                    const expiresAt = invite?.expiresAt;
+
+                    return (
+                      <tr key={inviteId} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">
+                          {inviteEmail}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            {formatRoleLabel(inviteRole)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
+                          {createdAt ? new Date(createdAt).toLocaleDateString() : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
+                          {expiresAt ? new Date(expiresAt).toLocaleDateString() : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {inviteId && inviteId.startsWith('unknown-') ? (
+                            <span className="text-xs text-slate-400">-</span>
+                          ) : (
+                            <form action={cancelInviteAction.bind(null, inviteId)} className="inline">
+                              <button
+                                type="submit"
+                                className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 text-xs font-medium"
+                              >
+                                Cancel
+                              </button>
+                            </form>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -256,7 +331,7 @@ export default async function SettingsPage() {
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Invite User</h2>
 
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-            <InviteUserForm practiceId={activePracticeId} practiceName={practice.name} />
+            <InviteUserForm practiceId={activePracticeId} practiceName={practiceName} />
           </div>
         </div>
       )}

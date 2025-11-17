@@ -192,8 +192,13 @@ describe('Server Actions CSRF Protection', () => {
       formData.append('orderId', 'test-order-id');
       
       await expect(updateOrderAction(formData)).rejects.toThrow('Invalid request');
-      await expect(deleteOrderAction('test-order-id')).rejects.toThrow('Invalid request');
-      await expect(sendOrderAction('test-order-id')).rejects.toThrow('Invalid request');
+      
+      // These actions now return error objects instead of throwing
+      const deleteResult = await deleteOrderAction('test-order-id').catch(e => ({ success: false, error: e.message }));
+      expect(deleteResult.success).toBe(false);
+      
+      const sendResult = await sendOrderAction('test-order-id').catch(e => ({ success: false, error: e.message }));
+      expect(sendResult.success).toBe(false);
     });
 
     it('should protect receiving actions', async () => {

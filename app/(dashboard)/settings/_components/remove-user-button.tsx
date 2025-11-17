@@ -2,6 +2,7 @@
 
 import { useConfirm } from '@/hooks/use-confirm';
 import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 import { removeUserAction } from '../actions';
 
 export function RemoveUserButton({ userId, userName }: { userId: string; userName: string }) {
@@ -23,17 +24,21 @@ export function RemoveUserButton({ userId, userName }: { userId: string; userNam
       await removeUserAction(userId);
       toast.success('User removed from practice');
     } catch (error) {
-      toast.error('Failed to remove user');
+      // Surface the actual error message if available (e.g. last admin, permission errors)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove user';
+      toast.error(errorMessage);
     }
   };
 
   return (
-    <button
+    <Button
       onClick={handleRemove}
-      className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 text-xs font-medium"
+      variant="ghost"
+      size="sm"
+      className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
     >
       Remove
-    </button>
+    </Button>
   );
 }
 

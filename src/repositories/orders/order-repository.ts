@@ -38,10 +38,6 @@ export class OrderRepository extends BaseRepository {
       ...this.scopeToPractice(practiceId),
     };
 
-    if (filters?.supplierId) {
-      where.supplierId = filters.supplierId;
-    }
-
     if (filters?.practiceSupplierId) {
       where.practiceSupplierId = filters.practiceSupplierId;
     }
@@ -67,9 +63,6 @@ export class OrderRepository extends BaseRepository {
     const orders = await client.order.findMany({
       where,
       include: {
-        supplier: {
-          select: { id: true, name: true, email: true, phone: true },
-        },
         practiceSupplier: {
           include: {
             globalSupplier: true,
@@ -106,7 +99,6 @@ export class OrderRepository extends BaseRepository {
     const order = await client.order.findUnique({
       where: { id: orderId, practiceId },
       include: {
-        supplier: true,
         practiceSupplier: {
           include: {
             globalSupplier: true,
@@ -151,8 +143,7 @@ export class OrderRepository extends BaseRepository {
     const order = await client.order.create({
       data: {
         practiceId: input.practiceId,
-        supplierId: input.supplierId!, // Will be set by service layer
-        practiceSupplierId: input.practiceSupplierId ?? null,
+        practiceSupplierId: input.practiceSupplierId,
         status: OrderStatus.DRAFT,
         createdById,
         reference: input.reference ?? null,
@@ -492,7 +483,7 @@ export class OrderRepository extends BaseRepository {
     return orders.map((order) => ({
       id: order.id,
       reference: order.reference,
-      supplierName: order.supplier?.name ?? 'Unknown',
+      supplierName: order.practiceSupplier?.customLabel || order.practiceSupplier?.globalSupplier?.name || 'Unknown',
       status: order.status,
       itemCount: order.items?.length ?? 0,
       totalAmount: calculateOrderTotal(order.items || []),

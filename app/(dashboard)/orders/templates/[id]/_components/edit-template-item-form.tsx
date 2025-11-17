@@ -58,13 +58,13 @@ export function EditTemplateItemForm({
         value={quantity}
         onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
         onBlur={handleBlur}
-        className="w-20 rounded border border-slate-700 bg-slate-800 px-2 py-1 text-center text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30"
+        className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-center text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
       />
       {itemUnit ? (
-        <span className="text-slate-500">{itemUnit}</span>
+        <span className="text-slate-500 dark:text-slate-400">{itemUnit}</span>
       ) : null}
       {hasChanges ? (
-        <span className="text-xs text-amber-400">*</span>
+        <span className="text-xs text-amber-500 dark:text-amber-400">*</span>
       ) : null}
     </div>
   );

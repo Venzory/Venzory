@@ -33,6 +33,7 @@ import {
   validatePrice,
 } from '@/src/domain/validators';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 import type { OrderTemplate, OrderTemplateItem } from '@prisma/client';
 
 export class OrderService {
@@ -88,7 +89,6 @@ export class OrderService {
 
   /**
    * Create new order
-   * Supports both legacy Supplier and new PracticeSupplier (Phase 2)
    */
   async createOrder(
     ctx: RequestContext,
@@ -102,21 +102,20 @@ export class OrderService {
       throw new ValidationError('Order must have at least one item');
     }
 
-    // Validate supplier IDs - at least one must be provided
-    if (!input.supplierId && !input.practiceSupplierId) {
-      throw new ValidationError('Either supplierId or practiceSupplierId must be provided');
-    }
-
     // Validate all items
     for (const item of input.items) {
       validatePositiveQuantity(item.quantity);
     }
 
-    // Phase 2: Resolve supplier IDs using dual-supplier pattern
-    const resolvedSupplierIds = await this.resolveSupplierIds(
-      input,
+    // Verify PracticeSupplier exists and is not blocked
+    const practiceSupplier = await this.practiceSupplierRepository.findPracticeSupplierById(
+      input.practiceSupplierId,
       ctx.practiceId
     );
+
+    if (practiceSupplier.isBlocked) {
+      throw new BusinessRuleViolationError('Cannot create order with blocked supplier');
+    }
 
     return withTransaction(async (tx) => {
       // Verify all items exist (batch validation avoids N+1)
@@ -127,14 +126,12 @@ export class OrderService {
         throw new NotFoundError(`Items not found: ${missingIds.join(', ')}`);
       }
 
-      // Create order with resolved supplier IDs
+      // Create order
       const order = await this.orderRepository.createOrder(
         ctx.userId,
         {
           ...input,
           practiceId: ctx.practiceId,
-          supplierId: resolvedSupplierIds.supplierId,
-          practiceSupplierId: resolvedSupplierIds.practiceSupplierId,
         },
         { tx }
       );
@@ -149,15 +146,17 @@ export class OrderService {
       // Calculate total amount
       const totalAmount = calculateOrderTotal(fullOrder.items || []);
 
-      // Get supplier name from appropriate source
-      const supplierName = this.getSupplierDisplayName(fullOrder);
+      // Get supplier name
+      const supplierName = fullOrder.practiceSupplier?.customLabel 
+        || fullOrder.practiceSupplier?.globalSupplier?.name 
+        || 'Unknown';
 
       // Log audit event
       await this.auditService.logOrderCreated(
         ctx,
         order.id,
         {
-          supplierId: resolvedSupplierIds.supplierId,
+          supplierId: input.practiceSupplierId,
           supplierName,
           itemCount: input.items.length,
           totalAmount,
@@ -167,84 +166,6 @@ export class OrderService {
 
       return fullOrder;
     });
-  }
-
-  /**
-   * Resolve supplier IDs for dual-supplier pattern (Phase 2)
-   * Ensures both supplierId and practiceSupplierId are populated when applicable
-   */
-  private async resolveSupplierIds(
-    input: Pick<CreateOrderInput, 'supplierId' | 'practiceSupplierId'>,
-    practiceId: string
-  ): Promise<{ supplierId: string; practiceSupplierId: string | null }> {
-    // Case 1: PracticeSupplier provided (preferred - Phase 2)
-    if (input.practiceSupplierId) {
-      const practiceSupplier = await this.practiceSupplierRepository.findPracticeSupplierById(
-        input.practiceSupplierId,
-        practiceId
-      );
-
-      // Check if supplier is blocked
-      if (practiceSupplier.isBlocked) {
-        throw new BusinessRuleViolationError('Cannot create order with blocked supplier');
-      }
-
-      // Derive legacy supplierId from migration tracking or find legacy supplier
-      let legacySupplierId = practiceSupplier.migratedFromSupplierId;
-      
-      if (!legacySupplierId) {
-        // If no migration tracking, this is a new PracticeSupplier
-        // For backward compatibility, we still need a legacy Supplier record
-        // This is a transitional state - in Phase 3+ we'll remove this requirement
-        throw new ValidationError(
-          'PracticeSupplier has no legacy supplier mapping. Please contact support.'
-        );
-      }
-
-      // Verify legacy supplier exists
-      await this.userRepository.findSupplierById(legacySupplierId, practiceId);
-
-      return {
-        supplierId: legacySupplierId,
-        practiceSupplierId: input.practiceSupplierId,
-      };
-    }
-
-    // Case 2: Legacy Supplier provided (fallback - backward compatibility)
-    if (input.supplierId) {
-      // Verify supplier exists
-      await this.userRepository.findSupplierById(input.supplierId, practiceId);
-
-      // Try to find corresponding PracticeSupplier for forward compatibility
-      const practiceSupplier = await this.practiceSupplierRepository.findPracticeSupplierByMigratedId(
-        practiceId,
-        input.supplierId
-      );
-
-      return {
-        supplierId: input.supplierId,
-        practiceSupplierId: practiceSupplier?.id ?? null,
-      };
-    }
-
-    // Should never reach here due to validation above
-    throw new ValidationError('No supplier specified');
-  }
-
-  /**
-   * Get supplier display name from order (Phase 2 helper)
-   * Prefers PracticeSupplier customLabel, falls back to GlobalSupplier or legacy Supplier name
-   */
-  private getSupplierDisplayName(order: OrderWithRelations): string {
-    // Prefer PracticeSupplier info if available
-    if (order.practiceSupplier) {
-      return order.practiceSupplier.customLabel 
-        || order.practiceSupplier.globalSupplier?.name 
-        || 'Unknown';
-    }
-
-    // Fall back to legacy Supplier
-    return order.supplier?.name ?? 'Unknown';
   }
 
   /**
@@ -422,7 +343,7 @@ export class OrderService {
       validateOrderCanBeSent({
         status: order.status,
         items: order.items ?? [],
-        supplierId: order.supplierId,
+        supplierId: order.practiceSupplierId,
       });
 
       // Update status to SENT
@@ -442,7 +363,7 @@ export class OrderService {
         ctx,
         orderId,
         {
-          supplierName: order.supplier?.name ?? 'Unknown',
+          supplierName: order.practiceSupplier?.customLabel || order.practiceSupplier?.globalSupplier?.name || 'Unknown',
           itemCount: order.items?.length ?? 0,
           totalAmount,
         },

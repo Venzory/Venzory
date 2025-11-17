@@ -49,7 +49,7 @@ export function AddTemplateItemForm({ templateId, items, suppliers }: AddTemplat
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         All available items have been added to this template
       </p>
     );
@@ -57,17 +57,17 @@ export function AddTemplateItemForm({ templateId, items, suppliers }: AddTemplat
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <h3 className="text-sm font-semibold text-white">Add Item to Template</h3>
+      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Add Item to Template</h3>
       
       {error ? (
-        <div className="rounded-lg border border-rose-700 bg-rose-900/20 p-3 text-xs text-rose-300">
+        <div className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300">
           {error}
         </div>
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-[2fr_1fr_2fr_auto]">
         <div className="space-y-1">
-          <label htmlFor="itemId" className="text-xs text-slate-400">
+          <label htmlFor="itemId" className="text-xs text-slate-600 dark:text-slate-400">
             Item
           </label>
           <select
@@ -75,7 +75,7 @@ export function AddTemplateItemForm({ templateId, items, suppliers }: AddTemplat
             value={itemId}
             onChange={(e) => setItemId(e.target.value)}
             required
-            className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             <option value="">Select an item...</option>
             {items.map((item) => (
@@ -87,7 +87,7 @@ export function AddTemplateItemForm({ templateId, items, suppliers }: AddTemplat
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="quantity" className="text-xs text-slate-400">
+          <label htmlFor="quantity" className="text-xs text-slate-600 dark:text-slate-400">
             Quantity
           </label>
           <input
@@ -96,19 +96,19 @@ export function AddTemplateItemForm({ templateId, items, suppliers }: AddTemplat
             min="1"
             value={quantity}
             onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-            className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="supplierId" className="text-xs text-slate-400">
+          <label htmlFor="supplierId" className="text-xs text-slate-600 dark:text-slate-400">
             Supplier (optional)
           </label>
           <select
             id="supplierId"
             value={supplierId}
             onChange={(e) => setSupplierId(e.target.value)}
-            className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             <option value="">No supplier</option>
             {suppliers.map((supplier) => (

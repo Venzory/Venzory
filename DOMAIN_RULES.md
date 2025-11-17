@@ -127,11 +127,11 @@ CANCELLED
 | **Service Layer** | Status transition guards, supplier resolution (dual-model), authorization checks, transaction atomicity |
 
 ### Known Gaps
-1. No DB CHECK constraint for positive quantities
-2. No DB constraint for status-dependent fields (sentAt when SENT)
-3. No DB constraint preventing orders without items
-4. No `onDelete` behavior for User and Supplier FKs
-5. No cross-practice validation for OrderItems
+1. ~~No DB CHECK constraint for positive quantities~~ ✅ **RESOLVED** (migration `20251111141000_add_check_constraints`)
+2. ~~No DB constraint for status-dependent fields (sentAt when SENT)~~ ✅ **RESOLVED** (migration `20251111141000_add_check_constraints`)
+3. No DB constraint preventing orders without items (service-layer validation only)
+4. ~~No `onDelete` behavior for User and Supplier FKs~~ ✅ **RESOLVED** (migration `20251111140000_add_ondelete_policies_and_constraints`)
+5. No cross-practice validation for OrderItems (implicit via practice-scoped queries)
 
 ---
 
@@ -263,12 +263,12 @@ CANCELLED
 | **Service Layer** | Status transition guards, atomic inventory updates in transactions, order status calculation, authorization checks |
 
 ### Known Gaps
-1. No DB CHECK constraint for positive quantities
-2. No DB constraint for status-dependent fields (receivedAt when CONFIRMED)
-3. No DB constraint preventing receipts without lines
-4. No `onDelete` behavior for User FK (creator)
-5. No cross-practice validation for linked Order
-6. No warning for over-receiving (receiving more than ordered)
+1. ~~No DB CHECK constraint for positive quantities~~ ✅ **RESOLVED** (migration `20251111141000_add_check_constraints`)
+2. ~~No DB constraint for status-dependent fields (receivedAt when CONFIRMED)~~ ✅ **RESOLVED** (migration `20251111141000_add_check_constraints`)
+3. No DB constraint preventing receipts without lines (service-layer validation only)
+4. ~~No `onDelete` behavior for User FK (creator)~~ ✅ **RESOLVED** (migration `20251111140000_add_ondelete_policies_and_constraints`)
+5. No cross-practice validation for linked Order (implicit via practice-scoped queries)
+6. No warning for over-receiving (receiving more than ordered) (business logic, not a constraint)
 
 ---
 
@@ -294,14 +294,28 @@ CANCELLED
   - Database: FK with RESTRICT (cannot delete Product if Items exist)
   - Critical: Protects canonical product data
 
-- **[ENFORCED - Validator + Service]** Item.name is required and validated
+- **[ENFORCED - DB UNIQUE + Validator]** Item.name is required, validated, and unique per practice
+  - Database: Unique constraint on `(practiceId, name)` ✅
   - Validator: `validateStringLength(name, 'Item name', 1, 255)`
   - Service: Checked in `createItem()` and `updateItem()`
+  - Migration: `20251113180000_add_unique_constraints_items_locations`
+
+- **[ENFORCED - DB PARTIAL UNIQUE]** Item.sku is unique per practice (where not null)
+  - Database: Partial unique index on `(practiceId, sku) WHERE sku IS NOT NULL` ✅
+  - Service: Validated in `createItem()` and `updateItem()`
+  - Migration: `20251113180000_add_unique_constraints_items_locations`
 
 **LocationInventory Identity**
 - **[ENFORCED - DB Composite PK]** Unique (locationId, itemId)
   - Database: Composite primary key
   - One inventory record per item per location
+
+**Location Identity**
+- **[ENFORCED - DB PARTIAL UNIQUE]** Location.code is unique per practice (where not null)
+  - Database: Partial unique index on `(practiceId, code) WHERE code IS NOT NULL` ✅
+  - Service: Validated in location creation/update
+  - Migration: `20251113180000_add_unique_constraints_items_locations`
+  - Allows multiple locations with NULL codes within same practice
 
 **Stock Adjustments (CRITICAL)**
 - **[ENFORCED - Service]** Stock adjustment cannot result in negative inventory
@@ -432,15 +446,16 @@ CANCELLED
 | **Domain Validators** | `validatePositiveQuantity()`, `validateNonNegativeResult()`, `validateStringLength()`, `validateTransferLocations()`, `validatePrice()` (not consistently used) |
 | **Service Layer** | Transaction atomicity for adjustments/transfers/counts, authorization checks, existence checks, low stock notifications |
 
-### Known Gaps (CRITICAL)
-1. **❌ P1**: No DB CHECK constraint for `LocationInventory.quantity >= 0` 
-2. **❌ P1**: No DB CHECK constraint for positive quantities on adjustments/transfers
-3. No DB constraint for transfer same-location prevention
-4. No DB constraint for sufficient source stock in transfers
-5. No `onDelete` behavior for multiple FKs (User, Supplier, Location)
-6. No cross-practice validation for Item default suppliers
-7. No price validation in SupplierItem
-8. No unique constraint on Item (practiceId, productId)
+### Known Gaps
+1. ~~**❌ P1**: No DB CHECK constraint for `LocationInventory.quantity >= 0`~~ ✅ **RESOLVED** (migration `20251111141000_add_check_constraints`)
+2. ~~**❌ P1**: No DB CHECK constraint for positive quantities on adjustments/transfers~~ ✅ **RESOLVED** (migration `20251111141000_add_check_constraints`)
+3. ~~No DB constraint for transfer same-location prevention~~ ✅ **RESOLVED** (migration `20251111141000_add_check_constraints`)
+4. No DB constraint for sufficient source stock in transfers (checked at service layer before transaction)
+5. ~~No `onDelete` behavior for multiple FKs (User, Supplier, Location)~~ ✅ **RESOLVED** (migration `20251111140000_add_ondelete_policies_and_constraints`)
+6. No cross-practice validation for Item default suppliers (implicit via practice-scoped queries)
+7. ~~No price validation in SupplierItem~~ ✅ **RESOLVED** (migration `20251111141000_add_check_constraints`)
+8. ~~No unique constraint on Item (practiceId, name)~~ ✅ **RESOLVED** (migration `20251113180000_add_unique_constraints_items_locations`)
+9. ~~No unique constraint on Item (practiceId, sku)~~ ✅ **RESOLVED** (migration `20251113180000_add_unique_constraints_items_locations`, partial unique index)
 
 ---
 
@@ -546,12 +561,12 @@ Phase 2:    Practice → PracticeSupplier → GlobalSupplier (platform-wide)
 | **Service Layer** | Blocked supplier check, dual-model resolution, migration tracking usage |
 
 ### Known Gaps
-1. PracticeSupplier.migratedFromSupplierId has no FK constraint
-2. No unique constraint on GlobalSupplier.name
-3. No unique constraint on Supplier (practiceId, name)
-4. No validation for dual-model consistency
-5. Error if PracticeSupplier has no legacy mapping (blocks Phase 2+ suppliers)
-6. No deprecation path defined for legacy Supplier model
+1. ~~PracticeSupplier.migratedFromSupplierId has no FK constraint~~ ✅ **RESOLVED** (migration `20251111140000_add_ondelete_policies_and_constraints`)
+2. ~~No unique constraint on GlobalSupplier.name~~ ✅ **RESOLVED** (migration `20251111140000_add_ondelete_policies_and_constraints`)
+3. ~~No unique constraint on Supplier (practiceId, name)~~ ✅ **RESOLVED** (migration `20251111140000_add_ondelete_policies_and_constraints`)
+4. No validation for dual-model consistency (service-layer check recommended)
+5. Error if PracticeSupplier has no legacy mapping (Phase 2 enhancement needed)
+6. No deprecation path defined for legacy Supplier model (Phase 3 planning)
 
 ---
 
@@ -645,12 +660,12 @@ Phase 2:    Practice → PracticeSupplier → GlobalSupplier (platform-wide)
 | **Domain Validators** | `validateGtin()` exists but **not used** |
 | **Service Layer** | Product existence checks, catalog availability checks in addItemFromCatalog |
 
-### Known Gaps (Critical for Magento)
-1. **❌ P1**: `validateGtin()` not enforced in Product creation
-2. No validation for isGs1Product consistency (gtin should be set)
-3. No validation for gs1VerificationStatus consistency (gs1VerifiedAt should be set)
-4. No price validation in SupplierCatalog
-5. No validation for dual-model consistency (supplierId vs practiceSupplierId)
+### Known Gaps
+1. **❌ P1**: `validateGtin()` not enforced in Product creation (service-layer enhancement needed)
+2. No validation for isGs1Product consistency (gtin should be set) (service-layer enhancement needed)
+3. No validation for gs1VerificationStatus consistency (gs1VerifiedAt should be set) (service-layer enhancement needed)
+4. ~~No price validation in SupplierCatalog~~ ✅ **RESOLVED** (migration `20251111141000_add_check_constraints`)
+5. No validation for dual-model consistency (supplierId vs practiceSupplierId) (service-layer check recommended)
 
 ---
 
@@ -1698,13 +1713,17 @@ The following scenarios should be tested to validate invariant enforcement:
 
 - `GlobalSupplier.name`: Unique (prevents duplicate global suppliers)
 - `Supplier(practiceId, name)`: Unique (prevents duplicate suppliers within practice)
+- `Item(practiceId, name)`: Unique (prevents duplicate item names within practice)
+- `Item(practiceId, sku)`: Partial unique index WHERE sku IS NOT NULL (prevents duplicate SKUs within practice)
+- `Location(practiceId, code)`: Partial unique index WHERE code IS NOT NULL (prevents duplicate location codes within practice)
 
 ### Date Applied
 
-**Migration Date**: 2025-11-11  
+**Migration Date**: 2025-11-11 to 2025-11-13  
 **Migration Versions**: 
 - 20251111140000_add_ondelete_policies_and_constraints
 - 20251111141000_add_check_constraints
+- 20251113180000_add_unique_constraints_items_locations
 
 **Documentation**:
 - Migration Guide: `docs/migrations/database-constraint-hardening.md`

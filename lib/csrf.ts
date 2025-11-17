@@ -154,6 +154,9 @@ export async function parseAndVerifySignedToken(signedToken: string): Promise<st
 /**
  * Extract CSRF token from cookie header
  * 
+ * Supports both production (__Host-csrf) and development (csrf-token) cookie names.
+ * The __Host- prefix requires HTTPS and Secure flag, so we use a simpler name in development.
+ * 
  * @param request - The incoming request
  * @returns The signed token from cookie, or null if not found
  */
@@ -174,7 +177,8 @@ export function getCsrfTokenFromCookie(request: Request): string | null {
       return acc;
     }, {} as Record<string, string>);
     
-    return cookies['__Host-csrf'] || null;
+    // Try production cookie name first, then development
+    return cookies['__Host-csrf'] || cookies['csrf-token'] || null;
   } catch (error) {
     logger.error({
       module: 'csrf',

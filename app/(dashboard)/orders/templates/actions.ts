@@ -283,6 +283,7 @@ export async function createOrdersFromTemplateAction(
 
     revalidatePath('/orders');
     revalidatePath('/orders/templates');
+    revalidatePath('/dashboard');
 
     return result;
   } catch (error: any) {

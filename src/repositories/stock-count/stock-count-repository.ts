@@ -56,7 +56,12 @@ export class StockCountRepository extends BaseRepository {
           select: { id: true, name: true, email: true },
         },
         lines: {
-          select: { id: true },
+          select: { 
+            id: true, 
+            variance: true,
+            countedQuantity: true,
+            systemQuantity: true,
+          },
         },
       },
       ...this.buildPagination(options?.pagination),
@@ -102,6 +107,29 @@ export class StockCountRepository extends BaseRepository {
       'StockCountSession',
       sessionId
     );
+  }
+
+  /**
+   * Find any IN_PROGRESS stock count session for a location
+   * Used to enforce single active session per location rule
+   */
+  async findInProgressSessionByLocation(
+    practiceId: string,
+    locationId: string,
+    options?: FindOptions
+  ): Promise<StockCountSession | null> {
+    const client = this.getClient(options?.tx);
+
+    const session = await client.stockCountSession.findFirst({
+      where: {
+        practiceId,
+        locationId,
+        status: 'IN_PROGRESS',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return session as StockCountSession | null;
   }
 
   /**

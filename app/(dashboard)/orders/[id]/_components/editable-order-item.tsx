@@ -35,18 +35,19 @@ export function EditableOrderItem({
   const lineTotal = optimisticUnitPrice * optimisticQuantity;
 
   const handleQuantityChange = async (newQuantity: number) => {
-    // Guard against invalid values
-    if (newQuantity < 1 || isPendingQty) return;
+    // Guard against invalid values - ensure positive integer
+    const validQuantity = Math.max(1, Math.floor(newQuantity) || 1);
+    if (validQuantity === quantity || isPendingQty) return;
     
     // Optimistically update the UI immediately
     const previousQuantity = optimisticQuantity;
-    setOptimisticQuantity(newQuantity);
+    setOptimisticQuantity(validQuantity);
     
     startQtyTransition(async () => {
       const formData = new FormData();
       formData.set('orderId', orderId);
       formData.set('itemId', itemId);
-      formData.set('quantity', newQuantity.toString());
+      formData.set('quantity', validQuantity.toString());
       formData.set('unitPrice', optimisticUnitPrice.toString());
       
       try {
@@ -61,19 +62,20 @@ export function EditableOrderItem({
   };
 
   const handlePriceChange = async (newPrice: number) => {
-    // Guard against invalid values
-    if (newPrice < 0 || isPendingPrice) return;
+    // Guard against invalid values - ensure non-negative, handle NaN
+    const validPrice = Math.max(0, newPrice || 0);
+    if (validPrice === unitPrice || isPendingPrice) return;
     
     // Optimistically update the UI immediately
     const previousPrice = optimisticUnitPrice;
-    setOptimisticUnitPrice(newPrice);
+    setOptimisticUnitPrice(validPrice);
     
     startPriceTransition(async () => {
       const formData = new FormData();
       formData.set('orderId', orderId);
       formData.set('itemId', itemId);
       formData.set('quantity', optimisticQuantity.toString());
-      formData.set('unitPrice', newPrice.toString());
+      formData.set('unitPrice', validPrice.toString());
       
       try {
         await updateOrderItemAction(formData);

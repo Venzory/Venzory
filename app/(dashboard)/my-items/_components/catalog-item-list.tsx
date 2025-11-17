@@ -39,6 +39,7 @@ interface CatalogItemListProps {
   currentPage: number;
   totalPages: number;
   totalItems: number;
+  itemsPerPage: number;
 }
 
 export function CatalogItemList({
@@ -51,6 +52,7 @@ export function CatalogItemList({
   currentPage,
   totalPages,
   totalItems,
+  itemsPerPage,
 }: CatalogItemListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -150,9 +152,9 @@ export function CatalogItemList({
         <span>
           {totalItems} {totalItems === 1 ? 'item' : 'items'} in your catalog
         </span>
-        {totalItems > 50 && (
+        {totalItems > itemsPerPage && (
           <span>
-            Showing {((currentPage - 1) * 50) + 1}-{Math.min(currentPage * 50, totalItems)}
+            Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalItems)}
           </span>
         )}
       </div>

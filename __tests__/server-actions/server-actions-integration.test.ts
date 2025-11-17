@@ -156,23 +156,25 @@ describe('Server Actions Integration (Valid CSRF)', () => {
   let signedToken: string;
   let rawToken: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     process.env.CSRF_SECRET = 'test-secret-key-for-testing-purposes-only';
     
     // Generate valid CSRF token pair
-    signedToken = createSignedCsrfToken();
-    rawToken = parseAndVerifySignedToken(signedToken)!;
+    signedToken = await createSignedCsrfToken();
+    rawToken = (await parseAndVerifySignedToken(signedToken))!;
   });
 
   /**
    * Helper to mock valid CSRF headers
+   * Uses development cookie name (csrf-token) for test environment
    */
   function mockValidCsrfHeaders() {
     const { headers } = require('next/headers');
     vi.mocked(headers).mockResolvedValue({
       get: vi.fn((name: string) => {
-        if (name === 'cookie') return `__Host-csrf=${encodeURIComponent(signedToken)}`;
+        // Use development cookie name in tests (csrf-token)
+        if (name === 'cookie') return `csrf-token=${encodeURIComponent(signedToken)}`;
         if (name === 'x-csrf-token') return rawToken;
         return null;
       }),
@@ -245,20 +247,24 @@ describe('Server Actions Integration (Valid CSRF)', () => {
   });
 
   describe('Order Actions', () => {
-    it('should create draft order with valid CSRF token', async () => {
+    it('should create draft order with indexed FormData format', async () => {
       mockValidCsrfHeaders();
 
       const { createDraftOrderAction } = await import('@/app/(dashboard)/orders/actions');
       
       const formData = new FormData();
-      formData.append('supplierId', 'test-supplier-id');
-      formData.append('items', JSON.stringify([
-        { itemId: 'test-item-id', quantity: 10, unitPrice: 5.99 }
-      ]));
+      formData.append('practiceSupplierId', 'test-practice-supplier-id');
+      formData.append('items[0].itemId', 'test-item-id-1');
+      formData.append('items[0].quantity', '10');
+      formData.append('items[0].unitPrice', '5.99');
+      formData.append('items[1].itemId', 'test-item-id-2');
+      formData.append('items[1].quantity', '5');
+      formData.append('items[1].unitPrice', '3.50');
       
       // Should redirect on success
       await expect(createDraftOrderAction(null, formData)).rejects.toThrow('NEXT_REDIRECT');
     });
+
 
     it('should add order item with valid CSRF token', async () => {
       mockValidCsrfHeaders();
@@ -271,6 +277,28 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('quantity', '5');
       
       const result = await addOrderItemAction(null, formData);
+      
+      expect(result).toHaveProperty('success');
+      expect(result.success).toBe('Item added to order');
+    });
+
+    it('should send order and return success', async () => {
+      mockValidCsrfHeaders();
+
+      const { sendOrderAction } = await import('@/app/(dashboard)/orders/actions');
+      
+      const result = await sendOrderAction('test-order-id');
+      
+      expect(result).toHaveProperty('success');
+      expect(result.success).toBe(true);
+    });
+
+    it('should delete order and return success', async () => {
+      mockValidCsrfHeaders();
+
+      const { deleteOrderAction } = await import('@/app/(dashboard)/orders/actions');
+      
+      const result = await deleteOrderAction('test-order-id');
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe(true);

@@ -44,7 +44,7 @@ const updateReceiptLineSchema = z.object({
 });
 
 const searchItemByGtinSchema = z.object({
-  gtin: z.string().min(1).max(64),
+  gtin: z.string().min(1).max(64).transform((val) => val.trim()),
 });
 
 /**
@@ -133,7 +133,13 @@ export async function addReceiptLineAction(_prevState: unknown, formData: FormDa
       // Return the first validation error with specific message
       const firstError = parsed.error.issues[0];
       const errorMessage = firstError?.message || 'Invalid input';
-      console.error('[addReceiptLineAction] Validation failed:', errorMessage, firstError);
+      logger.warn({
+        action: 'addReceiptLineAction',
+        userId: ctx.userId,
+        practiceId: ctx.practiceId,
+        receiptId: rawData.receiptId,
+        validationError: errorMessage,
+      }, 'Validation failed when adding receipt line');
       return { error: errorMessage } as const;
     }
 
@@ -156,7 +162,16 @@ export async function addReceiptLineAction(_prevState: unknown, formData: FormDa
     revalidatePath(`/receiving/${receiptId}`);
     return { success: 'Item added to receipt' } as const;
   } catch (error: any) {
-    console.error('[addReceiptLineAction] Error:', error.message);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'addReceiptLineAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      receiptId: formData.get('receiptId'),
+      itemId: formData.get('itemId'),
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to add receipt line');
     return { error: error.message || 'Failed to add item' } as const;
   }
 }
@@ -199,7 +214,15 @@ export async function updateReceiptLineAction(_prevState: unknown, formData: For
     revalidatePath(`/receiving/${result.id}`);
     return { success: 'Line updated' } as const;
   } catch (error: any) {
-    console.error('Failed to update receipt line:', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'updateReceiptLineAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      lineId: formData.get('lineId'),
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to update receipt line');
     return { error: error.message || 'Failed to update line' } as const;
   }
 }
@@ -242,13 +265,8 @@ export async function removeReceiptLineAction(lineId: string) {
 export async function confirmGoodsReceiptAction(receiptId: string) {
   await verifyCsrfFromHeaders();
   
-  let redirectPath = '/receiving';
-  
   try {
     const ctx = await buildRequestContext();
-
-    // Get receipt first to check if it's linked to an order
-    const receipt = await receivingService.getGoodsReceiptById(ctx, receiptId);
 
     // Confirm goods receipt using service
     const result = await receivingService.confirmGoodsReceipt(ctx, receiptId);
@@ -257,21 +275,24 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
       throw new Error(result.message);
     }
 
-    // Low stock notifications are already logged in the service
-    // The lowStockNotifications array can be used to display warnings to the user
-    if (result.lowStockNotifications && result.lowStockNotifications.length > 0) {
-      console.log('Low stock items detected:', result.lowStockNotifications);
-    }
-
     // Revalidate paths
     revalidatePath(`/receiving/${receiptId}`);
     revalidatePath('/receiving');
+    revalidatePath('/inventory');
+    revalidatePath('/dashboard');
     
-    // If linked to an order, redirect to that order page
-    if (receipt?.orderId) {
-      redirectPath = `/orders/${receipt.orderId}`;
-      revalidatePath(redirectPath);
+    // If linked to an order, revalidate order pages
+    if (result.orderId) {
+      revalidatePath(`/orders/${result.orderId}`);
+      revalidatePath('/orders');
     }
+
+    // Return success with redirect target and warnings
+    return {
+      success: true,
+      redirectTo: result.orderId ? `/orders/${result.orderId}` : '/receiving',
+      lowStockWarnings: result.lowStockNotifications,
+    } as const;
   } catch (error: any) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
@@ -285,9 +306,6 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
     
     throw error;
   }
-  
-  // Redirect outside try-catch so it can throw properly
-  redirect(redirectPath);
 }
 
 /**
@@ -372,6 +390,12 @@ export async function searchItemByGtinAction(gtin: string) {
     const item = await receivingService.searchItemByGtin(ctx, parsed.data.gtin);
 
     if (!item) {
+      logger.info({
+        action: 'searchItemByGtinAction',
+        userId: ctx.userId,
+        practiceId: ctx.practiceId,
+        gtin: parsed.data.gtin,
+      }, 'Item not found for GTIN');
       return { error: 'Item not found' } as const;
     }
 
@@ -385,7 +409,15 @@ export async function searchItemByGtinAction(gtin: string) {
       },
     } as const;
   } catch (error: any) {
-    console.error('Failed to search item by GTIN:', error);
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'searchItemByGtinAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      gtin,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to search item by GTIN');
     return { error: error.message || 'Failed to search item' } as const;
   }
 }

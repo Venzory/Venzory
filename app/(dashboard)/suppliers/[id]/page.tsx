@@ -10,6 +10,7 @@ import { hasRole } from '@/lib/rbac';
 import { PracticeSupplierForm } from '../_components/practice-supplier-form';
 import { SupplierStatusBadges } from '../_components/supplier-status-badges';
 import { unlinkPracticeSupplierAction } from '../actions';
+import { getPracticeSupplierDisplay } from '../_utils/supplier-display';
 
 interface SupplierDetailPageProps {
   params: Promise<{
@@ -37,8 +38,8 @@ export default async function SupplierDetailPage({ params }: SupplierDetailPageP
     minimumRole: PracticeRole.STAFF,
   });
 
+  const { name: displayName } = getPracticeSupplierDisplay(practiceSupplier);
   const supplier = practiceSupplier.globalSupplier;
-  const displayName = practiceSupplier.customLabel || supplier.name;
 
   return (
     <section className="space-y-6">
@@ -62,7 +63,7 @@ export default async function SupplierDetailPage({ params }: SupplierDetailPageP
               />
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm">
-              {practiceSupplier.customLabel && (
+              {practiceSupplier.customLabel && supplier?.name && (
                 <p className="text-slate-500 dark:text-slate-500">
                   Also known as: {supplier.name}
                 </p>
@@ -96,12 +97,14 @@ export default async function SupplierDetailPage({ params }: SupplierDetailPageP
               Contact Details
             </h2>
             <dl className="space-y-4 text-sm">
-              <div>
-                <dt className="mb-1 font-medium text-slate-600 dark:text-slate-400">Name</dt>
-                <dd className="text-slate-900 dark:text-slate-100">{supplier.name}</dd>
-              </div>
+              {supplier?.name && (
+                <div>
+                  <dt className="mb-1 font-medium text-slate-600 dark:text-slate-400">Name</dt>
+                  <dd className="text-slate-900 dark:text-slate-100">{supplier.name}</dd>
+                </div>
+              )}
 
-              {supplier.email && (
+              {supplier?.email && (
                 <div>
                   <dt className="mb-1 font-medium text-slate-600 dark:text-slate-400">Email</dt>
                   <dd>
@@ -115,7 +118,7 @@ export default async function SupplierDetailPage({ params }: SupplierDetailPageP
                 </div>
               )}
 
-              {supplier.phone && (
+              {supplier?.phone && (
                 <div>
                   <dt className="mb-1 font-medium text-slate-600 dark:text-slate-400">Phone</dt>
                   <dd>
@@ -129,7 +132,7 @@ export default async function SupplierDetailPage({ params }: SupplierDetailPageP
                 </div>
               )}
 
-              {supplier.website && (
+              {supplier?.website && (
                 <div>
                   <dt className="mb-1 font-medium text-slate-600 dark:text-slate-400">Website</dt>
                   <dd>
@@ -146,7 +149,7 @@ export default async function SupplierDetailPage({ params }: SupplierDetailPageP
                 </div>
               )}
 
-              {supplier.notes && (
+              {supplier?.notes && (
                 <div>
                   <dt className="mb-1 font-medium text-slate-600 dark:text-slate-400">General Notes</dt>
                   <dd className="text-slate-700 dark:text-slate-300">{supplier.notes}</dd>

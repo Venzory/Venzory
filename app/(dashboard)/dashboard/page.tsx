@@ -13,13 +13,14 @@ import { Button } from '@/components/ui/button';
 import { OnboardingReminderCard } from './_components/onboarding-reminder-card';
 import { calculateItemStockInfo } from '@/lib/inventory-utils';
 import { calculateOrderTotal } from '@/lib/prisma-transforms';
+import { getOrderSupplierDisplay } from './_utils/order-display';
 
 export default async function DashboardPage() {
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
   // Fetch data in parallel with safe limits to prevent performance issues
-  const [itemsResult, orders, adjustments, suppliers, onboardingStatus, practiceSuppliers] = await Promise.all([
+  const [itemsResult, orders, adjustments, suppliers, onboardingStatus, setupProgress] = await Promise.all([
     // Limit items to 100 for dashboard calculations
     getInventoryService().findItems(ctx, {}, { page: 1, limit: 100 }),
     // Limit orders to recent 50 for stats
@@ -30,8 +31,8 @@ export default async function DashboardPage() {
     getInventoryService().getSuppliers(ctx),
     // Fetch practice onboarding status
     getSettingsService().getPracticeOnboardingStatus(ctx),
-    // Fetch practice suppliers
-    getSettingsService().getPracticeSuppliers(ctx),
+    // Fetch setup progress
+    getSettingsService().getSetupProgress(ctx),
   ]);
 
   // Extract items from the result
@@ -74,14 +75,16 @@ export default async function DashboardPage() {
   });
 
   // Onboarding status checks
-  const hasSuppliers = practiceSuppliers.length > 0;
-  const hasItems = items.length > 0;
-  const hasOrders = orders.length > 0;
+  const hasLocations = setupProgress.hasLocations ?? false;
+  const hasSuppliers = setupProgress.hasSuppliers ?? false;
+  const hasItems = setupProgress.hasItems ?? false;
+  const hasReceivedOrders = setupProgress.hasReceivedOrders ?? false;
   const isOnboardingComplete = onboardingStatus.onboardingCompletedAt != null;
-  const allSetupComplete = hasSuppliers && hasItems && hasOrders;
+  const isOnboardingSkipped = onboardingStatus.onboardingSkippedAt != null;
+  const allSetupComplete = hasLocations && hasSuppliers && hasItems && hasReceivedOrders;
   
-  // Show reminder if: onboarding not complete AND setup not complete AND (skipped OR staff+)
-  const shouldShowReminder = !isOnboardingComplete && !allSetupComplete && canManage;
+  // Show reminder if: onboarding not complete AND not skipped AND setup not complete AND staff+
+  const shouldShowReminder = !isOnboardingComplete && !isOnboardingSkipped && !allSetupComplete && canManage;
 
   return (
     <section className="space-y-8">
@@ -105,9 +108,10 @@ export default async function DashboardPage() {
       {/* Onboarding Reminder Card */}
       {shouldShowReminder && (
         <OnboardingReminderCard
+          hasLocations={hasLocations}
           hasSuppliers={hasSuppliers}
           hasItems={hasItems}
-          hasOrders={hasOrders}
+          hasReceivedOrders={hasReceivedOrders}
         />
       )}
 
@@ -196,6 +200,9 @@ export default async function DashboardPage() {
                   {orders.map((order) => {
                     const total = calculateOrderTotal(order.items || []);
 
+                    // Get supplier display name and ID for linking (same logic as Orders list page)
+                    const { name: supplierName, linkId: supplierLinkId } = getOrderSupplierDisplay(order);
+
                     return (
                       <tr key={order.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
                         <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
@@ -207,12 +214,16 @@ export default async function DashboardPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <Link
-                            href={`/suppliers#${order.supplier?.id || ''}`}
-                            className="font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-                          >
-                            {order.supplier?.name || 'Unknown'}
-                          </Link>
+                          {supplierLinkId ? (
+                            <Link
+                              href={`/suppliers#${supplierLinkId}`}
+                              className="font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+                            >
+                              {supplierName}
+                            </Link>
+                          ) : (
+                            <span className="text-slate-600 dark:text-slate-400">{supplierName}</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <StatusBadge status={order.status} />

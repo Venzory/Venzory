@@ -13,14 +13,17 @@ import { getInventoryService } from '@/src/services/inventory';
 import { getOrCreateProductForItem } from '@/lib/integrations';
 import { isDomainError } from '@/src/domain/errors';
 import { UserRepository } from '@/src/repositories/users';
+import { LocationRepository } from '@/src/repositories/locations';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import logger from '@/lib/logger';
 
 const inventoryService = getInventoryService();
-// Note: Location and Supplier CRUD operations use UserRepository directly
+// Note: Supplier CRUD operations use UserRepository directly
 // These are simple CRUD operations without complex business logic
 // TODO: Consider moving to InventoryService or SettingsService in future refactoring
 const userRepository = new UserRepository();
+// Location operations now use LocationRepository for enhanced safety and validation
+const locationRepository = new LocationRepository();
 
 // Validation schemas
 const upsertItemSchema = z.object({
@@ -160,6 +163,7 @@ export async function upsertItemAction(_prevState: unknown, formData: FormData) 
     }
 
     revalidatePath('/inventory');
+    revalidatePath('/dashboard');
     return { success: itemId ? 'Item updated' : 'Item created' } as const;
   } catch (error) {
     const ctx = await buildRequestContext().catch(() => null);
@@ -231,17 +235,19 @@ export async function upsertLocationAction(_prevState: unknown, formData: FormDa
       }
 
       const { locationId, ...values } = parsed.data;
-      await userRepository.updateLocation(locationId, ctx.practiceId, values);
+      await locationRepository.updateLocation(locationId, ctx.practiceId, values);
     } else {
       const parsed = createLocationSchema.safeParse(payload);
       if (!parsed.success) {
         return { errors: parsed.error.flatten().fieldErrors };
       }
 
-      await userRepository.createLocation(ctx.practiceId, parsed.data);
+      await locationRepository.createLocation(ctx.practiceId, parsed.data);
     }
 
     revalidatePath('/locations');
+    revalidatePath('/inventory');
+    revalidatePath('/stock-count/new');
     return { success: payload.locationId ? 'Location updated' : 'Location created' };
   } catch (error) {
     const ctx = await buildRequestContext().catch(() => null);
@@ -269,8 +275,10 @@ export async function deleteLocationAction(locationId: string) {
   
   try {
     const ctx = await buildRequestContext();
-    await userRepository.deleteLocation(locationId, ctx.practiceId);
+    await locationRepository.deleteLocation(locationId, ctx.practiceId);
     revalidatePath('/locations');
+    revalidatePath('/inventory');
+    revalidatePath('/stock-count/new');
   } catch (error) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
@@ -321,6 +329,7 @@ export async function upsertSupplierAction(_prevState: unknown, formData: FormDa
 
     revalidatePath('/suppliers');
     revalidatePath('/inventory');
+    revalidatePath('/dashboard');
     return { success: supplierId ? 'Supplier updated' : 'Supplier added' } as const;
   } catch (error) {
     const ctx = await buildRequestContext().catch(() => null);
@@ -351,6 +360,7 @@ export async function deleteSupplierAction(supplierId: string) {
     await userRepository.deleteSupplier(supplierId, ctx.practiceId);
     revalidatePath('/suppliers');
     revalidatePath('/inventory');
+    revalidatePath('/dashboard');
   } catch (error) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
@@ -393,14 +403,22 @@ export async function createStockAdjustmentAction(_prevState: unknown, formData:
     await inventoryService.adjustStock(ctx, parsed.data);
 
     revalidatePath('/inventory');
+    revalidatePath('/dashboard');
+    revalidatePath('/locations');
     return { success: 'Stock adjustment recorded' };
   } catch (error) {
-    console.error('[createStockAdjustmentAction] Full error:', error);
-    console.error('[createStockAdjustmentAction] Error details:', {
-      message: error instanceof Error ? error.message : String(error),
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'createStockAdjustmentAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      itemId: formData.get('itemId'),
+      locationId: formData.get('locationId'),
+      quantity: formData.get('quantity'),
+      error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
-    });
+    }, 'Failed to create stock adjustment');
+    
     if (isDomainError(error)) {
       return { error: error.message };
     }
@@ -426,6 +444,7 @@ export async function createOrdersFromLowStockAction(selectedItemIds: string[]) 
 
     revalidatePath('/inventory');
     revalidatePath('/orders');
+    revalidatePath('/dashboard');
 
     const message =
       result.orders.length === 1

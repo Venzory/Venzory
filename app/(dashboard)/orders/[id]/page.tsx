@@ -8,6 +8,7 @@ import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getOrderService, getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 import { decimalToNumber, calculateOrderTotal } from '@/lib/prisma-transforms';
+import { Button } from '@/components/ui/button';
 
 import {
   removeOrderItemAction,
@@ -55,29 +56,20 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     : { items: [], totalCount: 0 };
   const allItems = allItemsResult.items;
 
-  // Filter items that match the order's supplier (support both legacy and PracticeSupplier)
+  // Filter items that match the order's supplier
   const availableItems = allItems
     .filter((item) => {
       // Check if item is related to this supplier
-      if (order.practiceSupplierId) {
-        // New PracticeSupplier filtering
-        const hasSupplierItem = item.supplierItems?.some((si: any) => si.practiceSupplierId === order.practiceSupplierId);
-        const hasDefaultSupplier = item.defaultPracticeSupplierId === order.practiceSupplierId;
-        return hasSupplierItem || hasDefaultSupplier;
-      } else if (order.supplierId) {
-        // Legacy Supplier filtering
-        const hasSupplierItem = item.supplierItems?.some((si: any) => si.supplierId === order.supplierId);
-        const hasDefaultSupplier = item.defaultSupplierId === order.supplierId;
-        return hasSupplierItem || hasDefaultSupplier;
-      }
-      return false;
+      const hasSupplierItem = item.supplierItems?.some((si: any) => si.practiceSupplierId === order.practiceSupplierId);
+      const hasDefaultSupplier = item.defaultPracticeSupplierId === order.practiceSupplierId;
+      return hasSupplierItem || hasDefaultSupplier;
     })
-    .filter((item) => !order.items?.some((oi: any) => oi.itemId === item.id))
+    .filter((item) => !(order.items || []).some((oi: any) => oi.itemId === item.id))
     .map((item) => ({
       ...item,
       defaultSupplierId: item.defaultSupplierId,
       defaultPracticeSupplierId: item.defaultPracticeSupplierId,
-      supplierItems: item.supplierItems?.map((si: any) => ({
+      supplierItems: (item.supplierItems || []).map((si: any) => ({
         supplierId: si.supplierId,
         practiceSupplierId: si.practiceSupplierId,
         unitPrice: decimalToNumber(si.unitPrice),
@@ -111,11 +103,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             canReceive={canReceive}
           />
           {canReceive ? (
-            <Link
-              href={`/receiving/new?orderId=${order.id}`}
-              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
-            >
-              Receive This Order
+            <Link href={`/receiving/new?orderId=${order.id}`}>
+              <Button variant="primary" size="md" className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700">
+                Receive This Order
+              </Button>
             </Link>
           ) : null}
         </div>
@@ -157,13 +148,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       </p>
                     )}
                   </>
-                ) : order.supplier ? (
-                  <Link
-                    href={`/suppliers#${order.supplier.id}`}
-                    className="text-sky-400 hover:text-sky-300"
-                  >
-                    {order.supplier.name}
-                  </Link>
                 ) : (
                   <span className="text-slate-500 dark:text-slate-400">Unknown Supplier</span>
                 )}
@@ -376,7 +360,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           <div className="border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
             <AddItemForm 
               orderId={order.id} 
-              supplierId={order.supplierId}
               practiceSupplierId={order.practiceSupplierId}
               items={availableItems} 
             />

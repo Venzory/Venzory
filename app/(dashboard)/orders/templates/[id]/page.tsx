@@ -7,6 +7,7 @@ import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getOrderService, getInventoryService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
+import { Button } from '@/components/ui/button';
 
 import { EditTemplateForm } from './_components/edit-template-form';
 import { AddTemplateItemForm } from './_components/add-template-item-form';
@@ -79,15 +80,14 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/orders/templates/${template.id}/preview`}
-            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
-          >
-            Create Order from Template
-          </Link>
           {canManage ? (
             <DeleteTemplateButton templateId={template.id} />
           ) : null}
+          <Link href={`/orders/templates/${template.id}/preview`}>
+            <Button variant="primary" size="md">
+              Create Order from Template
+            </Button>
+          </Link>
         </div>
       </div>
 

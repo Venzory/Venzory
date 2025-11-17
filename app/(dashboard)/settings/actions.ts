@@ -168,7 +168,7 @@ export async function updateUserRoleAction(
     });
 
     if (!parsed.success) {
-      return { error: 'Invalid input' } as const;
+      return { errors: parsed.error.flatten().fieldErrors } as const;
     }
 
     const { userId, role } = parsed.data;
@@ -203,8 +203,14 @@ export async function removeUserAction(userId: string) {
   } catch (error) {
     console.error('[Settings Actions] Error removing user:', error);
     
+    // Preserve domain error messages (e.g. last admin, permission errors)
     if (isDomainError(error)) {
       throw new Error(error.message);
+    }
+    
+    // Preserve generic error messages
+    if (error instanceof Error) {
+      throw error;
     }
     
     throw new Error('Failed to remove user');
@@ -225,8 +231,14 @@ export async function cancelInviteAction(inviteId: string) {
   } catch (error) {
     console.error('[Settings Actions] Error cancelling invite:', error);
     
+    // Preserve domain error messages (e.g. permission errors)
     if (isDomainError(error)) {
       throw new Error(error.message);
+    }
+    
+    // Preserve generic error messages
+    if (error instanceof Error) {
+      throw error;
     }
     
     throw new Error('Failed to cancel invite');
@@ -234,13 +246,12 @@ export async function cancelInviteAction(inviteId: string) {
 }
 
 // Wrapper functions for inline form usage (no return value expected)
+// These simply delegate to the primary actions without redundant checks
 export async function updatePracticeSettingsInlineAction(formData: FormData) {
-  await verifyCsrfFromHeaders();
   await updatePracticeSettingsAction(null, formData);
 }
 
 export async function updateUserRoleInlineAction(formData: FormData) {
-  await verifyCsrfFromHeaders();
   await updateUserRoleAction(null, formData);
 }
 

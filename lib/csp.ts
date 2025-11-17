@@ -89,8 +89,19 @@ export function generateCSP(config: CSPConfig): string {
     );
   }
 
+  // Clone directives and add development-specific settings
+  const directives = { ...CSP_DIRECTIVES };
+  
+  // In development, add 'unsafe-eval' for Next.js HMR and React Refresh
+  if (isDevelopment) {
+    directives['script-src'] = [
+      ...CSP_DIRECTIVES['script-src'],
+      "'unsafe-eval'",
+    ];
+  }
+
   // Build CSP directives
-  const directives = Object.entries(CSP_DIRECTIVES).map(([key, values]) => {
+  const directiveStrings = Object.entries(directives).map(([key, values]) => {
     if (values.length === 0) {
       // Directives without values (e.g., upgrade-insecure-requests)
       return key;
@@ -105,7 +116,7 @@ export function generateCSP(config: CSPConfig): string {
   });
 
   // Join all directives with semicolons
-  const cspString = directives.join('; ');
+  const cspString = directiveStrings.join('; ');
 
   // Validate CSP was generated successfully
   if (!cspString || cspString.length === 0) {

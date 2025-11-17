@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
+import { PracticeRole } from '@prisma/client';
 
 import { auth } from '@/auth';
 import { DashboardLayoutClient } from '@/components/layout/dashboard-layout-client';
 import { OnboardingWrapper } from './_components/onboarding-wrapper';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getSettingsService } from '@/src/services';
+import { hasRole } from '@/lib/rbac';
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -26,12 +28,20 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
 
   // Fetch onboarding data and practice settings for the active practice
   let shouldShowOnboarding = false;
+  let hasLocations = false;
   let hasSuppliers = false;
   let hasItems = false;
-  let hasOrders = false;
+  let hasReceivedOrders = false;
   let practiceName: string | null = null;
 
-  if (activePracticeId) {
+  // Check if user has actionable role (ADMIN or STAFF)
+  const canManageOnboarding = activePracticeId ? hasRole({
+    memberships: session.user.memberships,
+    practiceId: activePracticeId,
+    minimumRole: PracticeRole.STAFF,
+  }) : false;
+
+  if (activePracticeId && canManageOnboarding) {
     try {
       const ctx = buildRequestContextFromSession(session);
       
@@ -42,14 +52,16 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       ]);
 
       practiceName = practiceSettings.name;
-      hasSuppliers = setupProgress.hasSuppliers;
-      hasItems = setupProgress.hasItems;
-      hasOrders = setupProgress.hasOrders;
+      hasLocations = setupProgress.hasLocations ?? false;
+      hasSuppliers = setupProgress.hasSuppliers ?? false;
+      hasItems = setupProgress.hasItems ?? false;
+      hasReceivedOrders = setupProgress.hasReceivedOrders ?? false;
 
-      // Show onboarding if: not completed AND conditions not met
+      // Show onboarding if: not completed AND not skipped AND conditions not met AND user can manage
       const isOnboardingComplete = onboardingStatus.onboardingCompletedAt != null;
-      const allSetupComplete = hasSuppliers && hasItems && hasOrders;
-      shouldShowOnboarding = !isOnboardingComplete && !allSetupComplete;
+      const isOnboardingSkipped = onboardingStatus.onboardingSkippedAt != null;
+      const allSetupComplete = hasLocations && hasSuppliers && hasItems && hasReceivedOrders;
+      shouldShowOnboarding = !isOnboardingComplete && !isOnboardingSkipped && !allSetupComplete;
     } catch (error) {
       console.error('Error fetching onboarding data:', error);
       // Fallback to session data
@@ -67,9 +79,10 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     >
       <OnboardingWrapper
         shouldShowOnboarding={shouldShowOnboarding}
+        hasLocations={hasLocations}
         hasSuppliers={hasSuppliers}
         hasItems={hasItems}
-        hasOrders={hasOrders}
+        hasReceivedOrders={hasReceivedOrders}
       >
         {children}
       </OnboardingWrapper>

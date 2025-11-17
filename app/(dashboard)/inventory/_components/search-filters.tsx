@@ -48,6 +48,9 @@ export function SearchFilters({
       params.delete('q');
     }
     
+    // Reset to page 1 when search changes to avoid empty results
+    params.delete('page');
+    
     router.push(`/inventory?${params.toString()}`);
   }, [debouncedSearch, router, searchParams, initialSearch]);
 
@@ -60,6 +63,9 @@ export function SearchFilters({
       } else {
         params.delete(key);
       }
+      
+      // Reset to page 1 when filters change to avoid empty results
+      params.delete('page');
       
       router.push(`/inventory?${params.toString()}`);
     },

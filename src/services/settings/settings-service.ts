@@ -7,6 +7,7 @@ import { UserRepository } from '@/src/repositories/users';
 import { PracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { InventoryRepository } from '@/src/repositories/inventory';
 import { OrderRepository } from '@/src/repositories/orders';
+import { LocationRepository } from '@/src/repositories/locations';
 import { AuditService } from '../audit/audit-service';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
@@ -38,6 +39,7 @@ export class SettingsService {
     private practiceSupplierRepository: PracticeSupplierRepository,
     private inventoryRepository: InventoryRepository,
     private orderRepository: OrderRepository,
+    private locationRepository: LocationRepository,
     private auditService: AuditService
   ) {}
 
@@ -134,6 +136,20 @@ export class SettingsService {
       }
 
       const oldRole = membership.role;
+
+      // Prevent demoting the last admin
+      if (oldRole === 'ADMIN' && role !== 'ADMIN') {
+        const adminCount = await this.userRepository.countAdminsInPractice(
+          ctx.practiceId,
+          { tx }
+        );
+
+        if (adminCount === 1) {
+          throw new BusinessRuleViolationError(
+            'Cannot remove the last admin from the practice'
+          );
+        }
+      }
 
       // Update role
       await this.userRepository.updatePracticeUserRole(
@@ -313,12 +329,14 @@ export class SettingsService {
   /**
    * Update onboarding status
    * Can mark as complete, skipped, or reset
+   * Requires STAFF role (admins and staff can manage onboarding)
    */
   async updateOnboardingStatus(
     ctx: RequestContext,
     status: 'complete' | 'skip' | 'reset'
   ): Promise<void> {
-    // No special permissions needed - any user can update their practice onboarding
+    // Check permissions - only STAFF and ADMIN can manage onboarding
+    requireRole(ctx, 'STAFF');
 
     return withTransaction(async (tx) => {
       const updateData: any = {};
@@ -366,23 +384,32 @@ export class SettingsService {
   }
 
   /**
-   * Get setup progress (counts for suppliers, items, orders)
+   * Get setup progress (counts for locations, suppliers, items, orders, received orders)
    */
   async getSetupProgress(ctx: RequestContext) {
     // Use repositories to get counts with proper tenant scoping
-    const [supplierCount, itemCount, orderCount] = await Promise.all([
+    const [locationCount, supplierCount, itemCount, orderCount, allOrders] = await Promise.all([
+      this.locationRepository.findLocations(ctx.practiceId).then(l => l.length),
       this.practiceSupplierRepository.findPracticeSuppliers(ctx.practiceId).then(s => s.length),
       this.inventoryRepository.findItems(ctx.practiceId, {}).then(i => i.length),
       this.orderRepository.findOrders(ctx.practiceId, {}).then(o => o.length),
+      this.orderRepository.findOrders(ctx.practiceId, {}),
     ]);
 
+    // Count received orders
+    const receivedOrderCount = allOrders.filter(o => o.status === 'RECEIVED').length;
+
     return {
+      hasLocations: locationCount > 0,
       hasSuppliers: supplierCount > 0,
       hasItems: itemCount > 0,
       hasOrders: orderCount > 0,
+      hasReceivedOrders: receivedOrderCount > 0,
+      locationCount,
       supplierCount,
       itemCount,
       orderCount,
+      receivedOrderCount,
     };
   }
 
@@ -471,6 +498,7 @@ export function getSettingsService(): SettingsService {
       getPracticeSupplierRepository(),
       new InventoryRepository(),
       new OrderRepository(),
+      new LocationRepository(),
       getAuditService()
     );
   }

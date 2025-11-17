@@ -43,11 +43,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const serverSortBy = canSortServerSide ? (sortBy as 'name' | 'sku' | undefined) : undefined;
 
   // Fetch items using InventoryService with filters and pagination
+  // Note: lowStockOnly filter is applied client-side after calculating stock info
   const { items, totalCount } = await getInventoryService().findItems(ctx, {
     search,
     locationId: location,
     supplierId: supplier,
-    lowStockOnly: lowStock === 'true',
   }, {
     page: canSortServerSide ? currentPage : 1,
     limit: canSortServerSide ? itemsPerPage : 10000, // Fetch all if client-side sorting needed
@@ -74,12 +74,17 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
     };
   });
 
+  // Apply client-side low stock filter if requested
+  const filteredItems = lowStock === 'true' 
+    ? itemsWithStockInfo.filter(item => item.isLowStock)
+    : itemsWithStockInfo;
+
   // For computed fields (stock, locations, status), we still need client-side sorting
-  let finalItems = itemsWithStockInfo;
-  let finalTotalCount = totalCount;
+  let finalItems = filteredItems;
+  let finalTotalCount = lowStock === 'true' ? filteredItems.length : totalCount;
   
   if (!canSortServerSide && sortBy) {
-    const sortedItems = [...itemsWithStockInfo].sort((a, b) => {
+    const sortedItems = [...filteredItems].sort((a, b) => {
       const order = sortOrder === 'desc' ? -1 : 1;
       
       switch (sortBy) {
@@ -154,6 +159,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={finalTotalCount}
+          itemsPerPage={itemsPerPage}
         />
       </section>
 

@@ -23,8 +23,8 @@ type LocationOption = {
 };
 
 export function StockAdjustmentForm({
-  items,
-  locations,
+  items = [],
+  locations = [],
 }: {
   items: ItemOption[];
   locations: LocationOption[];
@@ -38,6 +38,7 @@ export function StockAdjustmentForm({
       // Reset form after successful adjustment
       formRef.current?.reset();
     } else if (state.error) {
+      // Show domain/server errors as toasts
       toast.error(state.error);
     }
     // Don't toast field errors - they're shown inline

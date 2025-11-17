@@ -1554,15 +1554,22 @@ async function createLocations(practiceId: string) {
   return locationMap;
 }
 
-async function createItems(practiceId: string, locationMap: Map<string, any>, supplierMap: Map<string, any>) {
+async function createItems(
+  practiceId: string, 
+  locationMap: Map<string, any>, 
+  supplierMap: Map<string, any>,
+  practiceSupplierMap: Map<string, any>
+) {
   console.log('\n📦 Creating items and inventory...');
   
   const itemMap = new Map();
   let lowStockCount = 0;
+  let supplierItemsCreated = 0;
 
   // Create items and inventory
   for (const itemData of ITEMS_DATA) {
     const defaultSupplierId = supplierMap.get(itemData.defaultSupplier)?.id;
+    const defaultPracticeSupplierId = practiceSupplierMap.get(itemData.defaultSupplier)?.id;
 
     const item = await prisma.item.upsert({
       where: { id: itemData.id },
@@ -1579,10 +1586,52 @@ async function createItems(practiceId: string, locationMap: Map<string, any>, su
         unit: itemData.unit,
         description: itemData.description,
         defaultSupplierId,
+        defaultPracticeSupplierId,
       },
     });
 
     itemMap.set(itemData.id, item);
+
+    // Create SupplierItem record linking this item to its default supplier with pricing
+    if (defaultSupplierId && defaultPracticeSupplierId) {
+      // Find the catalog entry for this product and supplier to get the price
+      const catalogEntry = await prisma.supplierCatalog.findUnique({
+        where: {
+          supplierId_productId: {
+            supplierId: defaultSupplierId,
+            productId: itemData.productId,
+          },
+        },
+      });
+
+      if (catalogEntry) {
+        await prisma.supplierItem.upsert({
+          where: {
+            supplierId_itemId: {
+              supplierId: defaultSupplierId,
+              itemId: item.id,
+            },
+          },
+          update: {
+            practiceSupplierId: defaultPracticeSupplierId,
+            unitPrice: catalogEntry.unitPrice,
+            currency: catalogEntry.currency,
+            minOrderQty: catalogEntry.minOrderQty,
+            supplierSku: catalogEntry.supplierSku,
+          },
+          create: {
+            supplierId: defaultSupplierId,
+            practiceSupplierId: defaultPracticeSupplierId,
+            itemId: item.id,
+            unitPrice: catalogEntry.unitPrice,
+            currency: catalogEntry.currency,
+            minOrderQty: catalogEntry.minOrderQty,
+            supplierSku: catalogEntry.supplierSku,
+          },
+        });
+        supplierItemsCreated++;
+      }
+    }
 
     // Create inventory at each location
     let totalQty = 0;
@@ -1619,6 +1668,7 @@ async function createItems(practiceId: string, locationMap: Map<string, any>, su
   }
 
   console.log(`  ✓ Items: ${ITEMS_DATA.length} (${lowStockCount} below reorder point)`);
+  console.log(`  ✓ SupplierItems: ${supplierItemsCreated} (item-supplier pricing links)`);
 
   return itemMap;
 }
@@ -1628,6 +1678,7 @@ async function createSuppliersAndCatalog(practiceId: string) {
   
   const supplierMap = new Map();
   const globalSupplierMap = new Map();
+  const practiceSupplierMap = new Map();
 
   for (const suppData of SUPPLIERS_DATA) {
     // Map by short name for easy reference
@@ -1672,14 +1723,19 @@ async function createSuppliersAndCatalog(practiceId: string) {
       supplierMap.set(shortName, supplier);
 
       // Create PracticeSupplier link for linked suppliers
-      await prisma.practiceSupplier.upsert({
+      const practiceSupplier = await prisma.practiceSupplier.upsert({
         where: {
           practiceId_globalSupplierId: {
             practiceId,
             globalSupplierId: globalSupplier.id,
           },
         },
-        update: {},
+        update: {
+          migratedFromSupplierId: supplier.id,
+          accountNumber: suppData.accountNumber || null,
+          customLabel: (suppData as any).customLabel || null,
+          isPreferred: suppData.isPreferred || false,
+        },
         create: {
           practiceId,
           globalSupplierId: globalSupplier.id,
@@ -1690,6 +1746,8 @@ async function createSuppliersAndCatalog(practiceId: string) {
           isBlocked: false,
         },
       });
+
+      practiceSupplierMap.set(shortName, practiceSupplier);
     }
   }
 
@@ -1744,10 +1802,10 @@ async function createSuppliersAndCatalog(practiceId: string) {
   console.log(`  ✓ Legacy Suppliers: ${linkedCount} (backward compatibility)`);
   console.log(`  ✓ Catalog entries: ${SUPPLIER_CATALOG_DATA.length}`);
   
-  return supplierMap;
+  return { supplierMap, practiceSupplierMap };
 }
 
-async function createOrders(practiceId: string, userId: string, supplierMap: Map<string, any>, itemMap: Map<string, any>) {
+async function createOrders(practiceId: string, userId: string, supplierMap: Map<string, any>, practiceSupplierMap: Map<string, any>, itemMap: Map<string, any>) {
   console.log('\n📦 Creating orders...');
   
   const now = new Date();
@@ -1888,8 +1946,8 @@ async function createOrders(practiceId: string, userId: string, supplierMap: Map
   ];
 
   for (const orderData of ordersData) {
-    const supplier = supplierMap.get(orderData.supplier);
-    if (!supplier) continue;
+    const practiceSupplier = practiceSupplierMap.get(orderData.supplier);
+    if (!practiceSupplier) continue;
 
     const order = await prisma.order.upsert({
       where: { id: orderData.id },
@@ -1899,7 +1957,7 @@ async function createOrders(practiceId: string, userId: string, supplierMap: Map
       create: {
         id: orderData.id,
         practiceId,
-        supplierId: supplier.id,
+        practiceSupplierId: practiceSupplier.id,
         status: orderData.status,
         createdById: userId,
         reference: orderData.reference,
@@ -2321,13 +2379,13 @@ async function main() {
   console.log(`  ✓ Products: ${PRODUCTS_DATA.length} (${gs1Count} with GTIN)`);
 
   // Create suppliers and catalog (needs products to exist first)
-  const supplierMap = await createSuppliersAndCatalog(practice.id);
+  const { supplierMap, practiceSupplierMap } = await createSuppliersAndCatalog(practice.id);
 
   // Create items with inventory
-  const itemMap = await createItems(practice.id, locationMap, supplierMap);
+  const itemMap = await createItems(practice.id, locationMap, supplierMap, practiceSupplierMap);
 
   // Create orders
-  await createOrders(practice.id, adminUser.id, supplierMap, itemMap);
+  await createOrders(practice.id, adminUser.id, supplierMap, practiceSupplierMap, itemMap);
 
   // Create goods receipts
   await createGoodsReceipts(practice.id, adminUser.id, locationMap, supplierMap, itemMap);

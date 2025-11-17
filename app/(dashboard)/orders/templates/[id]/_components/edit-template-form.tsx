@@ -44,7 +44,7 @@ export function EditTemplateForm({
     return (
       <button
         onClick={() => setIsEditing(true)}
-        className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+        className="rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800"
       >
         Edit Template Details
       </button>
@@ -52,11 +52,11 @@ export function EditTemplateForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-      <h3 className="text-lg font-semibold text-white">Edit Template Details</h3>
+    <form onSubmit={handleSubmit} className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-800 dark:bg-slate-900/60">
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Template Details</h3>
       <div className="space-y-4">
         <div className="space-y-2">
-          <label htmlFor="name" className="text-sm text-slate-400">
+          <label htmlFor="name" className="text-sm text-slate-600 dark:text-slate-400">
             Template Name *
           </label>
           <input
@@ -65,11 +65,11 @@ export function EditTemplateForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
         <div className="space-y-2">
-          <label htmlFor="description" className="text-sm text-slate-400">
+          <label htmlFor="description" className="text-sm text-slate-600 dark:text-slate-400">
             Description (optional)
           </label>
           <textarea
@@ -77,7 +77,7 @@ export function EditTemplateForm({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
       </div>
@@ -89,7 +89,7 @@ export function EditTemplateForm({
             setDescription(currentDescription || '');
             setIsEditing(false);
           }}
-          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           Cancel
         </button>

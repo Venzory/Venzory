@@ -17,15 +17,15 @@ import { sendOrderEmail } from '@/lib/email';
 import { createNotificationForPracticeUsers } from '@/lib/notifications';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import logger from '@/lib/logger';
+import type { FormState } from '@/lib/form-types';
 
 const orderService = getOrderService();
 
 // Validation schemas
 const createDraftOrderSchema = z.object({
-  supplierId: z.string().optional(), // Legacy support
-  practiceSupplierId: z.string().optional(), // New PracticeSupplier support
-  notes: z.string().max(512).optional().transform((value) => value?.trim() || null),
-  reference: z.string().max(128).optional().transform((value) => value?.trim() || null),
+  practiceSupplierId: z.string().min(1, 'Supplier is required'),
+  notes: z.string().max(512).transform((value) => value.trim() || null).optional(),
+  reference: z.string().max(128).transform((value) => value.trim() || null).optional(),
   items: z.array(
     z.object({
       itemId: z.string().min(1, 'Item ID is required'),
@@ -33,9 +33,6 @@ const createDraftOrderSchema = z.object({
       unitPrice: z.union([z.coerce.number().nonnegative(), z.null()]).optional().transform((value) => value ?? null),
     })
   ).min(1, 'At least one item is required'),
-}).refine((data) => data.supplierId || data.practiceSupplierId, {
-  message: 'Supplier is required',
-  path: ['supplierId'],
 });
 
 const updateOrderItemSchema = z.object({
@@ -62,7 +59,7 @@ const addOrderItemSchema = z.object({
 /**
  * Create a draft order with items
  */
-export async function createDraftOrderAction(_prevState: unknown, formData: FormData) {
+export async function createDraftOrderAction(_prevState: unknown, formData: FormData): Promise<FormState> {
   await verifyCsrfFromHeaders();
   
   let orderId: string | null = null;
@@ -70,32 +67,33 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
   try {
     const ctx = await buildRequestContext();
 
-    // Parse items from formData (they come as JSON string)
-    const itemsJson = formData.get('items');
-    let items;
-    try {
-      items = itemsJson ? JSON.parse(itemsJson as string) : [];
-    } catch {
-      return { error: 'Invalid items data' } as const;
+    // Parse items from indexed FormData fields
+    const items: Array<{ itemId: string; quantity: string; unitPrice: string }> = [];
+    let index = 0;
+    while (formData.has(`items[${index}].itemId`)) {
+      items.push({
+        itemId: formData.get(`items[${index}].itemId`) as string,
+        quantity: formData.get(`items[${index}].quantity`) as string,
+        unitPrice: formData.get(`items[${index}].unitPrice`) as string,
+      });
+      index++;
     }
 
     const parsed = createDraftOrderSchema.safeParse({
-      supplierId: formData.get('supplierId'),
-      practiceSupplierId: formData.get('practiceSupplierId'),
-      notes: formData.get('notes'),
-      reference: formData.get('reference'),
+      practiceSupplierId: formData.get('practiceSupplierId') || '',
+      notes: formData.get('notes') || '',
+      reference: formData.get('reference') || '',
       items,
     });
 
     if (!parsed.success) {
-      return { errors: parsed.error.flatten().fieldErrors } as const;
+      return { errors: parsed.error.flatten().fieldErrors };
     }
 
-    const { supplierId, practiceSupplierId, notes, reference, items: orderItems } = parsed.data;
+    const { practiceSupplierId, notes, reference, items: orderItems } = parsed.data;
 
-    // Create order using service (backend handles dual-supplier logic)
+    // Create order using service
     const result = await orderService.createOrder(ctx, {
-      supplierId,
       practiceSupplierId,
       notes,
       reference,
@@ -107,32 +105,32 @@ export async function createDraftOrderAction(_prevState: unknown, formData: Form
     });
 
     if (isDomainError(result)) {
-      return { error: result.message } as const;
+      return { error: result.message };
     }
 
     orderId = result.id;
     revalidatePath('/orders');
+    revalidatePath('/dashboard');
   } catch (error: any) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
       action: 'createDraftOrderAction',
       userId: ctx?.userId,
       practiceId: ctx?.practiceId,
-      supplierId: formData.get('supplierId'),
       practiceSupplierId: formData.get('practiceSupplierId'),
-      itemCount: (formData.get('items') as string)?.length || 0,
+      itemCount: items.length,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     }, 'Failed to create order');
     
-    return { error: error.message || 'Failed to create order' } as const;
+    return { error: error.message || 'Failed to create order' };
   }
   
   // Redirect outside try-catch so it can throw properly
   if (orderId) {
     redirect(`/orders/${orderId}`);
   } else {
-    return { error: 'Failed to create order - no order ID returned' } as const;
+    return { error: 'Failed to create order - no order ID returned' };
   }
 }
 
@@ -174,6 +172,7 @@ export async function updateOrderItemAction(formData: FormData) {
 
     revalidatePath(`/orders/${orderId}`);
     revalidatePath('/orders');
+    revalidatePath('/dashboard');
   } catch (error: any) {
     console.error('Failed to update order item:', error);
     throw error;
@@ -183,11 +182,7 @@ export async function updateOrderItemAction(formData: FormData) {
 /**
  * Add an order item (with form validation)
  */
-export async function addOrderItemAction(_prevState: unknown, formData: FormData): Promise<{
-  success?: string;
-  error?: string;
-  errors?: Record<string, string[]>;
-}> {
+export async function addOrderItemAction(_prevState: FormState, formData: FormData): Promise<FormState> {
   await verifyCsrfFromHeaders();
   
   try {
@@ -218,6 +213,8 @@ export async function addOrderItemAction(_prevState: unknown, formData: FormData
     }
 
     revalidatePath(`/orders/${orderId}`);
+    revalidatePath('/orders');
+    revalidatePath('/dashboard');
     return { success: 'Item added to order' };
   } catch (error: any) {
     console.error('Failed to add order item:', error);
@@ -228,9 +225,9 @@ export async function addOrderItemAction(_prevState: unknown, formData: FormData
 /**
  * Add an order item inline (returns result for client-side handling)
  */
-export async function addOrderItemInlineAction(formData: FormData) {
+export async function addOrderItemInlineAction(formData: FormData): Promise<FormState> {
   await verifyCsrfFromHeaders();
-  const result = await addOrderItemAction(undefined, formData);
+  const result = await addOrderItemAction({}, formData);
   return result;
 }
 
@@ -252,6 +249,7 @@ export async function removeOrderItemAction(orderId: string, itemId: string) {
 
     revalidatePath(`/orders/${orderId}`);
     revalidatePath('/orders');
+    revalidatePath('/dashboard');
   } catch (error: any) {
     console.error('Failed to remove order item:', error);
     throw error;
@@ -301,8 +299,9 @@ export async function updateOrderAction(formData: FormData) {
 
 /**
  * Delete a draft order
+ * Returns success status instead of redirecting to allow client-side navigation
  */
-export async function deleteOrderAction(orderId: string) {
+export async function deleteOrderAction(orderId: string): Promise<{ success: boolean; error?: string }> {
   await verifyCsrfFromHeaders();
   
   try {
@@ -312,23 +311,23 @@ export async function deleteOrderAction(orderId: string) {
 
     if (isDomainError(result)) {
       console.error('Service error:', result.message);
-      throw new Error(result.message);
+      return { success: false, error: result.message };
     }
 
     revalidatePath('/orders');
+    revalidatePath('/dashboard');
+    return { success: true };
   } catch (error: any) {
     console.error('Failed to delete order:', error);
-    throw error;
+    return { success: false, error: error.message || 'Failed to delete order' };
   }
-  
-  // Redirect outside try-catch so it can throw properly
-  redirect('/orders');
 }
 
 /**
  * Send/submit an order to supplier
+ * Returns success status instead of throwing to allow client-side error handling
  */
-export async function sendOrderAction(orderId: string) {
+export async function sendOrderAction(orderId: string): Promise<{ success: boolean; error?: string }> {
   await verifyCsrfFromHeaders();
   
   try {
@@ -339,7 +338,7 @@ export async function sendOrderAction(orderId: string) {
 
     if (isDomainError(result)) {
       console.error('Service error:', result.message);
-      throw new Error(result.message);
+      return { success: false, error: result.message };
     }
 
     // Send email notification
@@ -358,7 +357,7 @@ export async function sendOrderAction(orderId: string) {
         userId: ctx.userId,
         type: 'ORDER_SENT',
         title: 'Order Sent',
-        message: `Order #${orderId.slice(0, 8)} has been sent to ${(result as any).supplier?.name || 'supplier'}`,
+        message: `Order #${orderId.slice(0, 8)} has been sent to ${(result as any).practiceSupplier?.customLabel || (result as any).practiceSupplier?.globalSupplier?.name || 'supplier'}`,
         orderId: orderId,
       });
     } catch (notificationError) {
@@ -368,9 +367,11 @@ export async function sendOrderAction(orderId: string) {
 
     revalidatePath(`/orders/${orderId}`);
     revalidatePath('/orders');
+    revalidatePath('/dashboard');
+    return { success: true };
   } catch (error: any) {
     console.error('Failed to send order:', error);
-    throw error;
+    return { success: false, error: error.message || 'Failed to send order' };
   }
 }
 

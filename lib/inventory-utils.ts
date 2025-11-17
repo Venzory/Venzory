@@ -42,14 +42,15 @@ export interface ItemStockInfo {
  * @returns Stock information object
  */
 export function calculateItemStockInfo(item: ItemWithInventory): ItemStockInfo {
-  const inventory = item.inventory || [];
+  // Defensive: handle null/undefined inventory
+  const inventory = item?.inventory || [];
   
   // Calculate total stock across all locations
-  const totalStock = inventory.reduce((sum, inv) => sum + inv.quantity, 0);
+  const totalStock = inventory.reduce((sum, inv) => sum + (inv?.quantity || 0), 0);
   
   // Find locations where quantity is below reorder point
   const lowStockLocations = inventory.filter(
-    (inv) => inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
+    (inv) => inv && inv.reorderPoint !== null && inv.quantity < inv.reorderPoint
   );
   
   // Calculate suggested order quantity for low-stock locations
@@ -62,7 +63,9 @@ export function calculateItemStockInfo(item: ItemWithInventory): ItemStockInfo {
     locationCount: inventory.length,
     isLowStock: lowStockLocations.length > 0,
     suggestedQuantity,
-    lowStockLocations: lowStockLocations.map((inv) => inv.locationId || inv.location?.id || '').filter(Boolean),
+    lowStockLocations: lowStockLocations
+      .map((inv) => inv.locationId || inv.location?.id || '')
+      .filter(Boolean),
   };
 }
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
-export type OnboardingStep = 'suppliers' | 'items' | 'orders' | 'complete';
+export type OnboardingStep = 'locations' | 'suppliers' | 'items' | 'orders' | 'complete';
 
 interface OnboardingState {
   currentStep: OnboardingStep;
@@ -20,7 +20,7 @@ export function useOnboarding() {
   const pathname = usePathname();
   
   const [state, setState] = useState<OnboardingState>({
-    currentStep: 'suppliers',
+    currentStep: 'locations',
     isOpen: false,
   });
 
@@ -56,7 +56,7 @@ export function useOnboarding() {
 
   const nextStep = useCallback(() => {
     setState((prev) => {
-      const stepOrder: OnboardingStep[] = ['suppliers', 'items', 'orders', 'complete'];
+      const stepOrder: OnboardingStep[] = ['locations', 'suppliers', 'items', 'orders', 'complete'];
       const currentIndex = stepOrder.indexOf(prev.currentStep);
       const nextIndex = Math.min(currentIndex + 1, stepOrder.length - 1);
       return { ...prev, currentStep: stepOrder[nextIndex] };
@@ -68,6 +68,7 @@ export function useOnboarding() {
     
     // Navigate to the appropriate page for the step
     const pageMap: Record<OnboardingStep, string> = {
+      locations: '/locations',
       suppliers: '/suppliers',
       items: '/my-items',
       orders: '/orders/new',
@@ -79,12 +80,13 @@ export function useOnboarding() {
 
   const clearOnboardingState = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
-    setState({ currentStep: 'suppliers', isOpen: false });
+    setState({ currentStep: 'locations', isOpen: false });
   }, []);
 
   // Check if we're on the page for the current step
   const isOnStepPage = useCallback(() => {
     const stepPaths: Record<OnboardingStep, string[]> = {
+      locations: ['/locations'],
       suppliers: ['/suppliers'],
       items: ['/my-items', '/supplier-catalog'],
       orders: ['/orders/new', '/orders'],

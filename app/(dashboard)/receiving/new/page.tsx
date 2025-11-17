@@ -24,6 +24,16 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
       : null,
   ]);
 
+  // Get supplier name from order (support both legacy and PracticeSupplier)
+  let supplierName = 'Unknown';
+  if (order) {
+    if (order.practiceSupplier) {
+      supplierName = order.practiceSupplier.customLabel || order.practiceSupplier.globalSupplier?.name || 'Unknown';
+    } else if (order.supplier) {
+      supplierName = order.supplier.name;
+    }
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       <div>
@@ -32,7 +42,7 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
         </h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           {order
-            ? `Receiving order ${order.reference || `#${order.id.slice(0, 8)}`} from ${order.supplier?.name || 'Unknown'}`
+            ? `Receiving order ${order.reference || `#${order.id.slice(0, 8)}`} from ${supplierName}`
             : 'Start a new receipt to track incoming deliveries'}
         </p>
       </div>
@@ -44,7 +54,7 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
           id: order.id,
           reference: order.reference,
           supplierId: order.supplierId,
-          supplierName: order.supplier?.name || 'Unknown',
+          supplierName,
           items: (order.items || []).map(item => ({
             id: item.id,
             itemId: item.itemId,

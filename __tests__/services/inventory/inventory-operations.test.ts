@@ -123,6 +123,7 @@ describe('Inventory Operations', () => {
         location.id,
         item.id,
         5,
+        ctx.practiceId,
         expect.anything()
       );
       expect(mockInventoryRepo.createStockAdjustment).toHaveBeenCalled();
@@ -163,6 +164,7 @@ describe('Inventory Operations', () => {
         location.id,
         item.id,
         -3,
+        ctx.practiceId,
         expect.anything()
       );
       expect(mockInventoryRepo.createStockAdjustment).toHaveBeenCalled();
@@ -317,6 +319,7 @@ describe('Inventory Operations', () => {
         fromLocation.id,
         item.id,
         -3,
+        ctx.practiceId,
         expect.anything()
       );
       expect(mockInventoryRepo.adjustStock).toHaveBeenNthCalledWith(
@@ -324,6 +327,7 @@ describe('Inventory Operations', () => {
         toLocation.id,
         item.id,
         3,
+        ctx.practiceId,
         expect.anything()
       );
     });
@@ -453,6 +457,7 @@ describe('Inventory Operations', () => {
         fromLocation.id,
         item.id,
         -8,
+        ctx.practiceId,
         expect.anything()
       );
       expect(mockInventoryRepo.adjustStock).toHaveBeenNthCalledWith(
@@ -460,6 +465,7 @@ describe('Inventory Operations', () => {
         toLocation.id,
         item.id,
         8,
+        ctx.practiceId,
         expect.anything()
       );
     });
@@ -566,6 +572,112 @@ describe('Inventory Operations', () => {
 
       expect(result.items).toEqual(mockItems);
       expect(result.totalCount).toBe(mockItems.length);
+    });
+
+    it('should pass search filter to repository', async () => {
+      const ctx = createTestContext({ role: 'STAFF' });
+      const practice = createTestPractice();
+      const product = createTestProduct();
+      const item = createTestItem(practice.id, product.id, { name: 'Aspirin' });
+
+      mockInventoryRepo.findItems.mockResolvedValue([item]);
+      mockInventoryRepo.countItems.mockResolvedValue(1);
+
+      await inventoryService.findItems(ctx, { search: 'asp' });
+
+      expect(mockInventoryRepo.findItems).toHaveBeenCalledWith(
+        ctx.practiceId,
+        { search: 'asp' },
+        expect.objectContaining({
+          pagination: expect.any(Object),
+          orderBy: expect.any(Object),
+        })
+      );
+    });
+
+    it('should pass supplierId filter to repository', async () => {
+      const ctx = createTestContext({ role: 'STAFF' });
+      const supplierId = 'supplier-123';
+
+      mockInventoryRepo.findItems.mockResolvedValue([]);
+      mockInventoryRepo.countItems.mockResolvedValue(0);
+
+      await inventoryService.findItems(ctx, { supplierId });
+
+      expect(mockInventoryRepo.findItems).toHaveBeenCalledWith(
+        ctx.practiceId,
+        { supplierId },
+        expect.any(Object)
+      );
+    });
+
+    it('should apply pagination options correctly', async () => {
+      const ctx = createTestContext({ role: 'STAFF' });
+
+      mockInventoryRepo.findItems.mockResolvedValue([]);
+      mockInventoryRepo.countItems.mockResolvedValue(0);
+
+      await inventoryService.findItems(ctx, {}, { page: 2, limit: 25 });
+
+      expect(mockInventoryRepo.findItems).toHaveBeenCalledWith(
+        ctx.practiceId,
+        {},
+        expect.objectContaining({
+          pagination: { page: 2, limit: 25 },
+        })
+      );
+    });
+
+    it('should apply sorting options correctly', async () => {
+      const ctx = createTestContext({ role: 'STAFF' });
+
+      mockInventoryRepo.findItems.mockResolvedValue([]);
+      mockInventoryRepo.countItems.mockResolvedValue(0);
+
+      await inventoryService.findItems(ctx, {}, { sortBy: 'sku', sortOrder: 'desc' });
+
+      expect(mockInventoryRepo.findItems).toHaveBeenCalledWith(
+        ctx.practiceId,
+        {},
+        expect.objectContaining({
+          orderBy: { sku: 'desc' },
+        })
+      );
+    });
+
+    it('should use default sorting when no sortBy provided', async () => {
+      const ctx = createTestContext({ role: 'STAFF' });
+
+      mockInventoryRepo.findItems.mockResolvedValue([]);
+      mockInventoryRepo.countItems.mockResolvedValue(0);
+
+      await inventoryService.findItems(ctx, {});
+
+      expect(mockInventoryRepo.findItems).toHaveBeenCalledWith(
+        ctx.practiceId,
+        {},
+        expect.objectContaining({
+          orderBy: { name: 'asc' },
+        })
+      );
+    });
+
+    it('should return both items and totalCount', async () => {
+      const ctx = createTestContext({ role: 'STAFF' });
+      const practice = createTestPractice();
+      const product = createTestProduct();
+      const items = [
+        createTestItem(practice.id, product.id, { name: 'Item 1' }),
+        createTestItem(practice.id, product.id, { name: 'Item 2' }),
+      ];
+
+      mockInventoryRepo.findItems.mockResolvedValue(items);
+      mockInventoryRepo.countItems.mockResolvedValue(10); // Total in DB might be more
+
+      const result = await inventoryService.findItems(ctx, {}, { page: 1, limit: 2 });
+
+      expect(result.items).toHaveLength(2);
+      expect(result.totalCount).toBe(10);
     });
   });
 });

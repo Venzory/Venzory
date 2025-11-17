@@ -15,6 +15,9 @@ const MUTATING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
 /**
  * Extract CSRF token from document cookies
  * 
+ * Supports both production (__Host-csrf) and development (csrf-token) cookie names.
+ * The __Host- prefix requires HTTPS and Secure flag, so we use a simpler name in development.
+ * 
  * @returns Raw CSRF token (without signature) or null if not found
  */
 function getCsrfTokenFromCookie(): string | null {
@@ -31,7 +34,8 @@ function getCsrfTokenFromCookie(): string | null {
     return acc;
   }, {} as Record<string, string>);
   
-  const signedToken = cookies['__Host-csrf'];
+  // Try production cookie name first, then development
+  const signedToken = cookies['__Host-csrf'] || cookies['csrf-token'];
   
   if (!signedToken) {
     return null;

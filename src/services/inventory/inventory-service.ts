@@ -541,6 +541,19 @@ export class InventoryService {
         { tx }
       );
 
+      // Enforce single IN_PROGRESS session per location
+      const existingSession = await this.stockCountRepository.findInProgressSessionByLocation(
+        ctx.practiceId,
+        locationId,
+        { tx }
+      );
+
+      if (existingSession) {
+        throw new BusinessRuleViolationError(
+          'An in-progress stock count already exists for this location. Complete or cancel it before starting another.'
+        );
+      }
+
       // Create session
       const session = await this.stockCountRepository.createStockCountSession(
         ctx.practiceId,

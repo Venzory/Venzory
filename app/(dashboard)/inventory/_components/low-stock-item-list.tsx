@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Package, AlertTriangle, ChevronDown, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
@@ -39,6 +39,7 @@ interface LowStockItemListProps {
   currentPage: number;
   totalPages: number;
   totalItems: number;
+  itemsPerPage: number;
 }
 
 export function LowStockItemList({
@@ -51,6 +52,7 @@ export function LowStockItemList({
   currentPage,
   totalPages,
   totalItems,
+  itemsPerPage,
 }: LowStockItemListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -140,9 +142,9 @@ export function LowStockItemList({
         <span>
           {totalItems} {totalItems === 1 ? 'item' : 'items'} in inventory
         </span>
-        {totalItems > 50 && (
+        {totalItems > itemsPerPage && (
           <span>
-            Showing {((currentPage - 1) * 50) + 1}-{Math.min(currentPage * 50, totalItems)}
+            Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalItems)}
           </span>
         )}
       </div>
@@ -169,10 +171,9 @@ export function LowStockItemList({
                 const isExpanded = expandedRows.has(item.id);
 
                 return (
-                  <>
+                  <React.Fragment key={item.id}>
                     {/* Parent Row */}
                     <tr
-                      key={item.id}
                       className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
                     >
                       {/* Expand/Collapse Button */}
@@ -329,7 +330,7 @@ export function LowStockItemList({
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>

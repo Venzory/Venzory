@@ -2,6 +2,7 @@
 
 import { useConfirm } from '@/hooks/use-confirm';
 import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 import { removeTemplateItemAction } from '../../actions';
 
 export function RemoveTemplateItemButton({ templateItemId }: { templateItemId: string }) {
@@ -28,12 +29,14 @@ export function RemoveTemplateItemButton({ templateItemId }: { templateItemId: s
   };
 
   return (
-    <button
+    <Button
       onClick={handleRemove}
-      className="text-sm text-rose-400 transition hover:text-rose-300"
+      variant="ghost"
+      size="sm"
+      className="text-rose-400 hover:text-rose-300"
     >
       Remove
-    </button>
+    </Button>
   );
 }
 

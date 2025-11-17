@@ -8,6 +8,7 @@ import type { PracticeSupplierWithRelations, GlobalSupplier } from '@/src/domain
 import { EmptyState } from '@/components/ui/empty-state';
 import { SupplierStatusBadges } from './supplier-status-badges';
 import { AddSupplierModal } from './add-supplier-modal';
+import { getPracticeSupplierDisplay } from '../_utils/supplier-display';
 
 interface PracticeSupplierListProps {
   suppliers: PracticeSupplierWithRelations[];
@@ -76,12 +77,13 @@ export function PracticeSupplierList({ suppliers, globalSuppliers, canManage }: 
 
       <div className="space-y-5">
       {suppliers.map((practiceSupplier) => {
+        const { name: displayName } = getPracticeSupplierDisplay(practiceSupplier);
         const supplier = practiceSupplier.globalSupplier;
-        const displayName = practiceSupplier.customLabel || supplier.name;
 
         return (
           <div
             key={practiceSupplier.id}
+            id={practiceSupplier.id}
             className="rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none"
           >
             <div className="p-6">
@@ -99,7 +101,7 @@ export function PracticeSupplierList({ suppliers, globalSuppliers, canManage }: 
                           isBlocked={practiceSupplier.isBlocked}
                         />
                       </div>
-                      {practiceSupplier.customLabel && (
+                      {practiceSupplier.customLabel && supplier?.name && (
                         <p className="text-xs text-slate-500 dark:text-slate-500">
                           Also known as: {supplier.name}
                         </p>
@@ -118,7 +120,7 @@ export function PracticeSupplierList({ suppliers, globalSuppliers, canManage }: 
                   )}
 
                   {/* Contact information */}
-                  {(supplier.email || supplier.phone || supplier.website) && (
+                  {supplier && (supplier.email || supplier.phone || supplier.website) && (
                     <div className="space-y-2 border-t border-slate-100 pt-4 dark:border-slate-800">
                       <div className="grid gap-2 text-sm text-slate-700 dark:text-slate-300 md:grid-cols-2">
                         {supplier.email && (

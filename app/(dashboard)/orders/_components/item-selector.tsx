@@ -20,8 +20,7 @@ export interface ItemForSelection {
 
 interface ItemSelectorProps {
   items: ItemForSelection[];
-  supplierId?: string;
-  practiceSupplierId?: string;
+  practiceSupplierId: string;
   onSelect: (itemId: string, defaultPrice: number) => void;
   excludeItemIds?: string[];
   placeholder?: string;
@@ -29,7 +28,6 @@ interface ItemSelectorProps {
 
 export function ItemSelector({
   items,
-  supplierId,
   practiceSupplierId,
   onSelect,
   excludeItemIds = [],
@@ -47,20 +45,10 @@ export function ItemSelector({
   // Filter items by supplier and search term
   const availableItems = items
     .filter((item) => {
-      // Filter by supplier (support both legacy supplierId and new practiceSupplierId)
-      let matchesSupplier = false;
-      
-      if (practiceSupplierId) {
-        // New practice supplier filtering
-        matchesSupplier =
-          item.supplierItems.some((si) => si.practiceSupplierId === practiceSupplierId) ||
-          item.defaultPracticeSupplierId === practiceSupplierId;
-      } else if (supplierId) {
-        // Legacy supplier filtering
-        matchesSupplier =
-          item.supplierItems.some((si) => si.supplierId === supplierId) ||
-          item.defaultSupplierId === supplierId;
-      }
+      // Filter by supplier
+      const matchesSupplier =
+        item.supplierItems.some((si) => si.practiceSupplierId === practiceSupplierId) ||
+        item.defaultPracticeSupplierId === practiceSupplierId;
       
       // Filter out already selected items
       const notExcluded = !excludeItemIds.includes(item.id);
@@ -77,22 +65,10 @@ export function ItemSelector({
 
   // Get unit price for an item from supplier
   const getUnitPrice = (item: ItemForSelection): number => {
-    // Try practice supplier first
-    if (practiceSupplierId) {
-      const supplierItem = item.supplierItems.find((si) => si.practiceSupplierId === practiceSupplierId);
-      if (supplierItem?.unitPrice) {
-        return decimalToNumber(supplierItem.unitPrice) || 0;
-      }
+    const supplierItem = item.supplierItems.find((si) => si.practiceSupplierId === practiceSupplierId);
+    if (supplierItem?.unitPrice) {
+      return decimalToNumber(supplierItem.unitPrice) || 0;
     }
-    
-    // Fall back to legacy supplier
-    if (supplierId) {
-      const supplierItem = item.supplierItems.find((si) => si.supplierId === supplierId);
-      if (supplierItem?.unitPrice) {
-        return decimalToNumber(supplierItem.unitPrice) || 0;
-      }
-    }
-    
     return 0;
   };
 

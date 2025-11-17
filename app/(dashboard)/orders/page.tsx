@@ -108,8 +108,12 @@ function OrdersList({
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
             {orders.map((order) => {
-              const itemCount = order.items.length;
-              const total = calculateOrderTotal(order.items);
+              const itemCount = order.items?.length ?? 0;
+              const total = calculateOrderTotal(order.items || []);
+
+              // Get supplier display name and ID for linking
+              const supplierName = order.practiceSupplier?.customLabel || order.practiceSupplier?.globalSupplier?.name || 'Unknown Supplier';
+              const supplierLinkId = order.practiceSupplier?.id || '';
 
               return (
                 <tr key={order.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
@@ -122,12 +126,16 @@ function OrdersList({
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/suppliers#${order.supplier.id}`}
-                      className="font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-                    >
-                      {order.supplier.name}
-                    </Link>
+                    {supplierLinkId ? (
+                      <Link
+                        href={`/suppliers#${supplierLinkId}`}
+                        className="font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+                      >
+                        {supplierName}
+                      </Link>
+                    ) : (
+                      <span className="text-slate-600 dark:text-slate-400">{supplierName}</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge status={order.status} />

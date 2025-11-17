@@ -24,15 +24,19 @@ function generateNonce(): string {
 /**
  * Set CSRF cookie if not present or invalid
  * Cookie properties:
- * - Name: __Host-csrf (secure prefix)
+ * - Name: __Host-csrf (secure prefix in production), csrf-token (in development)
  * - HttpOnly: true (prevent JavaScript access)
  * - SameSite: Lax (protect against CSRF while allowing normal navigation)
  * - Secure: true (HTTPS only in production)
  * - Path: /
  * - Max-Age: 3600 (1 hour)
+ * 
+ * Note: __Host- prefix requires Secure flag and HTTPS. In development (HTTP),
+ * we use a simpler cookie name to ensure compatibility.
  */
 async function setCsrfCookie(response: NextResponse, request: Request): Promise<void> {
   const isProduction = env.NODE_ENV === 'production';
+  const cookieName = isProduction ? '__Host-csrf' : 'csrf-token';
   
   // Check if valid CSRF cookie already exists
   const existingToken = getCsrfTokenFromCookie(request);
@@ -51,7 +55,9 @@ async function setCsrfCookie(response: NextResponse, request: Request): Promise<
     const signedToken = await createSignedCsrfToken();
     
     // Set cookie with security attributes
-    const cookieValue = `__Host-csrf=${encodeURIComponent(signedToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600${isProduction ? '; Secure' : ''}`;
+    // In production: __Host-csrf with Secure flag (requires HTTPS)
+    // In development: csrf-token without Secure flag (for HTTP compatibility)
+    const cookieValue = `${cookieName}=${encodeURIComponent(signedToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600${isProduction ? '; Secure' : ''}`;
     
     response.headers.append('Set-Cookie', cookieValue);
   }

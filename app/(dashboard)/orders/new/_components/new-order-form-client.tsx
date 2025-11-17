@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useActionState, useEffect, useRef, Fragment } from 'react';
+import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
 
 import { createDraftOrderAction } from '../../actions';
 import { ItemSelector, type ItemForSelection } from '../../_components/item-selector';
 import type { PracticeSupplierWithRelations } from '@/src/domain/models/suppliers';
+import type { FormState } from '@/lib/form-types';
 
 interface NewOrderFormClientProps {
   practiceSuppliers: PracticeSupplierWithRelations[];
@@ -25,14 +27,45 @@ interface NewOrderFormClientProps {
   preSelectedSupplierId?: string;
 }
 
+const initialState: FormState = {};
+
+function SubmitButton({ disabled }: { disabled: boolean }) {
+  const { pending } = useFormStatus();
+  
+  return (
+    <button
+      type="submit"
+      disabled={disabled || pending}
+      className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100 flex items-center gap-2"
+    >
+      {pending ? (
+        <>
+          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Creating...
+        </>
+      ) : (
+        'Create Draft Order'
+      )}
+    </button>
+  );
+}
+
 export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSupplierId }: NewOrderFormClientProps) {
   const [selectedPracticeSupplierId, setSelectedPracticeSupplierId] = useState(preSelectedSupplierId || '');
   const [selectedItems, setSelectedItems] = useState<
     { itemId: string; quantity: number; unitPrice: number }[]
   >([]);
-  const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [state, formAction] = useActionState(createDraftOrderAction, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Handle form state changes
+  useEffect(() => {
+    // Errors are displayed inline in the UI
+    // Success triggers a redirect from the server action
+  }, [state]);
 
   const handleAddItem = (itemId: string, defaultPrice: number) => {
     if (selectedItems.some((i) => i.itemId === itemId)) {
@@ -47,43 +80,19 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
   };
 
   const handleUpdateQuantity = (itemId: string, quantity: number) => {
+    // Ensure quantity is a valid positive integer
+    const validQuantity = Math.max(1, Math.floor(quantity) || 1);
     setSelectedItems(
-      selectedItems.map((i) => (i.itemId === itemId ? { ...i, quantity } : i))
+      selectedItems.map((i) => (i.itemId === itemId ? { ...i, quantity: validQuantity } : i))
     );
   };
 
   const handleUpdatePrice = (itemId: string, unitPrice: number) => {
+    // Ensure price is non-negative and not NaN
+    const validPrice = Math.max(0, unitPrice || 0);
     setSelectedItems(
-      selectedItems.map((i) => (i.itemId === itemId ? { ...i, unitPrice } : i))
+      selectedItems.map((i) => (i.itemId === itemId ? { ...i, unitPrice: validPrice } : i))
     );
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
-    setFieldErrors({});
-    setIsSubmitting(true);
-
-    const formData = new FormData(e.currentTarget);
-    formData.set('practiceSupplierId', selectedPracticeSupplierId);
-    formData.set('items', JSON.stringify(selectedItems));
-
-    try {
-      const result = await createDraftOrderAction(null, formData);
-      if (result && 'errors' in result && result.errors) {
-        // Field-level validation errors
-        setFieldErrors(result.errors);
-        setIsSubmitting(false);
-      } else if (result && 'error' in result) {
-        // Form-level error
-        setError(result.error);
-        setIsSubmitting(false);
-      }
-      // If successful, the action will redirect
-    } catch (err) {
-      setError('Failed to create order');
-      setIsSubmitting(false);
-    }
   };
 
   const total = selectedItems.reduce((sum, item) => {
@@ -107,9 +116,9 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
         </div>
       </div>
 
-      {error ? (
-        <div className="rounded-lg border border-rose-800 bg-rose-900/30 p-4">
-          <p className="text-sm text-rose-300">{error}</p>
+      {state.error ? (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-900/30">
+          <p className="text-sm font-semibold text-rose-900 dark:text-rose-200">{state.error}</p>
         </div>
       ) : null}
 
@@ -122,7 +131,23 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form 
+        ref={formRef} 
+        action={formAction} 
+        className="space-y-6"
+      >
+        {/* Hidden inputs for dynamic data */}
+        <input type="hidden" name="practiceSupplierId" value={selectedPracticeSupplierId} />
+        
+        {/* Hidden inputs for items array */}
+        {selectedItems.map((item, index) => (
+          <Fragment key={item.itemId}>
+            <input type="hidden" name={`items[${index}].itemId`} value={item.itemId} />
+            <input type="hidden" name={`items[${index}].quantity`} value={item.quantity} />
+            <input type="hidden" name={`items[${index}].unitPrice`} value={item.unitPrice} />
+          </Fragment>
+        ))}
+        
         {/* Supplier Selection */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Supplier</h2>
@@ -161,8 +186,8 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
                 })}
               </select>
               
-              {fieldErrors.supplierId?.[0] && (
-                <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.supplierId[0]}</p>
+              {state.errors?.supplierId?.[0] && (
+                <p className="text-xs text-rose-600 dark:text-rose-400">{state.errors.supplierId[0]}</p>
               )}
               
               {selectedPracticeSupplierId && (() => {
@@ -320,8 +345,8 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
                   excludeItemIds={selectedItems.map((si) => si.itemId)}
                   placeholder="Search items by name or SKU..."
                 />
-                {fieldErrors.items?.[0] && (
-                  <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.items[0]}</p>
+                {state.errors?.items?.[0] && (
+                  <p className="text-xs text-rose-600 dark:text-rose-400">{state.errors.items[0]}</p>
                 )}
               </div>
             </div>
@@ -368,23 +393,7 @@ export function NewOrderFormClient({ practiceSuppliers, items, preSelectedSuppli
           >
             Cancel
           </Link>
-          <button
-            type="submit"
-            disabled={isSubmitting || !selectedPracticeSupplierId || selectedItems.length === 0}
-            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 disabled:active:scale-100 flex items-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Creating...
-              </>
-            ) : (
-              'Create Draft Order'
-            )}
-          </button>
+          <SubmitButton disabled={!selectedPracticeSupplierId || selectedItems.length === 0} />
         </div>
       </form>
     </div>

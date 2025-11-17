@@ -19,7 +19,8 @@ export default async function StockCountPage() {
   const ctx = buildRequestContextFromSession(session);
 
   // Fetch recent count sessions using InventoryService
-  const sessions = await getInventoryService().getStockCountSessions(ctx);
+  const sessionsResult = await getInventoryService().getStockCountSessions(ctx);
+  const sessions = sessionsResult ?? [];
 
   const getStatusVariant = (status: StockCountStatus): BadgeVariant => {
     switch (status) {
@@ -75,7 +76,7 @@ export default async function StockCountPage() {
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">In Progress</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {sessions.filter((s) => s.status === StockCountStatus.IN_PROGRESS).length}
+                {sessions.filter((s) => s?.status === StockCountStatus.IN_PROGRESS).length}
               </p>
             </div>
           </div>
@@ -89,7 +90,7 @@ export default async function StockCountPage() {
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Completed (30d)</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {sessions.filter((s) => s.status === StockCountStatus.COMPLETED).length}
+                {sessions.filter((s) => s?.status === StockCountStatus.COMPLETED).length}
               </p>
             </div>
           </div>
@@ -103,7 +104,7 @@ export default async function StockCountPage() {
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Items Counted</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {sessions.reduce((sum, s) => sum + s.lines.length, 0)}
+                {sessions.reduce((sum, s) => sum + (s?.lines ?? []).length, 0)}
               </p>
             </div>
           </div>
@@ -127,7 +128,11 @@ export default async function StockCountPage() {
         ) : (
           <div className="divide-y divide-card-border">
             {sessions.map((session) => {
-              const totalVariance = session.lines.reduce((sum: number, line: any) => sum + Math.abs(line.variance), 0);
+              const lines = session?.lines ?? [];
+              const totalVariance = lines.reduce((sum: number, line: any) => {
+                const variance = line?.variance ?? 0;
+                return sum + Math.abs(variance);
+              }, 0);
 
               return (
                 <Link
@@ -149,12 +154,12 @@ export default async function StockCountPage() {
                       <div className="flex items-center gap-2 text-sm">
                         <MapPin className="h-4 w-4 text-slate-400" />
                         <span className="font-medium text-slate-900 dark:text-slate-100">
-                          {session.location.name}
+                          {session?.location?.name ?? 'Unknown location'}
                         </span>
                       </div>
 
                       <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
-                        <span>{session.lines.length} items counted</span>
+                        <span>{lines.length} items counted</span>
                         {totalVariance > 0 && (
                           <span className="text-amber-600 dark:text-amber-400">
                             ±{totalVariance} variance
@@ -175,7 +180,7 @@ export default async function StockCountPage() {
                     </div>
 
                     <div className="text-right text-sm text-slate-600 dark:text-slate-400">
-                      <div>{session.createdBy.name || session.createdBy.email}</div>
+                      <div>{session?.createdBy?.name || session?.createdBy?.email || 'Unknown user'}</div>
                     </div>
                   </div>
                 </Link>

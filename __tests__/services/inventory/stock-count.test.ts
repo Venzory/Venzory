@@ -81,6 +81,7 @@ describe('Stock Count Service', () => {
       findStockCountLineById: vi.fn(),
       updateStockCountSessionStatus: vi.fn(),
       detectInventoryChanges: vi.fn(),
+      findInProgressSessionByLocation: vi.fn(),
     };
 
     mockUserRepo = {};
@@ -111,6 +112,7 @@ describe('Stock Count Service', () => {
       const location = createTestLocation(practice.id);
 
       mockLocationRepo.findLocationById.mockResolvedValue(location);
+      mockStockCountRepo.findInProgressSessionByLocation.mockResolvedValue(null);
       mockStockCountRepo.createStockCountSession.mockResolvedValue({
         id: 'session-1',
         practiceId: ctx.practiceId,
@@ -130,8 +132,40 @@ describe('Stock Count Service', () => {
         ctx.practiceId,
         expect.anything()
       );
+      expect(mockStockCountRepo.findInProgressSessionByLocation).toHaveBeenCalledWith(
+        ctx.practiceId,
+        location.id,
+        expect.anything()
+      );
       expect(mockStockCountRepo.createStockCountSession).toHaveBeenCalled();
       expect(mockAuditService.logStockCountSessionCreated).toHaveBeenCalled();
+    });
+
+    it('should throw BusinessRuleViolationError when IN_PROGRESS session already exists for location', async () => {
+      const ctx = createTestContext({ role: 'STAFF' });
+      const practice = createTestPractice();
+      const location = createTestLocation(practice.id);
+
+      mockLocationRepo.findLocationById.mockResolvedValue(location);
+      mockStockCountRepo.findInProgressSessionByLocation.mockResolvedValue({
+        id: 'existing-session',
+        practiceId: ctx.practiceId,
+        locationId: location.id,
+        status: StockCountStatus.IN_PROGRESS,
+        createdById: ctx.userId!,
+        notes: null,
+        completedAt: null,
+        createdAt: new Date(),
+      });
+
+      await expect(
+        inventoryService.createStockCountSession(ctx, location.id)
+      ).rejects.toThrow(BusinessRuleViolationError);
+      await expect(
+        inventoryService.createStockCountSession(ctx, location.id)
+      ).rejects.toThrow('An in-progress stock count already exists for this location');
+
+      expect(mockStockCountRepo.createStockCountSession).not.toHaveBeenCalled();
     });
 
     it('should throw ValidationError when userId is null', async () => {

@@ -12,10 +12,16 @@ import { parseAndVerifySignedToken } from '@/lib/csrf';
  * Extract and verify CSRF token from Next.js headers
  * 
  * Server actions receive the token via:
- * 1. Cookie: __Host-csrf (set by middleware)
- * 2. Header: x-csrf-token (set by client)
+ * 1. Cookie: __Host-csrf (production) or csrf-token (development)
+ * 2. Header: x-csrf-token (optional, for fetch requests)
  * 
- * This function verifies that both exist and match
+ * For Next.js server actions submitted via forms, the cookie alone provides
+ * CSRF protection due to SameSite=Lax and secure cookie attributes.
+ * 
+ * For programmatic fetch requests, both cookie and header must match.
+ * 
+ * Note: __Host- prefix requires HTTPS and Secure flag. In development (HTTP),
+ * we use csrf-token to ensure browser compatibility.
  * 
  * @throws Error if CSRF verification fails
  */
@@ -35,7 +41,8 @@ export async function verifyCsrfFromHeaders(): Promise<void> {
       return acc;
     }, {} as Record<string, string>);
     
-    cookieToken = cookies['__Host-csrf'] || null;
+    // Try production cookie name first, then development
+    cookieToken = cookies['__Host-csrf'] || cookies['csrf-token'] || null;
   }
   
   if (!cookieToken) {
@@ -49,17 +56,22 @@ export async function verifyCsrfFromHeaders(): Promise<void> {
     throw new Error('Invalid request');
   }
   
-  // Get token from header
+  // Get token from header (optional for form-based server actions)
   const headerToken = headersList.get('x-csrf-token');
   
-  if (!headerToken) {
-    throw new Error('Invalid request');
+  // If header token is provided (fetch requests), verify it matches
+  if (headerToken) {
+    // Compare tokens (constant-time comparison handled by Buffer.compare)
+    if (headerToken !== verifiedCookieToken) {
+      throw new Error('Invalid request');
+    }
   }
   
-  // Compare tokens (constant-time comparison handled by Buffer.compare)
-  if (headerToken !== verifiedCookieToken) {
-    throw new Error('Invalid request');
-  }
+  // If no header token, we rely on cookie-based CSRF protection
+  // This is secure for server actions due to:
+  // 1. SameSite=Lax prevents cross-site cookie sending
+  // 2. Secure cookie attributes (Secure flag in production, HttpOnly, Path=/)
+  // 3. Server actions are same-origin by design
 }
 
 /**
@@ -94,6 +106,8 @@ export function withCsrfAction<TArgs extends any[], TReturn>(
  * Helper to get raw CSRF token for client-side use
  * This is useful for forms that need to include the token
  * 
+ * Supports both production (__Host-csrf) and development (csrf-token) cookie names.
+ * 
  * @returns The raw CSRF token (without signature)
  */
 export async function getCsrfTokenForClient(): Promise<string | null> {
@@ -112,7 +126,8 @@ export async function getCsrfTokenForClient(): Promise<string | null> {
     return acc;
   }, {} as Record<string, string>);
   
-  const signedToken = cookies['__Host-csrf'];
+  // Try production cookie name first, then development
+  const signedToken = cookies['__Host-csrf'] || cookies['csrf-token'];
   
   if (!signedToken) {
     return null;

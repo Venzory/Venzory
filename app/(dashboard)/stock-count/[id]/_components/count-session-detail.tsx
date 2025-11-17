@@ -459,7 +459,8 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
                                 toast.success('Line removed');
                                 router.refresh();
                               } catch (error) {
-                                toast.error('Failed to remove line');
+                                const errorMessage = error instanceof Error ? error.message : 'Failed to remove line';
+                                toast.error(errorMessage);
                               }
                             }
                           }}

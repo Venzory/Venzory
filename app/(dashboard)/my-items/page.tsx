@@ -4,6 +4,7 @@ import { PracticeRole } from '@prisma/client';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getInventoryService } from '@/src/services';
+import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
 import { Button } from '@/components/ui/button';
 import { parseListParams } from '@/lib/url-params';
@@ -37,12 +38,11 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
   const canSortServerSide = !sortBy || sortBy === 'name' || sortBy === 'sku';
   const serverSortBy = canSortServerSide ? (sortBy as 'name' | 'sku' | undefined) : undefined;
 
-  // Fetch items with filters
+  // Fetch items with filters (don't apply lowStockOnly server-side, we'll filter client-side)
   const inventoryService = getInventoryService();
   const { items, totalCount } = await inventoryService.findItems(ctx, {
     search,
     practiceSupplierId: supplier,
-    lowStockOnly: lowStock === 'true',
   }, {
     page: canSortServerSide ? currentPage : 1,
     limit: canSortServerSide ? itemsPerPage : 10000,
@@ -50,8 +50,17 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
     sortOrder: canSortServerSide ? (sortOrder as 'asc' | 'desc') : undefined,
   });
 
-  // Get suppliers for filter
-  const suppliers = await inventoryService.getSuppliers(ctx);
+  // Get practice suppliers for filter (using PracticeSupplier instead of legacy Supplier)
+  const practiceSuppliers = await getPracticeSupplierRepository().findPracticeSuppliers(
+    practiceId,
+    { includeBlocked: false }
+  );
+  
+  // Map to simple { id, name } shape for the filter component
+  const suppliers = practiceSuppliers.map(ps => ({
+    id: ps.id,
+    name: ps.customLabel || ps.globalSupplier.name,
+  }));
 
   // Calculate low stock info and total stock for each item using shared utility
   const itemsWithStockInfo = items.map(item => {
@@ -63,17 +72,22 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
     };
   });
 
+  // Apply client-side low stock filter if requested
+  const filteredItems = lowStock === 'true' 
+    ? itemsWithStockInfo.filter(item => item.isLowStock)
+    : itemsWithStockInfo;
+
   // For computed fields (brand, supplier, stock, status), we still need client-side sorting
-  let finalItems = itemsWithStockInfo;
-  let finalTotalCount = totalCount;
+  let finalItems = filteredItems;
+  let finalTotalCount = lowStock === 'true' ? filteredItems.length : totalCount;
   
   if (!canSortServerSide && sortBy) {
-    const sortedItems = [...itemsWithStockInfo].sort((a, b) => {
+    const sortedItems = [...filteredItems].sort((a, b) => {
       const order = sortOrder === 'desc' ? -1 : 1;
       
       switch (sortBy) {
         case 'brand':
-          return order * (a.product?.brand || '').localeCompare(b.product?.brand || '');
+          return order * ((a.product?.brand || '').localeCompare(b.product?.brand || ''));
         case 'supplier':
           const supplierA = a.defaultPracticeSupplier?.customLabel || a.defaultPracticeSupplier?.globalSupplier?.name || '';
           const supplierB = b.defaultPracticeSupplier?.customLabel || b.defaultPracticeSupplier?.globalSupplier?.name || '';
@@ -139,6 +153,7 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={finalTotalCount}
+          itemsPerPage={itemsPerPage}
         />
       </section>
     </div>

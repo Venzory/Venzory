@@ -9,19 +9,90 @@
 3. `20251108011331_add_receiving_module` - Receiving module
 4. `20251108113748_remove_order_item_receipt` - Remove order item receipt
 5. `20251111112724_add_global_and_practice_suppliers` - **Phase 1: Global Supplier Architecture** ✨
+6. `20251111122948_add_practice_supplier_to_orders_items` - Phase 2: PracticeSupplier support
+7. `20251111140000_add_ondelete_policies_and_constraints` - **Database Constraint Hardening: onDelete policies & supplier uniques** ✨
+8. `20251111140500_add_partially_received_status` - Add PARTIALLY_RECEIVED order status
+9. `20251111141000_add_check_constraints` - **Database Constraint Hardening: CHECK constraints** ✨
+10. `20251113180000_add_unique_constraints_items_locations` - **Database Constraint Hardening: Item & Location uniques** ✨
+11. `20251116000000_formalize_remaining_drift` - **Formalize remaining drift: createdAt column & performance indexes** ✨
 
 ### Schema Drift Notes
 
-The database has some additional changes that were applied via `prisma db push` during development and are not yet in migration files:
+**Most drift has been resolved via migrations!** ✅
 
-- `OrderStatus` enum: Added `PARTIALLY_RECEIVED` variant
-- `Item` table: Added composite indexes on `(practiceId, name)` and `(practiceId, sku)`
-- `LocationInventory` table: Added `createdAt` column
-- `Order` table: Added composite index on `(practiceId, status, createdAt)`
+The following items that were previously drift have now been formalized:
 
-**Impact**: These changes are functional and working in production. They will need to be formalized in a future migration when convenient.
+- ~~`OrderStatus` enum: Added `PARTIALLY_RECEIVED` variant~~ ✅ **RESOLVED** (migration `20251111140500_add_partially_received_status`)
+- ~~`Item` table: Unique constraint on `(practiceId, name)`~~ ✅ **RESOLVED** (migration `20251113180000_add_unique_constraints_items_locations`)
+- ~~`Item` table: Partial unique index on `(practiceId, sku) WHERE sku IS NOT NULL`~~ ✅ **RESOLVED** (migration `20251113180000_add_unique_constraints_items_locations`)
+- ~~`Location` table: Partial unique index on `(practiceId, code) WHERE code IS NOT NULL`~~ ✅ **RESOLVED** (migration `20251113180000_add_unique_constraints_items_locations`)
 
-**Recommendation**: For new deployments, use `prisma db push` to sync the schema until these drifted changes are formalized.
+**Remaining Drift**: ✅ **ALL RESOLVED**
+
+The following items have now been formalized via migration `20251116000000_formalize_remaining_drift`:
+
+- ~~`LocationInventory` table: `createdAt` column~~ ✅ **RESOLVED**
+- ~~`Order` table: Composite index on `(practiceId, status, createdAt)`~~ ✅ **RESOLVED**
+- ~~`LocationInventory` table: Index on `[itemId, reorderPoint, quantity]`~~ ✅ **RESOLVED**
+
+**Current Status**: No remaining drift! All schema items in `schema.prisma` are now backed by migrations.
+
+**Note**: The drift formalization migration is **idempotent** - it can be safely applied to databases that already have these items (from prior `db push` usage) as well as fresh databases.
+
+## Database Constraint Hardening (Migrations 7, 9, 10)
+
+**Migrations**: 
+- `20251111140000_add_ondelete_policies_and_constraints`
+- `20251111141000_add_check_constraints`
+- `20251113180000_add_unique_constraints_items_locations`
+
+**Status**: ✅ Implemented and Documented  
+**Documentation**: See `docs/migrations/database-constraint-hardening.md` and `DOMAIN_RULES.md`
+
+### What Was Added
+
+**onDelete Policies (Migration 7)**:
+- User references: `onDelete: SetNull` (preserves audit trail)
+- Supplier references: `onDelete: SetNull` (preserves order history)
+- Location references in transfers: `onDelete: Restrict` (preserves audit trail)
+- PracticeSupplier migration tracking FK
+
+**Unique Constraints (Migrations 7 & 10)**:
+- `GlobalSupplier.name` - prevents duplicate global suppliers
+- `Supplier(practiceId, name)` - prevents duplicate suppliers per practice
+- `Item(practiceId, name)` - prevents duplicate item names per practice
+- `Item(practiceId, sku)` - partial unique (WHERE sku IS NOT NULL)
+- `Location(practiceId, code)` - partial unique (WHERE code IS NOT NULL)
+
+**CHECK Constraints (Migration 9)**:
+- Inventory: `quantity >= 0` (P1 CRITICAL for Magento)
+- Quantities: positive in OrderItem, GoodsReceiptLine, InventoryTransfer
+- Transfers: prevents same-location transfers
+- Adjustments: prevents zero-quantity adjustments
+- Status timestamps: SENT orders have sentAt, CONFIRMED receipts have receivedAt, etc.
+- Prices: non-negative in OrderItem, SupplierItem, SupplierCatalog
+- Reorder settings: non-negative reorderPoint, positive reorderQuantity
+- Min order quantities: positive where applicable
+
+### Verification
+
+```bash
+# Check constraint violations
+npx tsx scripts/run-validation-queries.ts
+
+# Check for duplicate data
+npx tsx scripts/check-duplicates.ts
+
+# Verify constraints are present in DB
+npx tsx scripts/verify-constraints.ts
+```
+
+### Backward Compatibility
+
+✅ All existing service-layer validation unchanged  
+✅ Constraints match existing business rules  
+✅ No breaking changes to application code  
+✅ User-friendly error messages via constraint error handler
 
 ## Phase 1: Global Supplier Architecture
 
@@ -100,6 +171,82 @@ npm run backfill:suppliers -- --apply
 
 ---
 
-**Last Updated**: November 11, 2025  
-**Schema Version**: Phase 1 Complete
+## Drift Cleanup - COMPLETED ✅
+
+### Previously Drifted Items (Now Resolved)
+
+All drift items have been formalized via migration `20251116000000_formalize_remaining_drift`:
+
+1. **LocationInventory.createdAt column** ✅
+   - Type: Audit timestamp
+   - Now: Backed by migration, added with default value
+   - Migration: Idempotent (skips if already exists)
+
+2. **Order composite index on (practiceId, status, createdAt)** ✅
+   - Type: Performance optimization
+   - Now: Backed by migration
+   - Benefit: Speeds up order list queries filtered by practice and status
+
+3. **LocationInventory index on [itemId, reorderPoint, quantity]** ✅
+   - Type: Performance optimization
+   - Now: Backed by migration
+   - Benefit: Speeds up reorder point queries
+
+### Detection
+
+To detect which drift items exist in your database:
+
+```bash
+# Use Prisma's migrate diff to see what's different
+npx prisma migrate diff \
+  --from-url="$DATABASE_URL" \
+  --to-schema-datasource \
+  --script > drift-analysis.sql
+
+# Review the output to see what Prisma thinks needs to change
+```
+
+### Remediation Options
+
+**Option 1: Create a follow-up migration (recommended for consistency)**
+- Generate a migration that adds these items
+- Apply it to all environments via `prisma migrate deploy`
+- Benefits: All environments consistent, proper migration history
+
+**Option 2: Mark as resolved (if already present in all live DBs)**
+- If all staging/prod DBs already have these via `db push`
+- Use `prisma migrate resolve` to mark a migration as applied without running it
+- Benefits: No schema changes needed
+
+**Option 3: Leave as-is (acceptable for now)**
+- These are non-critical optimizations
+- Can be addressed in a future maintenance window
+- Benefits: No immediate action required
+
+### Deployment of Drift Formalization Migration
+
+To apply the drift formalization migration:
+
+```bash
+# Local/Dev
+npx prisma migrate deploy
+
+# Staging
+DATABASE_URL=$STAGING_URL npx prisma migrate deploy
+
+# Production
+DATABASE_URL=$PRODUCTION_URL npx prisma migrate deploy
+```
+
+**Note**: This migration is safe to apply to all environments. It's idempotent and will skip items that already exist.
+
+### Going Forward
+
+**Policy**: Avoid `prisma db push` in favor of proper migrations (`prisma migrate dev` in development, `prisma migrate deploy` in staging/prod) to prevent future drift.
+
+---
+
+**Last Updated**: November 16, 2025  
+**Schema Version**: Phase 1 Complete + Constraint Hardening Complete + All Drift Resolved  
+**Drift Status**: ✅ **NONE** - All schema items backed by migrations
 

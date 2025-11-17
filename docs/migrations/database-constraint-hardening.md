@@ -15,7 +15,7 @@ This migration adds critical database-level constraints to enforce business inva
 
 1. **onDelete Policies**: Added to 15+ foreign key relationships
 2. **CHECK Constraints**: Added 17 new validation rules
-3. **Unique Constraints**: Added 2 new uniqueness rules
+3. **Unique Constraints**: Added 5 new uniqueness rules (suppliers, items, locations)
 4. **Foreign Keys**: Added 1 new FK for migration tracking
 
 ### Benefits
@@ -65,7 +65,7 @@ This migration adds critical database-level constraints to enforce business inva
 
 ## Migration Files
 
-### 1. onDelete Policies and Unique Constraints
+### 1. onDelete Policies and Unique Constraints (Suppliers)
 **File**: `prisma/migrations/20251111140000_add_ondelete_policies_and_constraints/migration.sql`
 
 **Changes**:
@@ -93,6 +93,16 @@ This migration adds critical database-level constraints to enforce business inva
 
 **Risk**: Medium (could fail if data violates constraints)
 
+### 3. Unique Constraints (Items and Locations)
+**File**: `prisma/migrations/20251113180000_add_unique_constraints_items_locations/migration.sql`
+
+**Changes**:
+- Adds unique constraint on `Item(practiceId, name)`
+- Adds partial unique index on `Item(practiceId, sku) WHERE sku IS NOT NULL`
+- Adds partial unique index on `Location(practiceId, code) WHERE code IS NOT NULL`
+
+**Risk**: Medium (could fail if duplicate data exists)
+
 ---
 
 ## Deployment Steps
@@ -107,6 +117,11 @@ cd /path/to/RemcuraV2
 npx tsx scripts/run-validation-queries.ts
 
 # Expected output: "No constraint violations found!"
+
+# Run duplicate detection (for item/location unique constraints)
+npx tsx scripts/check-duplicates.ts
+
+# Expected output: "No duplicates found!"
 ```
 
 If violations are found:

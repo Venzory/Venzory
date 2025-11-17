@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { X, Store, Package, ShoppingCart, CheckCircle2, ArrowRight } from 'lucide-react';
+import { X, Store, Package, ShoppingCart, CheckCircle2, ArrowRight, MapPin } from 'lucide-react';
 
 import { useOnboarding, type OnboardingStep } from '@/hooks/use-onboarding';
 import { markOnboardingComplete, skipOnboarding } from '@/app/(dashboard)/_actions/onboarding-actions';
@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
 
 interface OnboardingPanelProps {
+  hasLocations: boolean;
   hasSuppliers: boolean;
   hasItems: boolean;
-  hasOrders: boolean;
+  hasReceivedOrders: boolean;
 }
 
 interface StepConfig {
@@ -23,11 +24,19 @@ interface StepConfig {
   completed: boolean;
 }
 
-export function OnboardingPanel({ hasSuppliers, hasItems, hasOrders }: OnboardingPanelProps) {
+export function OnboardingPanel({ hasLocations, hasSuppliers, hasItems, hasReceivedOrders }: OnboardingPanelProps) {
   const { currentStep, isOpen, closeOnboarding, nextStep, goToStepPage, clearOnboardingState } = useOnboarding();
   const [isPending, startTransition] = useTransition();
 
   const steps: StepConfig[] = [
+    {
+      id: 'locations',
+      title: 'Set Up Your First Storage Location',
+      description: 'Create storage locations to track where inventory is kept. This could be a room, cabinet, or any organizational unit.',
+      icon: MapPin,
+      actionLabel: hasLocations ? 'Location created ✓' : 'Create Location',
+      completed: hasLocations,
+    },
     {
       id: 'suppliers',
       title: 'Link Your First Supplier',
@@ -46,11 +55,11 @@ export function OnboardingPanel({ hasSuppliers, hasItems, hasOrders }: Onboardin
     },
     {
       id: 'orders',
-      title: 'Create Your First Order',
-      description: 'Place your first order to your linked supplier. Orders start as drafts and can be edited before sending.',
+      title: 'Create and Receive Your First Order',
+      description: 'Place your first order to your linked supplier, then receive it into your inventory to complete the setup.',
       icon: ShoppingCart,
-      actionLabel: hasOrders ? 'Order created ✓' : 'Create Order',
-      completed: hasOrders,
+      actionLabel: hasReceivedOrders ? 'Order received ✓' : 'Create Order',
+      completed: hasReceivedOrders,
     },
   ];
 
@@ -102,7 +111,7 @@ export function OnboardingPanel({ hasSuppliers, hasItems, hasOrders }: Onboardin
   };
 
   // Check if all steps are completed
-  const allCompleted = hasSuppliers && hasItems && hasOrders;
+  const allCompleted = hasLocations && hasSuppliers && hasItems && hasReceivedOrders;
 
   if (!isOpen) {
     return null;
