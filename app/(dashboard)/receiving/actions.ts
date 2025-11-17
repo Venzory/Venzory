@@ -27,20 +27,30 @@ const createGoodsReceiptSchema = z.object({
 
 const addReceiptLineSchema = z.object({
   receiptId: z.string().min(1, 'Receipt ID is required'),
-  itemId: z.string().min(1, 'Item ID is required'),
-  quantity: z.coerce.number().int('Quantity must be a whole number').positive('Quantity must be at least 1'),
+  itemId: z.string().min(1, 'Item is required'),
+  quantity: z.coerce.number().int('Quantity must be a whole number').positive('Quantity must be at least 1').max(999999, 'Quantity is too large'),
   batchNumber: z.string().max(128, 'Batch number is too long').optional().nullable().transform((value) => value && value.trim() ? value.trim() : null),
-  expiryDate: z.string().optional().nullable().transform((value) => value && value.trim() ? new Date(value) : null),
+  expiryDate: z.string().optional().nullable().transform((value) => {
+    if (!value || !value.trim()) return null;
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return null;
+    return date;
+  }),
   scannedGtin: z.string().max(64, 'GTIN is too long').optional().nullable().transform((value) => value && value.trim() ? value.trim() : null),
   notes: z.string().max(256, 'Notes are too long').optional().nullable().transform((value) => value && value.trim() ? value.trim() : null),
 });
 
 const updateReceiptLineSchema = z.object({
-  lineId: z.string().min(1),
-  quantity: z.coerce.number().int().positive(),
-  batchNumber: z.string().max(128).optional().transform((value) => value?.trim() || null),
-  expiryDate: z.string().optional().transform((value) => value ? new Date(value) : null),
-  notes: z.string().max(256).optional().transform((value) => value?.trim() || null),
+  lineId: z.string().min(1, 'Line ID is required'),
+  quantity: z.coerce.number().int('Quantity must be a whole number').positive('Quantity must be at least 1').max(999999, 'Quantity is too large'),
+  batchNumber: z.string().max(128, 'Batch number is too long').optional().transform((value) => value?.trim() || null),
+  expiryDate: z.string().optional().transform((value) => {
+    if (!value || !value.trim()) return null;
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return null;
+    return date;
+  }),
+  notes: z.string().max(256, 'Notes are too long').optional().transform((value) => value?.trim() || null),
 });
 
 const searchItemByGtinSchema = z.object({
@@ -236,6 +246,11 @@ export async function removeReceiptLineAction(lineId: string) {
   try {
     const ctx = await buildRequestContext();
 
+    // Validate line ID
+    if (!lineId || typeof lineId !== 'string' || lineId.trim().length === 0) {
+      throw new Error('Invalid line ID');
+    }
+
     const result = await receivingService.removeReceiptLine(ctx, lineId);
 
     if (isDomainError(result)) {
@@ -268,6 +283,11 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
   try {
     const ctx = await buildRequestContext();
 
+    // Validate receipt ID
+    if (!receiptId || typeof receiptId !== 'string' || receiptId.trim().length === 0) {
+      throw new Error('Invalid receipt ID');
+    }
+
     // Confirm goods receipt using service
     const result = await receivingService.confirmGoodsReceipt(ctx, receiptId);
 
@@ -291,7 +311,7 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
     return {
       success: true,
       redirectTo: result.orderId ? `/orders/${result.orderId}` : '/receiving',
-      lowStockWarnings: result.lowStockNotifications,
+      lowStockWarnings: result.lowStockNotifications || [],
     } as const;
   } catch (error: any) {
     const ctx = await buildRequestContext().catch(() => null);
@@ -316,6 +336,11 @@ export async function cancelGoodsReceiptAction(receiptId: string) {
   
   try {
     const ctx = await buildRequestContext();
+
+    // Validate receipt ID
+    if (!receiptId || typeof receiptId !== 'string' || receiptId.trim().length === 0) {
+      throw new Error('Invalid receipt ID');
+    }
 
     const result = await receivingService.cancelGoodsReceipt(ctx, receiptId);
 
@@ -348,6 +373,11 @@ export async function deleteGoodsReceiptAction(receiptId: string) {
   
   try {
     const ctx = await buildRequestContext();
+
+    // Validate receipt ID
+    if (!receiptId || typeof receiptId !== 'string' || receiptId.trim().length === 0) {
+      throw new Error('Invalid receipt ID');
+    }
 
     const result = await receivingService.deleteGoodsReceipt(ctx, receiptId);
 

@@ -16,12 +16,12 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
 
   // Fetch locations and suppliers for form dropdowns
   const [locations, suppliers, order] = await Promise.all([
-    getInventoryService().getLocations(ctx),
-    getInventoryService().getSuppliers(ctx),
+    getInventoryService().getLocations(ctx).catch(() => []),
+    getInventoryService().getSuppliers(ctx).catch(() => []),
     // Fetch order details if orderId is provided
-    orderId
+    orderId && typeof orderId === 'string'
       ? getOrderService().getOrderById(ctx, orderId).catch(() => null)
-      : null,
+      : Promise.resolve(null),
   ]);
 
   // Get supplier name from order (support both legacy and PracticeSupplier)

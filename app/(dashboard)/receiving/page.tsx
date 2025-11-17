@@ -22,7 +22,7 @@ export default async function ReceivingPage() {
 
   const receipts = await getReceivingService().findGoodsReceipts(ctx, {
     dateFrom: thirtyDaysAgo,
-  });
+  }).catch(() => []);
 
   const getStatusVariant = (status: GoodsReceiptStatus): BadgeVariant => {
     switch (status) {
@@ -78,7 +78,7 @@ export default async function ReceivingPage() {
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Draft Receipts</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {receipts.filter((r) => r.status === GoodsReceiptStatus.DRAFT).length}
+                {receipts?.filter((r) => r.status === GoodsReceiptStatus.DRAFT).length ?? 0}
               </p>
             </div>
           </div>
@@ -92,7 +92,7 @@ export default async function ReceivingPage() {
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Confirmed (30d)</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {receipts.filter((r) => r.status === GoodsReceiptStatus.CONFIRMED).length}
+                {receipts?.filter((r) => r.status === GoodsReceiptStatus.CONFIRMED).length ?? 0}
               </p>
             </div>
           </div>
@@ -106,7 +106,7 @@ export default async function ReceivingPage() {
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400">Total Items</p>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {receipts.reduce((sum, r) => sum + (r.lines?.length || 0), 0)}
+                {receipts?.reduce((sum, r) => sum + (r.lines?.length ?? 0), 0) ?? 0}
               </p>
             </div>
           </div>

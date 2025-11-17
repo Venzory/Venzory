@@ -171,7 +171,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
     }
   };
 
-  const totalQuantity = receipt.lines.reduce((sum, line) => sum + line.quantity, 0);
+  const totalQuantity = (receipt.lines || []).reduce((sum, line) => sum + (line?.quantity || 0), 0);
 
   return (
     <>
@@ -194,7 +194,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
             </p>
           </div>
 
-          {canEdit && receipt.lines.length > 0 && (
+          {canEdit && (receipt.lines || []).length > 0 && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 onClick={handleCancel}
@@ -266,7 +266,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
               <div>
                 <p className="text-xs text-slate-600 dark:text-slate-400">Summary</p>
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {receipt.lines.length} items, {totalQuantity} units
+                  {(receipt.lines || []).length} items, {totalQuantity} units
                 </p>
               </div>
             </div>
@@ -281,7 +281,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
         )}
 
         {/* Expected Items Quick Entry (when receiving an order) */}
-        {canEdit && expectedItems && receipt.order && (
+        {canEdit && expectedItems && Array.isArray(expectedItems) && receipt.order && (
           <>
             {expectedItems.length > 0 ? (
               <div className="rounded-lg border border-card-border bg-card p-4">
@@ -296,11 +296,11 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
                 <ExpectedItemsForm
                   receiptId={receipt.id}
                   expectedItems={expectedItems}
-                  receivedItemIds={new Set(receipt.lines.map((l) => l.item.id))}
+                  receivedItemIds={new Set((receipt.lines || []).map((l) => l?.item?.id).filter(Boolean))}
                   onSuccess={() => router.refresh()}
                 />
               </div>
-            ) : receipt.lines.length > 0 && (
+            ) : (receipt.lines || []).length > 0 && (
               <div className="rounded-lg border border-green-600 bg-green-950/30 p-4">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
@@ -309,7 +309,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
                       All Order Items Received
                     </h3>
                     <p className="mt-1 text-sm text-green-300">
-                      You&apos;ve received all {receipt.lines.length} items from this order. 
+                      You&apos;ve received all {(receipt.lines || []).length} items from this order. 
                       Review the receipt lines below and click &quot;Confirm Receipt&quot; when ready to update inventory.
                     </p>
                   </div>
@@ -320,7 +320,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
         )}
 
         {/* Manual Entry (when not receiving an order, or after finishing expected items) */}
-        {canEdit && (!expectedItems || expectedItems.length === 0 || receipt.lines.length > 0) && (
+        {canEdit && (!expectedItems || expectedItems.length === 0 || (receipt.lines || []).length > 0) && (
           <>
             {/* Action Buttons */}
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -375,7 +375,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
             </h2>
           </div>
 
-          {receipt.lines.length === 0 ? (
+          {(receipt.lines || []).length === 0 ? (
             <div className="p-12 text-center">
               <PackageCheck className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-600" />
               <h3 className="mt-4 text-lg font-medium text-slate-900 dark:text-slate-100">
@@ -387,7 +387,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
             </div>
           ) : (
             <div className="divide-y divide-card-border">
-              {receipt.lines.map((line) => (
+              {(receipt.lines || []).map((line) => (
                 <div key={line.id} className="p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-2">

@@ -32,8 +32,21 @@ export function ExpectedItemsForm({
   const [state, formAction] = useActionState(addReceiptLineAction, null);
   const [formKey, setFormKey] = useState(0);
 
-  const currentItem = expectedItems[currentIndex];
-  const isLastItem = currentIndex === expectedItems.length - 1;
+  // Guard against empty or invalid expectedItems
+  if (!expectedItems || expectedItems.length === 0) {
+    return null;
+  }
+
+  // Ensure currentIndex is within bounds
+  const safeIndex = Math.min(currentIndex, expectedItems.length - 1);
+  const currentItem = expectedItems[safeIndex];
+  
+  // Guard against invalid currentItem
+  if (!currentItem || !currentItem.itemId) {
+    return null;
+  }
+
+  const isLastItem = safeIndex === expectedItems.length - 1;
   const alreadyReceived = receivedItemIds.has(currentItem.itemId);
   const isFullyReceived = currentItem.remainingQuantity === 0;
 
@@ -64,16 +77,16 @@ export function ExpectedItemsForm({
       {/* Progress indicator */}
       <div className="flex items-center justify-between text-xs">
         <span className="text-slate-600 dark:text-slate-400">
-          Item {currentIndex + 1} of {expectedItems.length}
+          Item {safeIndex + 1} of {expectedItems.length}
         </span>
         <div className="flex gap-1">
           {expectedItems.map((_, idx) => (
             <div
               key={idx}
               className={`h-2 w-8 rounded-full ${
-                idx < currentIndex
+                idx < safeIndex
                   ? 'bg-green-500'
-                  : idx === currentIndex
+                  : idx === safeIndex
                     ? 'bg-sky-500'
                     : 'bg-slate-300 dark:bg-slate-700'
               }`}
