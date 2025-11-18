@@ -21,7 +21,7 @@ const receivingService = getReceivingService();
 const createGoodsReceiptSchema = z.object({
   locationId: z.string().min(1, 'Location is required'),
   orderId: z.string().optional().nullable().transform((value) => value || null),
-  supplierId: z.string().optional().nullable().transform((value) => value || null),
+  practiceSupplierId: z.string().optional().nullable().transform((value) => value || null),
   notes: z.string().max(512).optional().transform((value) => value?.trim() || null),
 });
 
@@ -71,7 +71,7 @@ export async function createGoodsReceiptAction(_prevState: unknown, formData: Fo
     const parsed = createGoodsReceiptSchema.safeParse({
       locationId: formData.get('locationId'),
       orderId: formData.get('orderId'),
-      supplierId: formData.get('supplierId'),
+      practiceSupplierId: formData.get('supplierId'), // Form field is still named supplierId
       notes: formData.get('notes'),
     });
 
@@ -79,13 +79,13 @@ export async function createGoodsReceiptAction(_prevState: unknown, formData: Fo
       return { error: 'Invalid receipt details' } as const;
     }
 
-    const { locationId, orderId, supplierId, notes } = parsed.data;
+    const { locationId, orderId, practiceSupplierId, notes } = parsed.data;
 
     // Create goods receipt using service
     const result = await receivingService.createGoodsReceipt(ctx, {
       locationId,
       orderId,
-      supplierId,
+      practiceSupplierId,
       notes,
     });
 

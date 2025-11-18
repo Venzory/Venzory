@@ -71,7 +71,7 @@ export async function lookupGtin(gtin: string): Promise<Gs1LookupResponse | null
 export async function updateGs1Verification(
   productId: string,
   status: Gs1VerificationStatus,
-  gs1Data?: Record<string, any>
+  gs1Data?: Record<string, unknown>
 ): Promise<void> {
   await productRepository.updateGs1Verification(productId, status, gs1Data);
 }

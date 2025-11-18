@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getOrderService, getInventoryService } from '@/src/services';
+import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
 import { Button } from '@/components/ui/button';
 
@@ -33,11 +34,17 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
   }
 
   // Fetch available items and suppliers for the add item form
-  const [itemsResult, suppliers] = await Promise.all([
+  const [itemsResult, practiceSuppliers] = await Promise.all([
     getInventoryService().findItems(ctx, {}, { limit: 10000 }),
-    getInventoryService().getSuppliers(ctx),
+    getPracticeSupplierRepository().findPracticeSuppliers(practiceId),
   ]);
   const availableItems = itemsResult.items;
+  
+  // Transform PracticeSuppliers to match expected format
+  const suppliers = practiceSuppliers.map(ps => ({
+    id: ps.id,
+    name: ps.customLabel || ps.globalSupplier?.name || 'Unknown Supplier',
+  }));
 
   const canManage = hasRole({
     memberships: session.user.memberships,

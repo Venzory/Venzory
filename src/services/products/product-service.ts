@@ -251,10 +251,10 @@ export class ProductService {
    */
   async findSupplierCatalog(
     ctx: RequestContext,
-    supplierId: string,
+    practiceSupplierId: string,
     productId: string
   ): Promise<SupplierCatalog | null> {
-    return this.productRepository.findSupplierCatalog(supplierId, productId);
+    return this.productRepository.findSupplierCatalog(practiceSupplierId, productId);
   }
 
   /**
@@ -292,7 +292,7 @@ export class ProductService {
       // Log audit event
       await this.auditService.logSupplierCatalogUpdated(
         ctx,
-        catalog.supplierId,
+        catalog.practiceSupplierId,
         catalog.productId,
         {
           supplierSku: catalog.supplierSku,

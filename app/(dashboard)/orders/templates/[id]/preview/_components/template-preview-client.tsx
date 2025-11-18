@@ -10,14 +10,14 @@ import { decimalToNumber } from '@/lib/prisma-transforms';
 interface TemplateItem {
   id: string;
   defaultQuantity: number;
-  supplier: { id: string; name: string } | null;
+  practiceSupplier: { id: string; customLabel: string | null; globalSupplier: { id: string; name: string } } | null;
   item: {
     id: string;
     name: string;
     sku: string | null;
     unit: string | null;
-    defaultSupplierId: string | null;
-    supplierItems: { supplierId: string; unitPrice: any }[];
+    defaultPracticeSupplierId: string | null;
+    supplierItems: { practiceSupplierId: string | null; unitPrice: any }[];
   };
 }
 
@@ -38,8 +38,8 @@ interface Item {
   name: string;
   sku: string | null;
   unit: string | null;
-  defaultSupplierId: string | null;
-  supplierItems: { supplierId: string; unitPrice: any }[];
+  defaultPracticeSupplierId: string | null;
+  supplierItems: { practiceSupplierId: string | null; unitPrice: any }[];
 }
 
 interface TemplatePreviewClientProps {
@@ -70,23 +70,23 @@ export function TemplatePreviewClient({
   
   for (const templateItem of template.items) {
     // Determine supplier: from template item, or fallback to item's default supplier
-    const supplierId = templateItem.supplier?.id || templateItem.item.defaultSupplierId;
+    const practiceSupplierId = templateItem.practiceSupplier?.id || templateItem.item.defaultPracticeSupplierId;
     
-    if (!supplierId) {
+    if (!practiceSupplierId) {
       continue; // Skip items without a supplier
     }
 
     // Get unit price from supplier items
     const supplierItem = templateItem.item.supplierItems.find(
-      (si) => si.supplierId === supplierId
+      (si) => si.practiceSupplierId === practiceSupplierId
     );
     const unitPrice = decimalToNumber(supplierItem?.unitPrice);
 
-    if (!groupedBySupplier.has(supplierId)) {
-      groupedBySupplier.set(supplierId, []);
+    if (!groupedBySupplier.has(practiceSupplierId)) {
+      groupedBySupplier.set(practiceSupplierId, []);
     }
 
-    groupedBySupplier.get(supplierId)!.push({
+    groupedBySupplier.get(practiceSupplierId)!.push({
       itemId: templateItem.item.id,
       quantity: templateItem.defaultQuantity,
       unitPrice,
@@ -152,7 +152,7 @@ export function TemplatePreviewClient({
     }
 
     // Get unit price from supplier items
-    const supplierItem = item.supplierItems.find((si) => si.supplierId === supplierId);
+    const supplierItem = item.supplierItems.find((si) => si.practiceSupplierId === supplierId);
     const unitPrice = decimalToNumber(supplierItem?.unitPrice);
 
     setSupplierGroups((prev) => {
@@ -421,8 +421,8 @@ export function TemplatePreviewClient({
                         .filter(
                           (item) =>
                             // Match items by supplier items OR default supplier
-                            (item.supplierItems.some((si) => si.supplierId === supplierId) ||
-                              item.defaultSupplierId === supplierId) &&
+                            (item.supplierItems.some((si) => si.practiceSupplierId === supplierId) ||
+                              item.defaultPracticeSupplierId === supplierId) &&
                             !items.some((oi) => oi.itemId === item.id)
                         )
                         .map((item) => (

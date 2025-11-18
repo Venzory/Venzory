@@ -11,19 +11,7 @@ import type { FormState } from '@/lib/form-types';
 
 interface NewOrderFormClientProps {
   practiceSuppliers: PracticeSupplierWithRelations[];
-  items: {
-    id: string;
-    name: string;
-    sku: string | null;
-    unit: string | null;
-    defaultSupplierId: string | null;
-    defaultPracticeSupplierId: string | null;
-    supplierItems: { 
-      supplierId: string; 
-      practiceSupplierId: string | null;
-      unitPrice: any;
-    }[];
-  }[];
+  items: ItemForSelection[];
   preSelectedSupplierId?: string;
 }
 

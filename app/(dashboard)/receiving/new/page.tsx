@@ -1,5 +1,6 @@
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getInventoryService, getOrderService } from '@/src/services';
+import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { NewReceiptForm } from './_components/new-receipt-form';
 
 export const metadata = {
@@ -15,14 +16,20 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
   const { orderId } = await searchParams;
 
   // Fetch locations and suppliers for form dropdowns
-  const [locations, suppliers, order] = await Promise.all([
+  const [locations, practiceSuppliers, order] = await Promise.all([
     getInventoryService().getLocations(ctx).catch(() => []),
-    getInventoryService().getSuppliers(ctx).catch(() => []),
+    getPracticeSupplierRepository().findPracticeSuppliers(ctx.practiceId).catch(() => []),
     // Fetch order details if orderId is provided
     orderId && typeof orderId === 'string'
       ? getOrderService().getOrderById(ctx, orderId).catch(() => null)
       : Promise.resolve(null),
   ]);
+  
+  // Transform PracticeSuppliers to match expected format
+  const suppliers = practiceSuppliers.map(ps => ({
+    id: ps.id,
+    name: ps.customLabel || ps.globalSupplier?.name || 'Unknown Supplier',
+  }));
 
   // Get supplier name from order
   let supplierName = 'Unknown';

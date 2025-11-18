@@ -152,6 +152,11 @@ vi.mock('@/src/domain/errors', () => ({
   isDomainError: vi.fn(() => false),
 }));
 
+// Mock order email service
+vi.mock('@/src/lib/email/sendOrderEmail', () => ({
+  sendOrderEmail: vi.fn(() => Promise.resolve({ success: true })),
+}));
+
 describe('Server Actions Integration (Valid CSRF)', () => {
   let signedToken: string;
   let rawToken: string;
@@ -169,8 +174,8 @@ describe('Server Actions Integration (Valid CSRF)', () => {
    * Helper to mock valid CSRF headers
    * Uses development cookie name (csrf-token) for test environment
    */
-  function mockValidCsrfHeaders() {
-    const { headers } = require('next/headers');
+  async function mockValidCsrfHeaders() {
+    const { headers } = await import('next/headers');
     vi.mocked(headers).mockResolvedValue({
       get: vi.fn((name: string) => {
         // Use development cookie name in tests (csrf-token)
@@ -183,7 +188,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
   describe('Inventory Actions', () => {
     it('should create item with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
       
@@ -199,7 +204,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     });
 
     it('should update item with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
       
@@ -214,7 +219,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     });
 
     it('should create stock adjustment with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { createStockAdjustmentAction } = await import('@/app/(dashboard)/inventory/actions');
       
@@ -231,7 +236,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     });
 
     it('should create location with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { upsertLocationAction } = await import('@/app/(dashboard)/inventory/actions');
       
@@ -248,7 +253,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
   describe('Order Actions', () => {
     it('should create draft order with indexed FormData format', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { createDraftOrderAction } = await import('@/app/(dashboard)/orders/actions');
       
@@ -267,7 +272,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
 
     it('should add order item with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { addOrderItemAction } = await import('@/app/(dashboard)/orders/actions');
       
@@ -283,7 +288,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     });
 
     it('should send order and return success', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { sendOrderAction } = await import('@/app/(dashboard)/orders/actions');
       
@@ -293,8 +298,27 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       expect(result.success).toBe(true);
     });
 
+    it('should send order, mark it SENT, and trigger purchase order email', async () => {
+      await mockValidCsrfHeaders();
+
+      const { sendOrderAction } = await import('@/app/(dashboard)/orders/actions');
+      const { sendOrderEmail } = await import('@/src/lib/email/sendOrderEmail');
+      
+      // Clear previous calls
+      vi.clearAllMocks();
+      
+      const result = await sendOrderAction('test-order-id');
+      
+      // Verify action succeeded
+      expect(result).toHaveProperty('success');
+      expect(result.success).toBe(true);
+      
+      // Verify email service was called
+      expect(sendOrderEmail).toHaveBeenCalledTimes(1);
+    });
+
     it('should delete order and return success', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { deleteOrderAction } = await import('@/app/(dashboard)/orders/actions');
       
@@ -307,7 +331,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
   describe('Receiving Actions', () => {
     it('should create goods receipt with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { createGoodsReceiptAction } = await import('@/app/(dashboard)/receiving/actions');
       
@@ -320,7 +344,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     });
 
     it('should add receipt line with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { addReceiptLineAction } = await import('@/app/(dashboard)/receiving/actions');
       
@@ -338,7 +362,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
   describe('Stock Count Actions', () => {
     it('should create stock count session with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { createStockCountSessionAction } = await import('@/app/(dashboard)/stock-count/actions');
       
@@ -354,7 +378,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     });
 
     it('should add count line with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { addCountLineAction } = await import('@/app/(dashboard)/stock-count/actions');
       
@@ -372,7 +396,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
   describe('Product Actions', () => {
     it('should create product with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { createProductAction } = await import('@/app/(dashboard)/settings/products/actions');
       
@@ -388,7 +412,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     });
 
     it('should update product with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { updateProductAction } = await import('@/app/(dashboard)/settings/products/actions');
       
@@ -405,7 +429,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
   describe('Settings Actions', () => {
     it('should update practice settings with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { updatePracticeSettingsAction } = await import('@/app/(dashboard)/settings/actions');
       
@@ -420,7 +444,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     });
 
     it('should update user role with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { updateUserRoleAction } = await import('@/app/(dashboard)/settings/actions');
       
@@ -437,7 +461,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
   describe('Supplier Actions', () => {
     it('should update practice supplier with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { updatePracticeSupplierAction } = await import('@/app/(dashboard)/suppliers/actions');
       
@@ -453,7 +477,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     });
 
     it('should link global supplier with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { linkGlobalSupplierAction } = await import('@/app/(dashboard)/suppliers/actions');
       
@@ -469,7 +493,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
   describe('Supplier Catalog Actions', () => {
     it('should add to catalog with valid CSRF token', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { addToCatalogAction } = await import('@/app/(dashboard)/supplier-catalog/actions');
       
@@ -488,7 +512,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
 
   describe('CSRF Token Preservation', () => {
     it('should accept same valid token across multiple actions', async () => {
-      mockValidCsrfHeaders();
+      await mockValidCsrfHeaders();
 
       const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
       const { createProductAction } = await import('@/app/(dashboard)/settings/products/actions');

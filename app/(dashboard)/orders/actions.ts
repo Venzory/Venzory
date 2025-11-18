@@ -13,7 +13,8 @@ import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getOrderService } from '@/src/services/orders';
 import { isDomainError } from '@/src/domain/errors';
 import { OrderStatus } from '@prisma/client';
-import { sendOrderEmail } from '@/lib/email';
+import { sendOrderEmail } from '@/src/lib/email/sendOrderEmail';
+import { calculateOrderTotal, decimalToNumber } from '@/lib/prisma-transforms';
 import { createNotificationForPracticeUsers } from '@/lib/notifications';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import logger from '@/lib/logger';
@@ -343,12 +344,72 @@ export async function sendOrderAction(orderId: string): Promise<{ success: boole
       return { success: false, error: result.message };
     }
 
-    // Send email notification
+    // Send email notification to supplier
     try {
-      // TODO: Transform OrderWithRelations to SendOrderEmailParams
-      // await sendOrderEmail(result);
+      const supplierEmail = result.practiceSupplier?.globalSupplier?.email;
+      
+      if (supplierEmail) {
+        const supplierName = 
+          result.practiceSupplier?.customLabel || 
+          result.practiceSupplier?.globalSupplier?.name || 
+          'Unknown supplier';
+
+        // Extract practice information
+        const practice = (result as any).practice;
+        const practiceName = practice?.name || 'Unknown Practice';
+        
+        // Build practice address
+        let practiceAddress: string | null = null;
+        if (practice) {
+          const addressParts: string[] = [];
+          if (practice.street) addressParts.push(practice.street);
+          if (practice.city) addressParts.push(practice.city);
+          if (practice.postalCode) addressParts.push(practice.postalCode);
+          if (practice.country) addressParts.push(practice.country);
+          
+          if (addressParts.length > 0) {
+            practiceAddress = addressParts.join('\n');
+          }
+        }
+
+        // Map items
+        const items = (result.items ?? []).map((orderItem) => {
+          const unitPrice = typeof orderItem.unitPrice === 'number' 
+            ? orderItem.unitPrice 
+            : (decimalToNumber(orderItem.unitPrice) || 0);
+
+          return {
+            name: orderItem.item?.name || 'Unknown Item',
+            sku: orderItem.item?.sku || null,
+            quantity: orderItem.quantity,
+            unitPrice,
+            total: unitPrice * orderItem.quantity,
+          };
+        });
+
+        await sendOrderEmail({
+          supplierEmail,
+          supplierName,
+          practiceName,
+          practiceAddress,
+          orderReference: result.reference,
+          orderNotes: result.notes,
+          items,
+          orderTotal: calculateOrderTotal(result.items || []),
+        });
+      } else {
+        logger.warn({
+          action: 'sendOrderAction',
+          orderId,
+          supplierId: result.practiceSupplierId,
+        }, 'Cannot send order email - supplier has no email address');
+      }
     } catch (emailError) {
-      console.error('Failed to send order email:', emailError);
+      logger.error({
+        action: 'sendOrderAction',
+        orderId,
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+      }, 'Failed to send order email');
       // Continue even if email fails
     }
 

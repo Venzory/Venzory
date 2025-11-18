@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { PracticeRole, OrderStatus } from '@prisma/client';
-import { Package } from 'lucide-react';
+import { Package, TrendingDown, ShoppingCart, Inbox } from 'lucide-react';
 
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
@@ -16,21 +16,20 @@ import { calculateOrderTotal } from '@/lib/prisma-transforms';
 import { getOrderSupplierDisplay } from './_utils/order-display';
 import { calculateAwaitingReceiptCount, AWAITING_RECEIPT_LINK } from './_utils/kpi-utils';
 import { buildLowStockOrderHref } from './_utils/low-stock-actions';
+import { OrderStatusBadge } from './_utils/order-status-badge';
 
 export default async function DashboardPage() {
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
   // Fetch data in parallel with safe limits to prevent performance issues
-  const [itemsResult, orders, adjustments, suppliers, onboardingStatus, setupProgress] = await Promise.all([
+  const [itemsResult, orders, adjustments, onboardingStatus, setupProgress] = await Promise.all([
     // Limit items to 100 for dashboard calculations
     getInventoryService().findItems(ctx, {}, { page: 1, limit: 100 }),
     // Limit orders to recent 50 for stats
     getOrderService().findOrders(ctx, {}, { page: 1, limit: 50 }),
     // Fetch recent stock adjustments
     getInventoryService().getRecentAdjustments(ctx, 5),
-    // Fetch all suppliers for links
-    getInventoryService().getSuppliers(ctx),
     // Fetch practice onboarding status
     getSettingsService().getPracticeOnboardingStatus(ctx),
     // Fetch setup progress
@@ -64,6 +63,7 @@ export default async function DashboardPage() {
   // Calculate KPIs
   const lowStockCount = lowStockItems.length;
   const draftOrdersCount = orders.filter((o) => o.status === OrderStatus.DRAFT).length;
+  const sentOrdersCount = orders.filter((o) => o.status === OrderStatus.SENT).length;
   const awaitingReceiptCount = calculateAwaitingReceiptCount(orders);
   const receivedOrdersCount = orders.filter((o) => o.status === OrderStatus.RECEIVED).length;
 
@@ -119,57 +119,118 @@ export default async function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Low Stock Items</h2>
-          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{lowStockCount}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {lowStockCount > 0 ? (
-              <Link href="/inventory" className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300">
-                View inventory →
-              </Link>
-            ) : (
-              'All items adequately stocked'
-            )}
-          </p>
-        </Card>
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Draft Orders</h2>
-          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{draftOrdersCount}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {draftOrdersCount > 0 ? (
-              <Link href="/orders" className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
-                View orders →
-              </Link>
-            ) : (
-              'No pending drafts'
-            )}
-          </p>
-        </Card>
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Awaiting receipt</h2>
-          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{awaitingReceiptCount}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {awaitingReceiptCount > 0 ? (
-              <Link href={AWAITING_RECEIPT_LINK} className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300">
-                Go to Receiving →
-              </Link>
-            ) : (
-              'No orders awaiting receipt'
-            )}
-          </p>
-        </Card>
-        <Card>
-          <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Received Orders</h2>
-          <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{receivedOrdersCount}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Recently completed</p>
-        </Card>
-        {hasStockValue ? (
+        {/* Draft / Sent Orders KPI */}
+        {canManage ? (
+          <Link href="/orders" className="group">
+            <Card className="h-full transition-all hover:border-sky-300 hover:shadow-md dark:hover:border-sky-700">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Draft / Sent Orders</h2>
+                  <div className="mt-3 flex items-baseline gap-2">
+                    <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{draftOrdersCount}</p>
+                    <span className="text-lg text-slate-500 dark:text-slate-400">/</span>
+                    <p className="text-2xl font-semibold text-slate-700 dark:text-slate-300">{sentOrdersCount}</p>
+                  </div>
+                  <p className="mt-2 text-xs font-medium text-sky-600 group-hover:text-sky-700 dark:text-sky-400 dark:group-hover:text-sky-300">
+                    View all orders →
+                  </p>
+                </div>
+                <ShoppingCart className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+              </div>
+            </Card>
+          </Link>
+        ) : (
           <Card>
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Total Stock Value</h2>
-            <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">€{totalStockValue.toFixed(2)}</p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Based on available unit prices</p>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Draft / Sent Orders</h2>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <p className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{draftOrdersCount}</p>
+                  <span className="text-lg text-slate-500 dark:text-slate-400">/</span>
+                  <p className="text-2xl font-semibold text-slate-700 dark:text-slate-300">{sentOrdersCount}</p>
+                </div>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  {draftOrdersCount + sentOrdersCount === 0 ? 'No active orders' : 'Active orders'}
+                </p>
+              </div>
+              <ShoppingCart className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+            </div>
           </Card>
-        ) : null}
+        )}
+
+        {/* Awaiting Receipt KPI */}
+        {canManage ? (
+          <Link href={AWAITING_RECEIPT_LINK} className="group">
+            <Card className="h-full transition-all hover:border-blue-300 hover:shadow-md dark:hover:border-blue-700">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Awaiting Receipt</h2>
+                  <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{awaitingReceiptCount}</p>
+                  <p className="mt-2 text-xs font-medium text-blue-600 group-hover:text-blue-700 dark:text-blue-400 dark:group-hover:text-blue-300">
+                    {awaitingReceiptCount > 0 ? 'Go to Receiving →' : 'All orders received'}
+                  </p>
+                </div>
+                <Inbox className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+              </div>
+            </Card>
+          </Link>
+        ) : (
+          <Card>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Awaiting Receipt</h2>
+                <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{awaitingReceiptCount}</p>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  {awaitingReceiptCount > 0 ? 'Orders in transit' : 'All orders received'}
+                </p>
+              </div>
+              <Inbox className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+            </div>
+          </Card>
+        )}
+
+        {/* Low Stock Items KPI */}
+        {canManage ? (
+          <Link href="/inventory" className="group">
+            <Card className="h-full transition-all hover:border-amber-300 hover:shadow-md dark:hover:border-amber-700">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Low Stock Items</h2>
+                  <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{lowStockCount}</p>
+                  <p className="mt-2 text-xs font-medium text-amber-600 group-hover:text-amber-700 dark:text-amber-400 dark:group-hover:text-amber-300">
+                    {lowStockCount > 0 ? 'View inventory →' : 'All items stocked'}
+                  </p>
+                </div>
+                <TrendingDown className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+              </div>
+            </Card>
+          </Link>
+        ) : (
+          <Card>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Low Stock Items</h2>
+                <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{lowStockCount}</p>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  {lowStockCount > 0 ? 'Items need restocking' : 'All items adequately stocked'}
+                </p>
+              </div>
+              <TrendingDown className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+            </div>
+          </Card>
+        )}
+
+        {/* Received Orders KPI (non-interactive) */}
+        <Card>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Received Orders</h2>
+              <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{receivedOrdersCount}</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Recently completed</p>
+            </div>
+            <Package className="h-8 w-8 text-slate-400 dark:text-slate-600" />
+          </div>
+        </Card>
       </div>
 
       {/* Recent Orders Table */}
@@ -187,21 +248,21 @@ export default async function DashboardPage() {
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
+                <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Supplier
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                    <th className="px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                       Total
                     </th>
-                    <th className="px-4 py-3"></th>
+                    <th className="px-5 py-3.5"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -213,15 +274,15 @@ export default async function DashboardPage() {
 
                     return (
                       <tr key={order.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
-                          <div className="flex flex-col">
-                            <span>{formatDistanceToNow(order.createdAt, { addSuffix: true })}</span>
+                        <td className="px-5 py-4 text-slate-700 dark:text-slate-300">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium">{formatDistanceToNow(order.createdAt, { addSuffix: true })}</span>
                             <span className="text-xs text-slate-500 dark:text-slate-500">
                               {new Date(order.createdAt).toLocaleDateString()}
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-4">
                           {supplierLinkId ? (
                             <Link
                               href={`/suppliers#${supplierLinkId}`}
@@ -233,13 +294,13 @@ export default async function DashboardPage() {
                             <span className="text-slate-600 dark:text-slate-400">{supplierName}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={order.status} />
+                        <td className="px-5 py-4">
+                          <OrderStatusBadge status={order.status} />
                         </td>
-                        <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-200">
+                        <td className="px-5 py-4 text-right font-semibold text-slate-900 dark:text-slate-200">
                           {total > 0 ? `€${total.toFixed(2)}` : '-'}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-5 py-4 text-right">
                           <Link
                             href={`/orders/${order.id}`}
                             className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
@@ -268,84 +329,97 @@ export default async function DashboardPage() {
       )}
 
       {/* Low Stock Items */}
-      {lowStockInfoWithDetails.length > 0 ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Low Stock Items</h2>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Low Stock Items</h2>
+          {lowStockInfoWithDetails.length > 0 && (
             <Link
               href="/inventory"
               className="text-sm font-medium text-amber-600 transition hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
             >
               View all →
             </Link>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {lowStockInfoWithDetails.map(({ item, lowStockLocations, suggestedQuantity }) => (
-              <div
-                key={item.id}
-                className="rounded-xl border border-amber-300 bg-amber-50 p-6 dark:border-amber-700 dark:bg-amber-900/10"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-slate-900 dark:text-white">{item.name}</h3>
-                    {item.sku ? (
-                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
-                        {item.sku}
-                      </span>
-                    ) : null}
-                    <span className="rounded-full bg-amber-100 border border-amber-400 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/60 dark:border-amber-700 dark:text-amber-300">
-                      Low stock
-                    </span>
-                  </div>
-                  {item.defaultSupplier ? (
-                    <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Supplier:{' '}
-                      <Link
-                        href={`/suppliers#${item.defaultSupplier.id}`}
-                        className="text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-                      >
-                        {item.defaultSupplier.name}
-                      </Link>
-                    </p>
-                  ) : (
-                    <p className="text-xs text-amber-700 dark:text-amber-400">⚠ No default supplier set</p>
-                  )}
-                  <div className="text-xs text-slate-700 dark:text-slate-300">
-                    <p className="font-medium text-amber-800 dark:text-amber-300">Low at:</p>
-                    <ul className="mt-1 space-y-1">
-                      {lowStockLocations.map((inv) => (
-                        <li key={inv.locationId} className="flex items-center justify-between">
-                          <span>
-                            {inv.location?.name || 'Unknown Location'}
-                            {inv.location?.code ? ` (${inv.location?.code})` : ''}
-                          </span>
-                          <span className="text-amber-800 dark:text-amber-300">
-                            {inv.quantity} / {inv.reorderPoint}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  {suggestedQuantity > 0 && (
-                    <p className="text-xs text-amber-800 dark:text-amber-300">
-                      Suggested order quantity: {suggestedQuantity}
-                    </p>
-                  )}
-                  {canManage && (
-                    <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
-                      <Link href={buildLowStockOrderHref(item)}>
-                        <Button variant="secondary" size="sm" className="w-full text-xs">
-                          Order
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          )}
         </div>
-      ) : null}
+        {lowStockInfoWithDetails.length > 0 ? (
+          <Card className="overflow-hidden p-0">
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
+              {lowStockInfoWithDetails.map(({ item, lowStockLocations, suggestedQuantity }) => {
+                // Find the worst location (lowest stock relative to reorder point)
+                const worstLocation = lowStockLocations.reduce((worst, curr) => {
+                  const currRatio = curr.reorderPoint ? curr.quantity / curr.reorderPoint : 1;
+                  const worstRatio = worst.reorderPoint ? worst.quantity / worst.reorderPoint : 1;
+                  return currRatio < worstRatio ? curr : worst;
+                }, lowStockLocations[0]);
+
+                return (
+                  <div key={item.id} className="p-5 transition hover:bg-amber-50/50 dark:hover:bg-amber-900/5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-slate-900 dark:text-white truncate">{item.name}</h3>
+                          {item.sku && (
+                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                              {item.sku}
+                            </span>
+                          )}
+                          <span className="shrink-0 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/60 dark:border-amber-700 dark:text-amber-300">
+                            Low stock
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
+                          {item.defaultPracticeSupplier ? (
+                            <span>
+                              Supplier:{' '}
+                              <Link
+                                href={`/suppliers#${item.defaultPracticeSupplier.id}`}
+                                className="font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+                              >
+                                {item.defaultPracticeSupplier.customLabel || item.defaultPracticeSupplier.globalSupplier.name}
+                              </Link>
+                            </span>
+                          ) : (
+                            <span className="text-amber-700 dark:text-amber-400">⚠ No default supplier</span>
+                          )}
+                          {worstLocation && (
+                            <span className="font-medium text-amber-800 dark:text-amber-300">
+                              {worstLocation.location?.name || 'Unknown'}: {worstLocation.quantity} / {worstLocation.reorderPoint}
+                            </span>
+                          )}
+                          {lowStockLocations.length > 1 && (
+                            <span className="text-slate-500 dark:text-slate-500">
+                              +{lowStockLocations.length - 1} more location{lowStockLocations.length > 2 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {canManage && (
+                        <Link href={buildLowStockOrderHref(item)} className="shrink-0">
+                          <Button variant="secondary" size="sm">
+                            Order
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-8">
+            <div className="text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                <Package className="h-6 w-6 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">All items adequately stocked</h3>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                No items are currently below their reorder points.
+              </p>
+            </div>
+          </Card>
+        )}
+      </div>
 
       {/* Recent Stock Adjustments */}
       {adjustments.length > 0 ? (
@@ -383,24 +457,6 @@ export default async function DashboardPage() {
         </div>
       ) : null}
     </section>
-  );
-}
-
-function StatusBadge({ status }: { status: OrderStatus }) {
-  const styles = {
-    [OrderStatus.DRAFT]: 'bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:border-slate-600',
-    [OrderStatus.SENT]: 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
-    [OrderStatus.PARTIALLY_RECEIVED]: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700',
-    [OrderStatus.RECEIVED]: 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
-    [OrderStatus.CANCELLED]: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700',
-  };
-
-  return (
-    <span
-      className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}
-    >
-      {status.replace('_', ' ')}
-    </span>
   );
 }
 

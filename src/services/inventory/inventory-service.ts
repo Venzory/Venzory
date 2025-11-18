@@ -12,6 +12,7 @@ import { AuditService } from '../audit/audit-service';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
 import { withTransaction, type TransactionClient } from '@/src/repositories/base';
+import { getItemService } from './item-service';
 import {
   CreateItemInput,
   UpdateItemInput,
@@ -102,179 +103,7 @@ export class InventoryService {
     return this.inventoryRepository.findItemById(itemId, ctx.practiceId);
   }
 
-  /**
-   * Create new item
-   */
-  async createItem(
-    ctx: RequestContext,
-    input: Omit<CreateItemInput, 'practiceId'>
-  ): Promise<ItemWithRelations> {
-    // Check permissions
-    requireRole(ctx, 'STAFF');
 
-    // Validate input
-    validateStringLength(input.name, 'Item name', 1, 255);
-    if (input.sku) {
-      validateStringLength(input.sku, 'SKU', 1, 64);
-    }
-
-    // Verify product exists
-    await this.productRepository.findProductById(input.productId);
-
-    return withTransaction(async (tx) => {
-      // Create item
-      const item = await this.inventoryRepository.createItem(
-        {
-          ...input,
-          practiceId: ctx.practiceId,
-        },
-        { tx }
-      );
-
-      // Log audit event
-      await this.auditService.logItemCreated(
-        ctx,
-        item.id,
-        {
-          name: item.name,
-          sku: item.sku,
-          productId: item.productId,
-        },
-        tx
-      );
-
-      // Return item with relations
-      return this.inventoryRepository.findItemById(item.id, ctx.practiceId, { tx });
-    });
-  }
-
-  /**
-   * Add item from catalog (Phase 2: Catalog management)
-   * Creates an Item from a Product that exists in the practice's SupplierCatalog
-   */
-  async addItemFromCatalog(
-    ctx: RequestContext,
-    input: {
-      productId: string;
-      practiceSupplierId: string;
-      name: string;
-      sku?: string | null;
-      unit?: string | null;
-      description?: string | null;
-    }
-  ): Promise<ItemWithRelations> {
-    // Check permissions
-    requireRole(ctx, 'STAFF');
-
-    // Validate input
-    validateStringLength(input.name, 'Item name', 1, 255);
-    if (input.sku) {
-      validateStringLength(input.sku, 'SKU', 1, 64);
-    }
-
-    return withTransaction(async (tx) => {
-      // Verify product exists
-      await this.productRepository.findProductById(input.productId, { tx });
-
-      // Verify the product is available from this practice supplier
-      const catalogEntry = await this.productRepository.findCatalogByPracticeSupplierProduct(
-        input.practiceSupplierId,
-        input.productId,
-        { tx }
-      );
-
-      if (!catalogEntry) {
-        throw new BusinessRuleViolationError(
-          'This product is not available from the selected supplier'
-        );
-      }
-
-      // Check if item already exists for this product in the practice
-      const existingItems = await this.inventoryRepository.findItems(
-        ctx.practiceId,
-        { productId: input.productId },
-        { tx }
-      );
-
-      if (existingItems.length > 0) {
-        throw new BusinessRuleViolationError(
-          'An item for this product already exists in your catalog'
-        );
-      }
-
-      // Create item
-      const item = await this.inventoryRepository.createItem(
-        {
-          practiceId: ctx.practiceId,
-          productId: input.productId,
-          name: input.name,
-          sku: input.sku ?? null,
-          unit: input.unit ?? null,
-          description: input.description ?? null,
-          defaultPracticeSupplierId: input.practiceSupplierId,
-        },
-        { tx }
-      );
-
-      // Log audit event
-      await this.auditService.logItemCreated(
-        ctx,
-        item.id,
-        {
-          name: item.name,
-          sku: item.sku,
-          productId: item.productId,
-        },
-        tx
-      );
-
-      // Return item with relations
-      return this.inventoryRepository.findItemById(item.id, ctx.practiceId, { tx });
-    });
-  }
-
-  /**
-   * Update existing item
-   */
-  async updateItem(
-    ctx: RequestContext,
-    itemId: string,
-    input: UpdateItemInput
-  ): Promise<ItemWithRelations> {
-    // Check permissions
-    requireRole(ctx, 'STAFF');
-
-    // Validate input
-    if (input.name) {
-      validateStringLength(input.name, 'Item name', 1, 255);
-    }
-    if (input.sku) {
-      validateStringLength(input.sku, 'SKU', 1, 64);
-    }
-
-    return withTransaction(async (tx) => {
-      // Verify item exists
-      const existingItem = await this.inventoryRepository.findItemById(
-        itemId,
-        ctx.practiceId,
-        { tx }
-      );
-
-      // Update item
-      const item = await this.inventoryRepository.updateItem(
-        itemId,
-        ctx.practiceId,
-        input,
-        { tx }
-      );
-
-      // Log audit event
-      await this.auditService.logItemUpdated(ctx, itemId, input, tx);
-
-      // Return updated item with relations
-      return this.inventoryRepository.findItemById(item.id, ctx.practiceId, { tx });
-    });
-  }
 
   /**
    * Delete item
@@ -1043,19 +872,6 @@ export class InventoryService {
   // GETTER METHODS FOR PAGES
   // ===========================
 
-  /**
-   * Get suppliers for the practice
-   */
-  async getSuppliers(ctx: RequestContext): Promise<any[]> {
-    return this.userRepository.findSuppliers(ctx.practiceId);
-  }
-
-  /**
-   * Get suppliers with their associated items
-   */
-  async getSuppliersWithItems(ctx: RequestContext): Promise<any[]> {
-    return this.userRepository.findSuppliersWithItems(ctx.practiceId);
-  }
 
   /**
    * Get locations for the practice

@@ -47,10 +47,10 @@ export class ProductRepository extends BaseRepository {
     }
 
     // Filter by supplier (products linked via SupplierCatalog)
-    if (filters?.supplierId) {
+    if (filters?.practiceSupplierId) {
       where.supplierCatalogs = {
         some: {
-          supplierId: filters.supplierId,
+          practiceSupplierId: filters.practiceSupplierId,
           isActive: true,
         },
       };
@@ -118,10 +118,10 @@ export class ProductRepository extends BaseRepository {
     }
 
     // Filter by supplier (products linked via SupplierCatalog)
-    if (filters?.supplierId) {
+    if (filters?.practiceSupplierId) {
       where.supplierCatalogs = {
         some: {
-          supplierId: filters.supplierId,
+          practiceSupplierId: filters.practiceSupplierId,
           isActive: true,
         },
       };
@@ -270,7 +270,7 @@ export class ProductRepository extends BaseRepository {
    * Find supplier catalog entry
    */
   async findSupplierCatalog(
-    supplierId: string,
+    practiceSupplierId: string,
     productId: string,
     options?: FindOptions
   ): Promise<SupplierCatalog | null> {
@@ -278,7 +278,7 @@ export class ProductRepository extends BaseRepository {
 
     const catalog = await client.supplierCatalog.findUnique({
       where: {
-        supplierId_productId: { supplierId, productId },
+        practiceSupplierId_productId: { practiceSupplierId, productId },
       },
       include: options?.include ?? undefined,
     });
@@ -287,16 +287,16 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
-   * Find all catalog entries for a supplier
+   * Find all catalog entries for a practice supplier
    */
   async findSupplierCatalogs(
-    supplierId: string,
+    practiceSupplierId: string,
     activeOnly: boolean = true,
     options?: FindOptions
   ): Promise<SupplierCatalog[]> {
     const client = this.getClient(options?.tx);
 
-    const where: Prisma.SupplierCatalogWhereInput = { supplierId };
+    const where: Prisma.SupplierCatalogWhereInput = { practiceSupplierId };
     if (activeOnly) {
       where.isActive = true;
     }
@@ -323,14 +323,13 @@ export class ProductRepository extends BaseRepository {
 
     const catalog = await client.supplierCatalog.upsert({
       where: {
-        supplierId_productId: {
-          supplierId: input.supplierId,
+        practiceSupplierId_productId: {
+          practiceSupplierId: input.practiceSupplierId,
           productId: input.productId,
         },
       },
       create: {
-        supplierId: input.supplierId,
-        practiceSupplierId: input.practiceSupplierId ?? null,
+        practiceSupplierId: input.practiceSupplierId,
         productId: input.productId,
         supplierSku: input.supplierSku ?? null,
         unitPrice: input.unitPrice ?? null,
@@ -342,7 +341,6 @@ export class ProductRepository extends BaseRepository {
         lastSyncAt: new Date(),
       },
       update: {
-        practiceSupplierId: input.practiceSupplierId,
         supplierSku: input.supplierSku,
         unitPrice: input.unitPrice,
         currency: input.currency,
@@ -361,7 +359,7 @@ export class ProductRepository extends BaseRepository {
    * Sync supplier feed (find/create product + upsert catalog)
    */
   async syncSupplierFeed(
-    supplierId: string,
+    practiceSupplierId: string,
     productData: ProductSyncData,
     catalogData: CatalogSyncData,
     options?: RepositoryOptions
@@ -374,7 +372,7 @@ export class ProductRepository extends BaseRepository {
     // Upsert catalog entry
     const catalog = await this.upsertSupplierCatalog(
       {
-        supplierId,
+        practiceSupplierId,
         productId: product.id,
         supplierSku: catalogData.supplierSku ?? null,
         unitPrice: catalogData.unitPrice ?? null,
@@ -394,7 +392,7 @@ export class ProductRepository extends BaseRepository {
    * Batch sync multiple supplier feeds
    */
   async batchSyncSupplierFeeds(
-    supplierId: string,
+    practiceSupplierId: string,
     feeds: Array<{ product: ProductSyncData; catalog: CatalogSyncData }>,
     options?: RepositoryOptions
   ): Promise<{ productsProcessed: number; catalogsUpdated: number; errors: string[] }> {
@@ -404,7 +402,7 @@ export class ProductRepository extends BaseRepository {
 
     for (const feed of feeds) {
       try {
-        await this.syncSupplierFeed(supplierId, feed.product, feed.catalog, options);
+        await this.syncSupplierFeed(practiceSupplierId, feed.product, feed.catalog, options);
         productsProcessed++;
         catalogsUpdated++;
       } catch (error) {
@@ -422,7 +420,7 @@ export class ProductRepository extends BaseRepository {
   async updateGs1Verification(
     productId: string,
     status: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'FAILED' | 'EXPIRED',
-    gs1Data?: Record<string, any> | null,
+    gs1Data?: Record<string, unknown> | null,
     options?: RepositoryOptions
   ): Promise<Product> {
     const client = this.getClient(options?.tx);

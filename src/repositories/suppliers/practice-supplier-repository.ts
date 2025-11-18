@@ -110,29 +110,6 @@ export class PracticeSupplierRepository extends BaseRepository {
     return practiceSupplier as PracticeSupplierWithRelations | null;
   }
 
-  /**
-   * Find practice supplier by migrated supplier ID
-   */
-  async findPracticeSupplierByMigratedId(
-    practiceId: string,
-    migratedFromSupplierId: string,
-    options?: FindOptions
-  ): Promise<PracticeSupplierWithRelations | null> {
-    const client = this.getClient(options?.tx);
-
-    const practiceSupplier = await client.practiceSupplier.findFirst({
-      where: {
-        practiceId,
-        migratedFromSupplierId,
-      },
-      include: {
-        globalSupplier: true,
-        practice: options?.include?.practice ? true : false,
-      },
-    });
-
-    return practiceSupplier as PracticeSupplierWithRelations | null;
-  }
 
   /**
    * Create a link between practice and global supplier

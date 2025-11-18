@@ -40,8 +40,8 @@ export class ReceivingRepository extends BaseRepository {
       where.orderId = filters.orderId;
     }
 
-    if (filters?.supplierId) {
-      where.supplierId = filters.supplierId;
+    if (filters?.practiceSupplierId) {
+      where.practiceSupplierId = filters.practiceSupplierId;
     }
 
     if (filters?.status) {
@@ -67,8 +67,10 @@ export class ReceivingRepository extends BaseRepository {
         order: {
           select: { id: true, reference: true },
         },
-        supplier: {
-          select: { id: true, name: true },
+        practiceSupplier: {
+          include: {
+            globalSupplier: true,
+          },
         },
         lines: {
           include: {
@@ -111,7 +113,11 @@ export class ReceivingRepository extends BaseRepository {
             },
           },
         },
-        supplier: true,
+        practiceSupplier: {
+          include: {
+            globalSupplier: true,
+          },
+        },
         lines: {
           include: {
             item: {
@@ -145,7 +151,7 @@ export class ReceivingRepository extends BaseRepository {
         practiceId: input.practiceId,
         locationId: input.locationId,
         orderId: input.orderId ?? null,
-        supplierId: input.supplierId ?? null,
+        practiceSupplierId: input.practiceSupplierId ?? null,
         status: GoodsReceiptStatus.DRAFT,
         createdById,
         notes: input.notes ?? null,
@@ -337,7 +343,7 @@ export class ReceivingRepository extends BaseRepository {
     return receipts.map((receipt) => ({
       id: receipt.id,
       locationName: receipt.location?.name ?? 'Unknown',
-      supplierName: receipt.supplier?.name ?? null,
+      supplierName: receipt.practiceSupplier?.customLabel || receipt.practiceSupplier?.globalSupplier?.name || null,
       status: receipt.status,
       lineCount: receipt.lines?.length ?? 0,
       totalQuantity: receipt.lines?.reduce((sum, line) => sum + line.quantity, 0) ?? 0,

@@ -32,23 +32,12 @@ export function ExpectedItemsForm({
   const [state, formAction] = useActionState(addReceiptLineAction, null);
   const [formKey, setFormKey] = useState(0);
 
-  // Guard against empty or invalid expectedItems
-  if (!expectedItems || expectedItems.length === 0) {
-    return null;
-  }
-
   // Ensure currentIndex is within bounds
   const safeIndex = Math.min(currentIndex, expectedItems.length - 1);
   const currentItem = expectedItems[safeIndex];
-  
-  // Guard against invalid currentItem
-  if (!currentItem || !currentItem.itemId) {
-    return null;
-  }
-
   const isLastItem = safeIndex === expectedItems.length - 1;
-  const alreadyReceived = receivedItemIds.has(currentItem.itemId);
-  const isFullyReceived = currentItem.remainingQuantity === 0;
+  const alreadyReceived = currentItem ? receivedItemIds.has(currentItem.itemId) : false;
+  const isFullyReceived = currentItem ? currentItem.remainingQuantity === 0 : false;
 
   // Reset form and move to next item on success
   useEffect(() => {
@@ -64,6 +53,16 @@ export function ExpectedItemsForm({
       return () => clearTimeout(timer);
     }
   }, [state?.success, isLastItem, onSuccess]);
+
+  // Guard against empty or invalid expectedItems
+  if (!expectedItems || expectedItems.length === 0) {
+    return null;
+  }
+  
+  // Guard against invalid currentItem
+  if (!currentItem || !currentItem.itemId) {
+    return null;
+  }
 
   const handleSkip = () => {
     if (!isLastItem) {

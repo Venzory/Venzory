@@ -10,6 +10,7 @@ import { hasRole } from '@/lib/rbac';
 import { PracticeRole } from '@prisma/client';
 import type { UpdatePracticeSupplierInput } from '@/src/domain/models/suppliers';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
+import { toAppError } from '@/src/lib/app-error';
 
 /**
  * Update practice-specific supplier settings
@@ -71,12 +72,14 @@ export async function updatePracticeSupplierAction(
   } catch (error: unknown) {
     console.error('Failed to update practice supplier:', error);
     
+    const appError = toAppError(error);
+    
     // Handle specific error cases
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (appError.code === 'P2025') {
       return { error: 'Supplier not found. It may have been removed.' };
     }
     
-    if (error instanceof Error && (error.message.includes('not found') || error.name === 'NotFoundError')) {
+    if (appError.message.includes('not found') || appError.code === 'NOT_FOUND') {
       return { error: 'Supplier not found in your practice.' };
     }
     
@@ -116,12 +119,14 @@ export async function unlinkPracticeSupplierAction(
   } catch (error: unknown) {
     console.error('Failed to unlink practice supplier:', error);
     
+    const appError = toAppError(error);
+    
     // Provide clearer error messages
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (appError.code === 'P2025') {
       throw new Error('Supplier not found. It may have already been removed.');
     }
     
-    if (error instanceof Error && (error.message.includes('not found') || error.name === 'NotFoundError')) {
+    if (appError.message.includes('not found') || appError.code === 'NOT_FOUND') {
       throw new Error('Supplier not found in your practice.');
     }
     
@@ -179,14 +184,16 @@ export async function linkGlobalSupplierAction(
       revalidatePath('/dashboard');
 
       return { success: 'Supplier linked successfully.' };
-    } catch (linkError: any) {
+    } catch (linkError: unknown) {
+      const appError = toAppError(linkError);
+      
       // Handle duplicate link error (unique constraint violation)
-      if (linkError?.code === 'P2002' || linkError?.message?.includes('Unique constraint')) {
+      if (appError.code === 'P2002' || appError.message.includes('Unique constraint')) {
         return { error: 'This supplier is already linked to your practice.' };
       }
       
       // Handle supplier not found
-      if (linkError?.code === 'P2025' || linkError?.message?.includes('not found')) {
+      if (appError.code === 'P2025' || appError.message.includes('not found')) {
         return { error: 'The selected supplier could not be found.' };
       }
       

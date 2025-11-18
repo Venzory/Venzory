@@ -5,7 +5,7 @@
 
 import { Prisma, PracticeRole, MembershipStatus } from '@prisma/client';
 import { BaseRepository, type FindOptions, type RepositoryOptions } from '../base';
-import { User, Practice, PracticeMembership, Location, Supplier } from '@/src/domain/models';
+import { User, Practice, PracticeMembership, Location } from '@/src/domain/models';
 import { NotFoundError } from '@/src/domain/errors';
 
 export class UserRepository extends BaseRepository {
@@ -300,133 +300,6 @@ export class UserRepository extends BaseRepository {
     await client.location.delete({
       where: { id: locationId, practiceId },
     });
-  }
-
-  /**
-   * Find suppliers for a practice
-   */
-  async findSuppliers(
-    practiceId: string,
-    options?: FindOptions
-  ): Promise<Supplier[]> {
-    const client = this.getClient(options?.tx);
-
-    const suppliers = await client.supplier.findMany({
-      where: this.scopeToPractice(practiceId),
-      orderBy: { name: 'asc' },
-    });
-
-    return suppliers as Supplier[];
-  }
-
-  /**
-   * Find supplier by ID
-   */
-  async findSupplierById(
-    supplierId: string,
-    practiceId: string,
-    options?: FindOptions
-  ): Promise<Supplier> {
-    const client = this.getClient(options?.tx);
-
-    const supplier = await client.supplier.findUnique({
-      where: { id: supplierId, practiceId },
-    });
-
-    return this.ensureExists(Promise.resolve(supplier), 'Supplier', supplierId);
-  }
-
-  /**
-   * Create supplier
-   */
-  async createSupplier(
-    practiceId: string,
-    data: {
-      name: string;
-      email?: string | null;
-      phone?: string | null;
-      website?: string | null;
-      notes?: string | null;
-    },
-    options?: RepositoryOptions
-  ): Promise<Supplier> {
-    const client = this.getClient(options?.tx);
-
-    const supplier = await client.supplier.create({
-      data: {
-        practiceId,
-        name: data.name,
-        email: data.email ?? null,
-        phone: data.phone ?? null,
-        website: data.website ?? null,
-        notes: data.notes ?? null,
-      },
-    });
-
-    return supplier as Supplier;
-  }
-
-  /**
-   * Update supplier
-   */
-  async updateSupplier(
-    supplierId: string,
-    practiceId: string,
-    data: {
-      name?: string;
-      email?: string | null;
-      phone?: string | null;
-      website?: string | null;
-      notes?: string | null;
-    },
-    options?: RepositoryOptions
-  ): Promise<Supplier> {
-    const client = this.getClient(options?.tx);
-
-    const supplier = await client.supplier.update({
-      where: { id: supplierId, practiceId },
-      data,
-    });
-
-    return supplier as Supplier;
-  }
-
-  /**
-   * Delete supplier
-   */
-  async deleteSupplier(
-    supplierId: string,
-    practiceId: string,
-    options?: RepositoryOptions
-  ): Promise<void> {
-    const client = this.getClient(options?.tx);
-
-    await client.supplier.delete({
-      where: { id: supplierId, practiceId },
-    });
-  }
-
-  /**
-   * Find suppliers with their associated items
-   */
-  async findSuppliersWithItems(
-    practiceId: string,
-    options?: FindOptions
-  ): Promise<any[]> {
-    const client = this.getClient(options?.tx);
-
-    const suppliers = await client.supplier.findMany({
-      where: this.scopeToPractice(practiceId),
-      orderBy: { name: 'asc' },
-      include: {
-        defaultItems: {
-          select: { id: true, name: true, sku: true },
-          orderBy: { name: 'asc' },
-        },
-      },
-    });
-
-    return suppliers;
   }
 
   /**

@@ -88,6 +88,28 @@ application with App Router, Tailwind CSS, and Prisma for data access.
 - `prisma/` – Prisma schema & migrations
 - `types/` – shared TypeScript definitions
 
+### Documentation
+
+Comprehensive documentation is organized by topic in the `docs/` directory:
+
+- **`docs/architecture/`** – System design, domain models, layered architecture, audit analysis
+- **`docs/operations/`** – Runbooks, health checks, testing procedures, verification reports
+- **`docs/security/`** – Security implementation, audits, tenant isolation
+- **`docs/infra/`** – Database migrations, constraints, deployment guides
+- **`docs/inventory/`** – Receiving, stock counting, locations, items management
+- **`docs/orders/`** – Order management, templates, quick reorder features
+- **`docs/suppliers/`** – Global/practice supplier architecture and migration
+- **`docs/product/`** – MVP status reports, feature specifications
+- **`docs/process/`** – Testing guide, development practices
+- **`docs/archive/`** – Historical implementation reports and legacy docs
+
+**Quick Start:**
+- **Canonical docs index**: [`docs/CANONICAL_DOCS.md`](docs/CANONICAL_DOCS.md) – Authoritative reference documents
+- **Complete inventory**: [`docs/DOC_INVENTORY.md`](docs/DOC_INVENTORY.md) – All 62 docs cataloged with currency assessment
+- **Current MVP status**: [`docs/product/MVP_FLOW_STATUS_REPORT.md`](docs/product/MVP_FLOW_STATUS_REPORT.md)
+- **System architecture**: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md)
+- **Operations runbook**: [`docs/operations/OPS_RUNBOOK.md`](docs/operations/OPS_RUNBOOK.md)
+
 ### Prisma Commands
 
 - `npm run prisma:generate` – regenerate Prisma client
@@ -155,12 +177,38 @@ Sentry integration captures and reports errors in both client and server context
 
 #### Continuous Integration (CI/CD)
 
-A GitHub Actions workflow (`.github/workflows/ci.yml`) automatically runs on all pull requests and pushes to `main`:
-- Lints code with ESLint
-- Builds the application to catch type errors and build issues
-- Fails the build if any errors are detected
+A minimal, stable GitHub Actions workflow (`.github/workflows/ci.yml`) automatically runs on all pull requests and pushes:
+- **Lints code** with ESLint (`npm run lint`)
+- **Type checks** with TypeScript (`npm run typecheck`)
+- **Runs critical tests** with Vitest (`npm run test:ci`)
 
-**Best Practice**: Ensure all CI checks pass before merging PRs or deploying to production.
+**CI Test Strategy:**
+
+The `test:ci` script runs only a stable, reliable subset of the test suite to provide a fast, green baseline for CI. Currently, it includes:
+- CSRF protection tests (`__tests__/lib/csrf.test.ts`)
+- Content Security Policy tests (`__tests__/lib/csp.test.ts`)
+- Middleware CSRF tests (`__tests__/middleware-csrf.test.ts`)
+
+This focused approach ensures CI completes quickly and reliably without attempting to run tests that may be flaky or require additional infrastructure.
+
+**Running CI checks locally:**
+
+```bash
+npm run lint        # Lint code
+npm run typecheck   # Type check
+npm run test:ci     # Run CI test suite
+```
+
+**Full test suite:**
+
+To run the complete test suite locally (including tests not in CI):
+
+```bash
+npm run test:unit          # All unit tests
+npm run test:integration   # Integration tests (requires database)
+```
+
+**Best Practice**: Ensure all CI checks pass before merging PRs or deploying to production. As tests are stabilized, they can be added to the `test:ci` suite by updating `vitest.ci.config.ts`.
 
 #### Security Headers & Content Security Policy (CSP)
 

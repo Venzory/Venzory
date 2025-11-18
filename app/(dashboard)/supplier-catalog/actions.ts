@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { buildRequestContext } from '@/src/lib/context/context-builder';
-import { getInventoryService } from '@/src/services';
+import { getItemService } from '@/src/services';
 import { isDomainError } from '@/src/domain/errors';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
@@ -45,7 +45,7 @@ export async function addToCatalogAction(
     const { productId, practiceSupplierId, name, sku, unit, description } = parsed.data;
 
     // Create item from catalog
-    const item = await getInventoryService().addItemFromCatalog(ctx, {
+    const item = await getItemService().addItemFromCatalog(ctx, {
       productId,
       practiceSupplierId,
       name,

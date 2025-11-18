@@ -21,13 +21,23 @@ export function decimalToNumber(value: Decimal | null | undefined): number | nul
 }
 
 /**
+ * Helper type for entities with a Decimal unitPrice field
+ * Used to constrain transform functions while remaining flexible
+ */
+export type WithDecimalUnitPrice = {
+  unitPrice: Decimal | null | undefined;
+};
+
+/**
  * Transform a SupplierItem for client consumption
  * Converts Decimal unitPrice to number
  * 
  * @param supplierItem - Raw SupplierItem from Prisma
  * @returns Transformed object with unitPrice as number
  */
-export function transformSupplierItemForClient(supplierItem: any): any {
+export function transformSupplierItemForClient<T extends WithDecimalUnitPrice>(
+  supplierItem: T,
+): Omit<T, 'unitPrice'> & { unitPrice: number | null } {
   return {
     ...supplierItem,
     unitPrice: decimalToNumber(supplierItem.unitPrice),
@@ -41,7 +51,9 @@ export function transformSupplierItemForClient(supplierItem: any): any {
  * @param orderItem - Raw OrderItem from Prisma
  * @returns Transformed object with unitPrice as number
  */
-export function transformOrderItemForClient(orderItem: any): any {
+export function transformOrderItemForClient<T extends WithDecimalUnitPrice>(
+  orderItem: T,
+): Omit<T, 'unitPrice'> & { unitPrice: number | null } {
   return {
     ...orderItem,
     unitPrice: decimalToNumber(orderItem.unitPrice),
@@ -55,7 +67,9 @@ export function transformOrderItemForClient(orderItem: any): any {
  * @param catalogEntry - Raw SupplierCatalog from Prisma
  * @returns Transformed object with unitPrice as number
  */
-export function transformSupplierCatalogForClient(catalogEntry: any): any {
+export function transformSupplierCatalogForClient<T extends WithDecimalUnitPrice>(
+  catalogEntry: T,
+): Omit<T, 'unitPrice'> & { unitPrice: number | null } {
   return {
     ...catalogEntry,
     unitPrice: decimalToNumber(catalogEntry.unitPrice),

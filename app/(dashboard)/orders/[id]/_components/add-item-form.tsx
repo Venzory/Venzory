@@ -12,19 +12,7 @@ const initialState: FormState = {};
 interface AddItemFormProps {
   orderId: string;
   practiceSupplierId: string;
-  items: Array<{
-    id: string;
-    name: string;
-    sku: string | null;
-    unit: string | null;
-    defaultSupplierId: string | null;
-    defaultPracticeSupplierId?: string | null;
-    supplierItems?: Array<{
-      supplierId: string;
-      practiceSupplierId?: string | null;
-      unitPrice: number | null;
-    }>;
-  }>;
+  items: ItemForSelection[];
 }
 
 export function AddItemForm({ orderId, practiceSupplierId, items }: AddItemFormProps) {

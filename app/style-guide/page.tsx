@@ -176,7 +176,7 @@ export default function StyleGuidePage() {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Spacing Scale</h3>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Common spacing utilities based on Tailwind's default 0.25rem (4px) scale.
+            Common spacing utilities based on Tailwind&apos;s default 0.25rem (4px) scale.
           </p>
           <div className="space-y-3">
             {[

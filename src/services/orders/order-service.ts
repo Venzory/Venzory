@@ -557,20 +557,24 @@ export class OrderService {
                 id: true,
                 name: true,
                 sku: true,
-                defaultSupplierId: true,
-                defaultSupplier: {
-                  select: { id: true, name: true },
+                defaultPracticeSupplierId: true,
+                defaultPracticeSupplier: {
+                  include: {
+                    globalSupplier: true,
+                  },
                 },
                 supplierItems: {
                   select: {
-                    supplierId: true,
+                    practiceSupplierId: true,
                     unitPrice: true,
                   },
                 },
               },
             },
-            supplier: {
-              select: { id: true, name: true },
+            practiceSupplier: {
+              include: {
+                globalSupplier: true,
+              },
             },
           },
           orderBy: {
@@ -598,7 +602,7 @@ export class OrderService {
       items: Array<{
         itemId: string;
         defaultQuantity: number;
-        supplierId: string | null;
+        practiceSupplierId: string | null;
       }>;
     }
   ): Promise<OrderTemplate> {
@@ -640,7 +644,7 @@ export class OrderService {
             create: input.items.map((item) => ({
               itemId: item.itemId,
               defaultQuantity: item.defaultQuantity,
-              supplierId: item.supplierId,
+              practiceSupplierId: item.practiceSupplierId,
             })),
           },
         },
@@ -718,7 +722,7 @@ export class OrderService {
     input: {
       itemId: string;
       defaultQuantity: number;
-      supplierId: string | null;
+      practiceSupplierId: string | null;
     }
   ): Promise<OrderTemplateItem> {
     // Check permissions
@@ -766,7 +770,7 @@ export class OrderService {
           templateId,
           itemId: input.itemId,
           defaultQuantity: input.defaultQuantity,
-          supplierId: input.supplierId,
+          practiceSupplierId: input.practiceSupplierId,
         },
       });
     });
@@ -780,7 +784,7 @@ export class OrderService {
     templateItemId: string,
     input: {
       defaultQuantity: number;
-      supplierId: string | null;
+      practiceSupplierId: string | null;
     }
   ): Promise<OrderTemplateItem> {
     // Check permissions
@@ -809,7 +813,7 @@ export class OrderService {
         where: { id: templateItemId },
         data: {
           defaultQuantity: input.defaultQuantity,
-          supplierId: input.supplierId,
+          practiceSupplierId: input.practiceSupplierId,
         },
       });
     });
@@ -874,22 +878,8 @@ export class OrderService {
     >();
 
     for (const templateItem of template.items) {
-      // Determine supplier: prefer explicit templateItem.supplierId (legacy), fallback to item's defaultPracticeSupplierId (Phase 2)
-      let practiceSupplierId: string | null = null;
-      
-      // If template has legacy supplierId, find the corresponding PracticeSupplier
-      if (templateItem.supplierId) {
-        const practiceSupplier = await this.practiceSupplierRepository.findPracticeSupplierByMigratedId(
-          ctx.practiceId,
-          templateItem.supplierId
-        );
-        practiceSupplierId = practiceSupplier?.id || null;
-      }
-      
-      // Fallback to item's defaultPracticeSupplierId
-      if (!practiceSupplierId) {
-        practiceSupplierId = templateItem.item?.defaultPracticeSupplierId || null;
-      }
+      // Use template item's practiceSupplierId, fallback to item's defaultPracticeSupplierId
+      let practiceSupplierId: string | null = templateItem.practiceSupplierId || templateItem.item?.defaultPracticeSupplierId || null;
 
       if (!practiceSupplierId) {
         // Skip items without a practice supplier

@@ -67,10 +67,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     .filter((item) => !(order.items || []).some((oi: any) => oi.itemId === item.id))
     .map((item) => ({
       ...item,
-      defaultSupplierId: item.defaultSupplierId,
-      defaultPracticeSupplierId: item.defaultPracticeSupplierId,
       supplierItems: (item.supplierItems || []).map((si: any) => ({
-        supplierId: si.supplierId,
         practiceSupplierId: si.practiceSupplierId,
         unitPrice: decimalToNumber(si.unitPrice),
       })),

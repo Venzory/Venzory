@@ -5,6 +5,7 @@ import { PracticeRole } from '@prisma/client';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getInventoryService } from '@/src/services';
+import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const { items, totalCount } = await getInventoryService().findItems(ctx, {
     search,
     locationId: location,
-    supplierId: supplier,
+    practiceSupplierId: supplier,
   }, {
     page: canSortServerSide ? currentPage : 1,
     limit: canSortServerSide ? itemsPerPage : 10000, // Fetch all if client-side sorting needed
@@ -109,8 +110,19 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   // Calculate pagination UI values
   const totalPages = Math.ceil(finalTotalCount / itemsPerPage);
 
-  const [suppliers, locations, adjustments] = await Promise.all([
-    getInventoryService().getSuppliers(ctx),
+  // Get practice suppliers (Phase 2)
+  const practiceSuppliers = await getPracticeSupplierRepository().findPracticeSuppliers(
+    practiceId,
+    { includeBlocked: false }
+  );
+  
+  // Map to simple { id, name } shape for the form component
+  const suppliers = practiceSuppliers.map(ps => ({
+    id: ps.id,
+    name: ps.customLabel || ps.globalSupplier.name,
+  }));
+
+  const [locations, adjustments] = await Promise.all([
     getInventoryService().getLocations(ctx),
     getInventoryService().getRecentAdjustments(ctx, 10),
   ]);

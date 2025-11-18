@@ -3,6 +3,7 @@ import { PracticeRole } from '@prisma/client';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getInventoryService } from '@/src/services';
+import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
 
 import { NewTemplateFormClient } from './_components/new-template-form-client';
@@ -29,11 +30,17 @@ export default async function NewTemplatePage() {
     );
   }
 
-  const [itemsResult, suppliers] = await Promise.all([
+  const [itemsResult, practiceSuppliers] = await Promise.all([
     getInventoryService().findItems(ctx, {}, { limit: 10000 }),
-    getInventoryService().getSuppliers(ctx),
+    getPracticeSupplierRepository().findPracticeSuppliers(practiceId),
   ]);
   const allItems = itemsResult.items;
+  
+  // Transform PracticeSuppliers to match expected format
+  const suppliers = practiceSuppliers.map(ps => ({
+    id: ps.id,
+    name: ps.customLabel || ps.globalSupplier?.name || 'Unknown Supplier',
+  }));
 
   // Transform items to match expected format
   const items = allItems.map(item => ({
@@ -41,7 +48,7 @@ export default async function NewTemplatePage() {
     name: item.name,
     sku: item.sku,
     unit: item.unit,
-    defaultSupplierId: item.defaultSupplierId,
+                      defaultPracticeSupplierId: item.defaultPracticeSupplierId,
   }));
 
   return <NewTemplateFormClient items={items} suppliers={suppliers} />;

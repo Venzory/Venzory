@@ -93,18 +93,18 @@ export async function findOrCreateProduct(productData: ProductData): Promise<str
  * Creates or updates the SupplierCatalog entry that links a supplier to a product
  * with their specific pricing and integration settings.
  * 
- * @param supplierId - Supplier ID
+ * @param practiceSupplierId - Practice Supplier ID
  * @param productId - Product ID
  * @param catalogData - Supplier-specific catalog information
  * @returns SupplierCatalog ID
  */
 export async function syncSupplierCatalog(
-  supplierId: string,
+  practiceSupplierId: string,
   productId: string,
   catalogData: CatalogEntry
 ): Promise<string> {
   const upsertInput: UpsertSupplierCatalogInput = {
-    supplierId,
+    practiceSupplierId,
     productId,
     supplierSku: catalogData.supplierSku,
     unitPrice: catalogData.unitPrice,
@@ -127,19 +127,19 @@ export async function syncSupplierCatalog(
  * 1. Find or create the canonical Product
  * 2. Create or update the SupplierCatalog entry
  * 
- * @param supplierId - Supplier ID
+ * @param practiceSupplierId - Practice Supplier ID
  * @param feed - Supplier data feed entry
  * @returns Object with productId and catalogId
  */
 export async function processSupplierFeed(
-  supplierId: string,
+  practiceSupplierId: string,
   feed: SupplierDataFeed
 ): Promise<{ productId: string; catalogId: string }> {
   // Find or create the product
   const productId = await findOrCreateProduct(feed.product);
   
   // Sync the supplier catalog entry
-  const catalogId = await syncSupplierCatalog(supplierId, productId, feed.catalog);
+  const catalogId = await syncSupplierCatalog(practiceSupplierId, productId, feed.catalog);
   
   return { productId, catalogId };
 }
@@ -149,12 +149,12 @@ export async function processSupplierFeed(
  * 
  * Efficiently processes multiple products from a supplier
  * 
- * @param supplierId - Supplier ID
+ * @param practiceSupplierId - Practice Supplier ID
  * @param feeds - Array of supplier data feed entries
  * @returns Import result summary
  */
 export async function batchProcessSupplierFeeds(
-  supplierId: string,
+  practiceSupplierId: string,
   feeds: SupplierDataFeed[]
 ): Promise<ImportResult> {
   const result: ImportResult = {
@@ -169,7 +169,7 @@ export async function batchProcessSupplierFeeds(
   for (let i = 0; i < feeds.length; i++) {
     const feed = feeds[i];
     try {
-      const { productId } = await processSupplierFeed(supplierId, feed);
+      const { productId } = await processSupplierFeed(practiceSupplierId, feed);
       
       // Check if product was newly created or updated
       const product = await productRepository.findProductById(productId);
@@ -216,7 +216,7 @@ export async function batchProcessSupplierFeeds(
  * @returns Normalized supplier data feed
  */
 export function normalizeSupplierData(
-  rawData: any,
+  rawData: unknown,
   integrationType: IntegrationType
 ): SupplierDataFeed {
   // This is a basic implementation - extend based on actual supplier formats
@@ -243,22 +243,23 @@ export function normalizeSupplierData(
 /**
  * Normalize API response data
  */
-function normalizeApiData(data: any): SupplierDataFeed {
+function normalizeApiData(data: unknown): SupplierDataFeed {
+  const record = data as Record<string, unknown>;
   return {
     product: {
-      gtin: data.gtin || data.ean || data.barcode,
-      brand: data.brand || data.manufacturer,
-      name: data.name || data.productName || data.title,
-      description: data.description || data.longDescription,
-      isGs1Product: Boolean(data.gtin || data.ean),
+      gtin: (record.gtin || record.ean || record.barcode) as string | undefined,
+      brand: (record.brand || record.manufacturer) as string | undefined,
+      name: (record.name || record.productName || record.title) as string,
+      description: (record.description || record.longDescription) as string | undefined,
+      isGs1Product: Boolean(record.gtin || record.ean),
     },
     catalog: {
-      supplierSku: data.sku || data.supplierSku || data.articleNumber,
-      unitPrice: parseFloat(data.price || data.unitPrice || 0),
-      currency: data.currency || 'EUR',
-      minOrderQty: parseInt(data.minOrderQty || data.moq || '1', 10),
+      supplierSku: (record.sku || record.supplierSku || record.articleNumber) as string | undefined,
+      unitPrice: parseFloat((record.price || record.unitPrice || 0) as string),
+      currency: (record.currency || 'EUR') as string,
+      minOrderQty: parseInt((record.minOrderQty || record.moq || '1') as string, 10),
       integrationType: 'API',
-      isActive: data.active !== false,
+      isActive: record.active !== false,
     },
   };
 }
@@ -266,20 +267,21 @@ function normalizeApiData(data: any): SupplierDataFeed {
 /**
  * Normalize CSV row data
  */
-function normalizeCsvData(data: any): SupplierDataFeed {
+function normalizeCsvData(data: unknown): SupplierDataFeed {
+  const record = data as Record<string, unknown>;
   return {
     product: {
-      gtin: data.GTIN || data.EAN || data.Barcode || data.gtin,
-      brand: data.Brand || data.Manufacturer || data.brand,
-      name: data.Name || data.ProductName || data.Description || data.name,
-      description: data.Description || data.LongDescription || data.description,
-      isGs1Product: Boolean(data.GTIN || data.EAN),
+      gtin: (record.GTIN || record.EAN || record.Barcode || record.gtin) as string | undefined,
+      brand: (record.Brand || record.Manufacturer || record.brand) as string | undefined,
+      name: (record.Name || record.ProductName || record.Description || record.name) as string,
+      description: (record.Description || record.LongDescription || record.description) as string | undefined,
+      isGs1Product: Boolean(record.GTIN || record.EAN),
     },
     catalog: {
-      supplierSku: data.SKU || data.ArticleNumber || data.SupplierSKU || data.sku,
-      unitPrice: parseFloat(data.Price || data.UnitPrice || data.price || '0'),
-      currency: data.Currency || data.currency || 'EUR',
-      minOrderQty: parseInt(data.MinOrderQty || data.MOQ || data.minOrderQty || '1', 10),
+      supplierSku: (record.SKU || record.ArticleNumber || record.SupplierSKU || record.sku) as string | undefined,
+      unitPrice: parseFloat((record.Price || record.UnitPrice || record.price || '0') as string),
+      currency: (record.Currency || record.currency || 'EUR') as string,
+      minOrderQty: parseInt((record.MinOrderQty || record.MOQ || record.minOrderQty || '1') as string, 10),
       integrationType: 'CSV',
       isActive: true,
     },
@@ -289,22 +291,23 @@ function normalizeCsvData(data: any): SupplierDataFeed {
 /**
  * Normalize EDI data
  */
-function normalizeEdiData(data: any): SupplierDataFeed {
+function normalizeEdiData(data: unknown): SupplierDataFeed {
   // EDI parsing would be more complex in production
   // This is a placeholder structure
+  const record = data as Record<string, unknown>;
   return {
     product: {
-      gtin: data.ean || data.gtin,
-      brand: data.brand,
-      name: data.description,
-      description: data.longDescription,
-      isGs1Product: Boolean(data.ean || data.gtin),
+      gtin: (record.ean || record.gtin) as string | undefined,
+      brand: record.brand as string | undefined,
+      name: record.description as string,
+      description: record.longDescription as string | undefined,
+      isGs1Product: Boolean(record.ean || record.gtin),
     },
     catalog: {
-      supplierSku: data.lineItemId,
-      unitPrice: parseFloat(data.unitPrice || '0'),
-      currency: data.currency || 'EUR',
-      minOrderQty: parseInt(data.minQty || '1', 10),
+      supplierSku: record.lineItemId as string | undefined,
+      unitPrice: parseFloat((record.unitPrice || '0') as string),
+      currency: (record.currency || 'EUR') as string,
+      minOrderQty: parseInt((record.minQty || '1') as string, 10),
       integrationType: 'EDI',
       isActive: true,
     },
@@ -314,20 +317,21 @@ function normalizeEdiData(data: any): SupplierDataFeed {
 /**
  * Normalize OCI (Open Catalog Interface) data
  */
-function normalizeOciData(data: any): SupplierDataFeed {
+function normalizeOciData(data: unknown): SupplierDataFeed {
+  const record = data as Record<string, unknown>;
   return {
     product: {
-      gtin: data.NEW_ITEM_EAN,
-      brand: data.NEW_ITEM_VENDOR,
-      name: data.NEW_ITEM_DESCRIPTION,
-      description: data.NEW_ITEM_LONGTEXT,
-      isGs1Product: Boolean(data.NEW_ITEM_EAN),
+      gtin: record.NEW_ITEM_EAN as string | undefined,
+      brand: record.NEW_ITEM_VENDOR as string | undefined,
+      name: record.NEW_ITEM_DESCRIPTION as string,
+      description: record.NEW_ITEM_LONGTEXT as string | undefined,
+      isGs1Product: Boolean(record.NEW_ITEM_EAN),
     },
     catalog: {
-      supplierSku: data.NEW_ITEM_VENDORMAT,
-      unitPrice: parseFloat(data.NEW_ITEM_PRICE || '0'),
-      currency: data.NEW_ITEM_CURRENCY || 'EUR',
-      minOrderQty: parseInt(data.NEW_ITEM_MINQTY || '1', 10),
+      supplierSku: record.NEW_ITEM_VENDORMAT as string | undefined,
+      unitPrice: parseFloat((record.NEW_ITEM_PRICE || '0') as string),
+      currency: (record.NEW_ITEM_CURRENCY || 'EUR') as string,
+      minOrderQty: parseInt((record.NEW_ITEM_MINQTY || '1') as string, 10),
       integrationType: 'OCI',
       isActive: true,
     },
@@ -337,20 +341,21 @@ function normalizeOciData(data: any): SupplierDataFeed {
 /**
  * Normalize manual entry data
  */
-function normalizeManualData(data: any): SupplierDataFeed {
+function normalizeManualData(data: unknown): SupplierDataFeed {
+  const record = data as Record<string, unknown>;
   return {
     product: {
-      gtin: data.gtin,
-      brand: data.brand,
-      name: data.name,
-      description: data.description,
-      isGs1Product: Boolean(data.gtin && isValidGtin(data.gtin)),
+      gtin: record.gtin as string | undefined,
+      brand: record.brand as string | undefined,
+      name: record.name as string,
+      description: record.description as string | undefined,
+      isGs1Product: Boolean(record.gtin && isValidGtin(record.gtin as string)),
     },
     catalog: {
-      supplierSku: data.supplierSku || data.sku,
-      unitPrice: data.unitPrice ? parseFloat(data.unitPrice) : undefined,
-      currency: data.currency || 'EUR',
-      minOrderQty: data.minOrderQty ? parseInt(data.minOrderQty, 10) : 1,
+      supplierSku: (record.supplierSku || record.sku) as string | undefined,
+      unitPrice: record.unitPrice ? parseFloat(record.unitPrice as string) : undefined,
+      currency: (record.currency || 'EUR') as string,
+      minOrderQty: record.minOrderQty ? parseInt(record.minOrderQty as string, 10) : 1,
       integrationType: 'MANUAL',
       isActive: true,
     },

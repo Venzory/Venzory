@@ -11,6 +11,18 @@
 import { IntegrationType, Gs1VerificationStatus } from '@prisma/client';
 
 /**
+ * JSON-serializable value type
+ * Used for structured payloads that can be safely serialized/deserialized
+ */
+export type JsonValue = 
+  | string 
+  | number 
+  | boolean 
+  | null 
+  | JsonValue[] 
+  | { [key: string]: JsonValue };
+
+/**
  * Standardized product data structure
  * This represents the core product information that should come from any supplier feed
  */
@@ -21,7 +33,7 @@ export interface ProductData {
   description?: string;
   isGs1Product: boolean;
   gs1VerificationStatus?: Gs1VerificationStatus;
-  gs1Data?: Record<string, any>;    // Raw GS1 API response if available
+  gs1Data?: Record<string, JsonValue>;    // Raw GS1 API response if available
 }
 
 /**
@@ -73,7 +85,7 @@ export interface IntegrationConfig {
   nextSyncAt?: Date;
   
   // Custom integration settings
-  custom?: Record<string, any>;
+  custom?: Record<string, unknown>;
 }
 
 /**
@@ -117,7 +129,7 @@ export interface ImportError {
   gtin?: string;
   message: string;
   code?: string;
-  details?: any;
+  details?: unknown;
 }
 
 /**
@@ -135,7 +147,7 @@ export interface Gs1LookupResponse {
   manufacturer?: string;
   verificationStatus: Gs1VerificationStatus;
   verifiedAt: Date;
-  rawData?: Record<string, any>;
+  rawData?: Record<string, JsonValue>;
 }
 
 /**
@@ -144,7 +156,7 @@ export interface Gs1LookupResponse {
  */
 export interface SupplierFeedParser {
   readonly integrationType: IntegrationType;
-  parse(rawData: any): Promise<SupplierDataFeed[]>;
+  parse(rawData: unknown): Promise<SupplierDataFeed[]>;
   validate(feed: SupplierDataFeed): boolean;
 }
 

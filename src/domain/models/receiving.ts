@@ -3,9 +3,10 @@
  * These models represent the business entities for goods receiving
  */
 
-import type { BaseEntity, Location, Supplier } from './common';
+import type { BaseEntity, Location } from './common';
 import type { Item } from './inventory';
 import type { Order } from './orders';
+import type { PracticeSupplierWithRelations } from './suppliers';
 
 export type GoodsReceiptStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
 
@@ -16,7 +17,7 @@ export interface GoodsReceipt extends BaseEntity {
   practiceId: string;
   locationId: string;
   orderId: string | null;
-  supplierId: string | null;
+  practiceSupplierId: string | null;
   status: GoodsReceiptStatus;
   createdById: string | null;
   receivedAt: Date | null;
@@ -29,7 +30,7 @@ export interface GoodsReceipt extends BaseEntity {
 export interface GoodsReceiptWithRelations extends GoodsReceipt {
   location?: Location;
   order?: Order | null;
-  supplier?: Supplier | null;
+  practiceSupplier?: PracticeSupplierWithRelations | null;
   lines?: GoodsReceiptLine[];
   createdBy?: {
     id: string;
@@ -62,7 +63,7 @@ export interface CreateGoodsReceiptInput {
   practiceId: string;
   locationId: string;
   orderId?: string | null;
-  supplierId?: string | null;
+  practiceSupplierId?: string | null;
   notes?: string | null;
 }
 
@@ -95,7 +96,7 @@ export interface GoodsReceiptFilters {
   practiceId: string;
   locationId?: string;
   orderId?: string;
-  supplierId?: string;
+  practiceSupplierId?: string;
   status?: GoodsReceiptStatus;
   dateFrom?: Date;
   dateTo?: Date;

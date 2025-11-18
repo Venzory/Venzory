@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getOrderService, getInventoryService } from '@/src/services';
+import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
 
 import { TemplatePreviewClient } from './_components/template-preview-client';
@@ -42,10 +43,16 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
     notFound();
   }
 
-  const [allSuppliers, itemsResult] = await Promise.all([
-    getInventoryService().getSuppliers(ctx),
+  const [practiceSuppliers, itemsResult] = await Promise.all([
+    getPracticeSupplierRepository().findPracticeSuppliers(practiceId),
     getInventoryService().findItems(ctx, {}, { limit: 10000 }),
   ]);
+  
+  // Transform PracticeSuppliers to match expected format
+  const allSuppliers = practiceSuppliers.map(ps => ({
+    id: ps.id,
+    name: ps.customLabel || ps.globalSupplier?.name || 'Unknown Supplier',
+  }));
   const itemsList = itemsResult.items;
 
   // Transform items to match expected format
@@ -54,9 +61,9 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
     name: item.name,
     sku: item.sku,
     unit: item.unit,
-    defaultSupplierId: item.defaultSupplierId,
+    defaultPracticeSupplierId: item.defaultPracticeSupplierId,
     supplierItems: item.supplierItems?.map((si: any) => ({
-      supplierId: si.supplierId,
+      practiceSupplierId: si.practiceSupplierId,
       unitPrice: si.unitPrice,
     })) || [],
   }));

@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { buildRequestContext } from '@/src/lib/context/context-builder';
-import { getInventoryService } from '@/src/services/inventory';
+import { getInventoryService, getItemService } from '@/src/services/inventory';
 import { getOrCreateProductForItem } from '@/lib/integrations';
 import { isDomainError } from '@/src/domain/errors';
 import { UserRepository } from '@/src/repositories/users';
@@ -18,6 +18,7 @@ import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import logger from '@/lib/logger';
 
 const inventoryService = getInventoryService();
+const itemService = getItemService();
 // Note: Supplier CRUD operations use UserRepository directly
 // These are simple CRUD operations without complex business logic
 // TODO: Consider moving to InventoryService or SettingsService in future refactoring
@@ -40,6 +41,10 @@ const upsertItemSchema = z.object({
     .string()
     .optional()
     .transform((value) => (value && value !== 'none' ? value : null)),
+  defaultPracticeSupplierId: z
+    .string()
+    .optional()
+    .transform((value) => (value && value !== 'none' ? value : null)),
   gtin: z
     .string()
     .max(14, 'GTIN must be 14 characters or less')
@@ -54,6 +59,11 @@ const upsertItemSchema = z.object({
     .max(128)
     .optional()
     .transform((value) => value?.trim() || null),
+  // Optional pricing fields for supplier
+  supplierSku: z.string().max(64).optional().transform((value) => value?.trim() || null),
+  unitPrice: z.coerce.number().positive().optional().nullable(),
+  currency: z.string().max(3).optional().transform((value) => value?.trim() || 'EUR'),
+  minOrderQty: z.coerce.number().int().positive().optional().nullable(),
 });
 
 const updateLocationSchema = z.object({
@@ -124,24 +134,47 @@ export async function upsertItemAction(_prevState: unknown, formData: FormData) 
       description: formData.get('description'),
       unit: formData.get('unit'),
       defaultSupplierId: formData.get('defaultSupplierId'),
+      defaultPracticeSupplierId: formData.get('defaultPracticeSupplierId'),
       gtin: formData.get('gtin'),
       brand: formData.get('brand'),
+      supplierSku: formData.get('supplierSku'),
+      unitPrice: formData.get('unitPrice'),
+      currency: formData.get('currency'),
+      minOrderQty: formData.get('minOrderQty'),
     });
 
     if (!parsed.success) {
       return { errors: parsed.error.flatten().fieldErrors } as const;
     }
 
-    const { itemId, gtin, brand, name, description, sku, unit, defaultSupplierId } = parsed.data;
+    const { 
+      itemId, 
+      gtin, 
+      brand, 
+      name, 
+      description, 
+      sku, 
+      unit, 
+      defaultSupplierId,
+      defaultPracticeSupplierId,
+      supplierSku,
+      unitPrice,
+      currency,
+      minOrderQty,
+    } = parsed.data;
 
     if (itemId) {
       // Update existing item
-      await inventoryService.updateItem(ctx, itemId, {
+      await itemService.updateItem(ctx, itemId, {
         name,
         description,
         sku,
         unit,
-        defaultSupplierId,
+        defaultPracticeSupplierId,
+        supplierSku,
+        unitPrice,
+        currency,
+        minOrderQty,
       });
     } else {
       // Create new item - get or create product first
@@ -152,13 +185,17 @@ export async function upsertItemAction(_prevState: unknown, formData: FormData) 
         description ?? undefined
       );
 
-      await inventoryService.createItem(ctx, {
+      await itemService.createItem(ctx, {
         productId,
         name,
         description,
         sku,
         unit,
-        defaultSupplierId,
+        defaultPracticeSupplierId,
+        supplierSku,
+        unitPrice,
+        currency,
+        minOrderQty,
       });
     }
 
@@ -193,6 +230,7 @@ export async function deleteItemAction(itemId: string) {
     const ctx = await buildRequestContext();
     await inventoryService.deleteItem(ctx, itemId);
     revalidatePath('/inventory');
+    revalidatePath('/my-items');
   } catch (error) {
     const ctx = await buildRequestContext().catch(() => null);
     logger.error({
@@ -297,87 +335,6 @@ export async function deleteLocationAction(locationId: string) {
   }
 }
 
-/**
- * Create or update supplier
- */
-export async function upsertSupplierAction(_prevState: unknown, formData: FormData) {
-  await verifyCsrfFromHeaders();
-  
-  try {
-    const ctx = await buildRequestContext();
-
-    const parsed = upsertSupplierSchema.safeParse({
-      supplierId: formData.get('supplierId') ?? undefined,
-      name: formData.get('name'),
-      email: formData.get('email'),
-      phone: formData.get('phone'),
-      website: formData.get('website'),
-      notes: formData.get('notes'),
-    });
-
-    if (!parsed.success) {
-      return { error: 'Invalid supplier details' } as const;
-    }
-
-    const { supplierId, ...values } = parsed.data;
-
-    if (supplierId) {
-      await userRepository.updateSupplier(supplierId, ctx.practiceId, values);
-    } else {
-      await userRepository.createSupplier(ctx.practiceId, values);
-    }
-
-    revalidatePath('/suppliers');
-    revalidatePath('/inventory');
-    revalidatePath('/dashboard');
-    return { success: supplierId ? 'Supplier updated' : 'Supplier added' } as const;
-  } catch (error) {
-    const ctx = await buildRequestContext().catch(() => null);
-    logger.error({
-      action: 'upsertSupplierAction',
-      userId: ctx?.userId,
-      practiceId: ctx?.practiceId,
-      supplierId: formData.get('supplierId'),
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    }, 'Failed to upsert supplier');
-    
-    if (isDomainError(error)) {
-      return { error: error.message } as const;
-    }
-    return { error: 'An unexpected error occurred' } as const;
-  }
-}
-
-/**
- * Delete supplier
- */
-export async function deleteSupplierAction(supplierId: string) {
-  await verifyCsrfFromHeaders();
-  
-  try {
-    const ctx = await buildRequestContext();
-    await userRepository.deleteSupplier(supplierId, ctx.practiceId);
-    revalidatePath('/suppliers');
-    revalidatePath('/inventory');
-    revalidatePath('/dashboard');
-  } catch (error) {
-    const ctx = await buildRequestContext().catch(() => null);
-    logger.error({
-      action: 'deleteSupplierAction',
-      userId: ctx?.userId,
-      practiceId: ctx?.practiceId,
-      supplierId,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    }, 'Failed to delete supplier');
-    
-    if (isDomainError(error)) {
-      throw new Error(error.message);
-    }
-    throw error;
-  }
-}
 
 /**
  * Create stock adjustment
@@ -476,10 +433,4 @@ export async function upsertLocationInlineAction(formData: FormData) {
   await verifyCsrfFromHeaders();
   await upsertLocationAction(null, formData);
 }
-
-export async function upsertSupplierInlineAction(formData: FormData) {
-  await verifyCsrfFromHeaders();
-  await upsertSupplierAction(null, formData);
-}
-
 

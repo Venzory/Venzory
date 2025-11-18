@@ -12,6 +12,7 @@
     "test:unit": "vitest run --config vitest.config.ts",
     "test:unit:watch": "vitest --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:ci": "vitest run --config vitest.ci.config.ts",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
@@ -25,7 +26,8 @@
     "db:verify-constraints": "tsx scripts/verify-constraints.ts",
     "db:verify-all": "npm run db:validate && npm run db:check-duplicates && npm run db:verify-constraints",
     "backfill:suppliers": "tsx scripts/backfill-global-suppliers.ts",
-    "backfill:supplier-catalog": "tsx scripts/backfill-supplier-catalog-practice-links.ts"
+    "backfill:supplier-catalog": "tsx scripts/backfill-supplier-catalog-practice-links.ts",
+    "backfill:practice-supplier-final": "tsx scripts/backfill-practice-supplier-final.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

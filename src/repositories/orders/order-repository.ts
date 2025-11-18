@@ -377,8 +377,14 @@ export class OrderRepository extends BaseRepository {
             item: {
               select: { id: true, name: true, sku: true },
             },
-            supplier: {
-              select: { id: true, name: true },
+            practiceSupplier: {
+              select: { 
+                id: true, 
+                customLabel: true,
+                globalSupplier: {
+                  select: { id: true, name: true },
+                },
+              },
             },
           },
         },
@@ -408,7 +414,11 @@ export class OrderRepository extends BaseRepository {
         items: {
           include: {
             item: true,
-            supplier: true,
+            practiceSupplier: {
+              include: {
+                globalSupplier: true,
+              },
+            },
           },
         },
       },

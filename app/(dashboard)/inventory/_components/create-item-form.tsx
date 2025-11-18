@@ -139,7 +139,7 @@ export function CreateItemForm({ suppliers }: { suppliers: SupplierOption[] }) {
             </label>
             <select
               id="item-supplier"
-              name="defaultSupplierId"
+              name="defaultPracticeSupplierId"
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
               defaultValue="none"
             >
@@ -150,6 +150,9 @@ export function CreateItemForm({ suppliers }: { suppliers: SupplierOption[] }) {
                 </option>
               ))}
             </select>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Optional: Select a default supplier for this item
+            </p>
           </div>
         </div>
       </div>

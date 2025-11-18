@@ -11,7 +11,7 @@ interface NewTemplateFormClientProps {
     name: string;
     sku: string | null;
     unit: string | null;
-    defaultSupplierId: string | null;
+    defaultPracticeSupplierId: string | null;
   }[];
   suppliers: { id: string; name: string }[];
 }
@@ -32,11 +32,11 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
 
     // Get default supplier from item
     const item = items.find((i) => i.id === itemId);
-    const defaultSupplierId = item?.defaultSupplierId || null;
+    const defaultPracticeSupplierId = item?.defaultPracticeSupplierId || null;
 
     setSelectedItems([
       ...selectedItems,
-      { itemId, defaultQuantity: 1, supplierId: defaultSupplierId },
+      { itemId, defaultQuantity: 1, supplierId: defaultPracticeSupplierId },
     ]);
   };
 

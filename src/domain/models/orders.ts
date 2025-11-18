@@ -3,7 +3,7 @@
  * These models represent the business entities for order management
  */
 
-import type { BaseEntity, Supplier } from './common';
+import type { BaseEntity } from './common';
 import type { Item } from './inventory';
 import type { PracticeSupplierWithRelations } from './suppliers';
 
@@ -68,10 +68,10 @@ export interface OrderTemplateItem {
   templateId: string;
   itemId: string;
   defaultQuantity: number;
-  supplierId: string | null;
+  practiceSupplierId: string | null;
   createdAt: Date;
   item?: Item;
-  supplier?: Supplier | null;
+  practiceSupplier?: PracticeSupplierWithRelations | null;
 }
 
 /**

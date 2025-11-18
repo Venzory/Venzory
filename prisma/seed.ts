@@ -1,2432 +1,817 @@
-import { 
-  PrismaClient, 
-  PracticeRole, 
-  MembershipStatus, 
-  OrderStatus,
-  GoodsReceiptStatus,
-  StockCountStatus,
-  IntegrationType,
-  Gs1VerificationStatus
-} from '@prisma/client';
+import { PrismaClient, PracticeRole, OrderStatus, GoodsReceiptStatus } from '@prisma/client';
 import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-// ============================================================================
-// DATA DEFINITIONS
-// ============================================================================
+// Helper functions
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-const PRACTICE_DATA = {
-  id: 'seed-greenwood-clinic',
-  name: 'Greenwood Medical Clinic',
-  slug: 'greenwood-clinic',
-  street: 'Keizersgracht 123',
-  city: 'Amsterdam',
-  postalCode: '1015 CJ',
-  country: 'Netherlands',
-  contactEmail: 'info@greenwood-clinic.nl',
-  contactPhone: '+31 20 123 4567',
-};
+function randomPrice(min: number, max: number): number {
+  return Math.round((Math.random() * (max - min) + min) * 100) / 100;
+}
 
-const USERS_DATA = [
-  {
-    id: 'seed-user-sarah',
-    email: 'sarah.mitchell@greenwood-clinic.nl',
-    name: 'Dr. Sarah Mitchell',
-    role: PracticeRole.ADMIN,
-    hasMembership: true,
-  },
-  {
-    id: 'seed-user-emma',
-    email: 'emma.johnson@greenwood-clinic.nl',
-    name: 'Emma Johnson',
-    role: PracticeRole.STAFF,
-    hasMembership: true,
-  },
-  {
-    id: 'seed-user-tom',
-    email: 'tom.richards@greenwood-clinic.nl',
-    name: 'Tom Richards',
-    role: PracticeRole.STAFF,
-    hasMembership: true,
-  },
-  {
-    id: 'seed-user-existing',
-    email: 'existing@remcura.test',
-    name: 'Existing User',
-    role: PracticeRole.STAFF,
-    hasMembership: false,
-  },
-];
+function randomElement<T>(array: T[]): T {
+  return array[randomInt(0, array.length - 1)];
+}
 
-const LOCATIONS_DATA = [
-  {
-    id: 'seed-loc-main',
-    name: 'Main Building',
-    code: 'MAIN',
-    description: 'Primary clinic building',
-    parentCode: null,
-  },
-  {
-    id: 'seed-loc-tr1',
-    name: 'Treatment Room 1',
-    code: 'TR-01',
-    description: 'General consultation and treatment room',
-    parentCode: 'MAIN',
-  },
-  {
-    id: 'seed-loc-tr2',
-    name: 'Treatment Room 2',
-    code: 'TR-02',
-    description: 'Minor procedures and examination room',
-    parentCode: 'MAIN',
-  },
-  {
-    id: 'seed-loc-pharm',
-    name: 'Storage – Pharmacy',
-    code: 'PHARM-STOR',
-    description: 'Central pharmaceutical and medical supply storage',
-    parentCode: 'MAIN',
-  },
-  {
-    id: 'seed-loc-emergency',
-    name: 'Emergency Supply Cabinet',
-    code: 'EMER-CAB',
-    description: 'Critical emergency supplies and medications',
-    parentCode: 'MAIN',
-  },
-];
+function daysAgo(days: number): Date {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date;
+}
 
-const PRODUCTS_DATA = [
-  // ========== GENERAL MEDICAL SUPPLIES ==========
-  // Disposables - Gloves
-  {
-    id: 'seed-prod-gloves-nitrile-l',
-    gtin: '05012345678906',
-    brand: 'MediCare',
-    name: 'Nitrile Examination Gloves - Large',
-    description: 'Powder-free nitrile examination gloves, size L, 100 pcs per box',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-gloves-nitrile-m',
-    gtin: '05012345678913',
-    brand: 'MediCare',
-    name: 'Nitrile Examination Gloves - Medium',
-    description: 'Powder-free nitrile examination gloves, size M, 100 pcs per box',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-gloves-nitrile-s',
-    gtin: '05012345678920',
-    brand: 'MediCare',
-    name: 'Nitrile Examination Gloves - Small',
-    description: 'Powder-free nitrile examination gloves, size S, 100 pcs per box',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-gloves-latex-l',
-    gtin: null,
-    brand: 'SafeMed',
-    name: 'Latex Examination Gloves - Large',
-    description: 'Powdered latex gloves, size L, 100 pcs per box',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-gloves-latex-m',
-    gtin: null,
-    brand: 'SafeMed',
-    name: 'Latex Examination Gloves - Medium',
-    description: 'Powdered latex gloves, size M, 100 pcs per box',
-    isGs1Product: false,
-  },
-  
-  // Syringes & Needles
-  {
-    id: 'seed-prod-syringe-3ml',
-    gtin: '05023456789010',
-    brand: 'SafeMed',
-    name: 'Sterile Syringe 3ml',
-    description: 'Single-use sterile syringes with luer lock, 3ml capacity',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-syringe-5ml',
-    gtin: '05023456789017',
-    brand: 'SafeMed',
-    name: 'Sterile Syringe 5ml',
-    description: 'Single-use sterile syringes with luer lock, 5ml capacity',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-syringe-10ml',
-    gtin: '05023456789024',
-    brand: 'SafeMed',
-    name: 'Sterile Syringe 10ml',
-    description: 'Single-use sterile syringes with luer lock, 10ml capacity',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-syringe-20ml',
-    gtin: '05023456789048',
-    brand: 'SafeMed',
-    name: 'Sterile Syringe 20ml',
-    description: 'Single-use sterile syringes with luer lock, 20ml capacity',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-needles-21g',
-    gtin: '05023456789055',
-    brand: 'SafeMed',
-    name: 'Hypodermic Needles 21G',
-    description: 'Sterile hypodermic needles, 21 gauge x 38mm',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-needles-23g',
-    gtin: '05023456789031',
-    brand: 'SafeMed',
-    name: 'Hypodermic Needles 23G',
-    description: 'Sterile hypodermic needles, 23 gauge x 25mm',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-needles-25g',
-    gtin: '05023456789062',
-    brand: 'SafeMed',
-    name: 'Hypodermic Needles 25G',
-    description: 'Sterile hypodermic needles, 25 gauge x 16mm',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-butterfly-needles',
-    gtin: '05023456789079',
-    brand: 'SafeMed',
-    name: 'Butterfly Infusion Set',
-    description: 'Winged infusion set, 23G x 19mm, flexible tubing',
-    isGs1Product: true,
-  },
-  
-  // Wound Care
-  {
-    id: 'seed-prod-gauze-2x2',
-    gtin: '05034567890111',
-    brand: 'CurePlus',
-    name: 'Sterile Gauze Pads 2x2',
-    description: 'Sterile gauze pads for wound care, 2x2 inch, 200 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-gauze-4x4',
-    gtin: '05034567890128',
-    brand: 'CurePlus',
-    name: 'Sterile Gauze Pads 4x4',
-    description: 'Sterile gauze pads for wound care, 4x4 inch, 100 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-bandage-elastic',
-    gtin: null,
-    brand: 'CurePlus',
-    name: 'Elastic Bandage 10cm',
-    description: 'Elastic medical bandage, 10cm x 4.5m',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-bandage-adhesive',
-    gtin: null,
-    brand: 'CurePlus',
-    name: 'Adhesive Bandages',
-    description: 'Assorted adhesive bandages, waterproof, 100 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-wound-dressing',
-    gtin: '05034567890135',
-    brand: 'CurePlus',
-    name: 'Advanced Wound Dressing',
-    description: 'Hydrocolloid wound dressing, 10cm x 10cm, sterile',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-foam-dressing',
-    gtin: '05034567890142',
-    brand: 'CurePlus',
-    name: 'Foam Wound Dressing',
-    description: 'Absorbent foam dressing, 15cm x 15cm, with adhesive border',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-medical-tape',
-    gtin: null,
-    brand: 'MediCare',
-    name: 'Medical Adhesive Tape',
-    description: 'Non-woven medical tape, hypoallergenic, 2.5cm x 9m',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-surgical-tape',
-    gtin: null,
-    brand: 'MediCare',
-    name: 'Surgical Tape',
-    description: 'Micropore surgical tape, breathable, 5cm x 9m',
-    isGs1Product: false,
-  },
-  
-  // PPE
-  {
-    id: 'seed-prod-masks-surgical',
-    gtin: '05045678901239',
-    brand: 'HealthShield',
-    name: 'Surgical Face Masks',
-    description: '3-ply disposable surgical masks, Type II, 50 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-masks-n95',
-    gtin: '05045678901253',
-    brand: 'HealthShield',
-    name: 'N95 Respirator Masks',
-    description: 'NIOSH-approved N95 respirator, 20 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-face-shield',
-    gtin: '05045678901246',
-    brand: 'HealthShield',
-    name: 'Protective Face Shield',
-    description: 'Reusable face shield with adjustable headband',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-gown-disposable',
-    gtin: null,
-    brand: 'HealthShield',
-    name: 'Disposable Isolation Gown',
-    description: 'Level 2 isolation gown, fluid resistant, one size',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-gown-level3',
-    gtin: '05045678901260',
-    brand: 'HealthShield',
-    name: 'Level 3 Surgical Gown',
-    description: 'Sterile surgical gown, Level 3 protection, reinforced',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-shoe-covers',
-    gtin: null,
-    brand: 'HealthShield',
-    name: 'Disposable Shoe Covers',
-    description: 'Non-slip disposable shoe covers, one size, 100 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-hair-caps',
-    gtin: null,
-    brand: 'HealthShield',
-    name: 'Disposable Hair Caps',
-    description: 'Bouffant caps, latex-free, 100 pack',
-    isGs1Product: false,
-  },
-  
-  // Consumables & Prep
-  {
-    id: 'seed-prod-alcohol-wipes',
-    gtin: null,
-    brand: 'CleanCare',
-    name: 'Alcohol Prep Pads',
-    description: '70% isopropyl alcohol prep pads, 100 count',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-chlorhexidine-wipes',
-    gtin: '05067890123401',
-    brand: 'CleanCare',
-    name: 'Chlorhexidine Prep Wipes',
-    description: '2% chlorhexidine gluconate prep wipes, 50 count',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-cotton-swabs',
-    gtin: null,
-    brand: 'CleanCare',
-    name: 'Sterile Cotton Swabs',
-    description: 'Sterile cotton-tipped applicators, 100 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-cotton-balls',
-    gtin: null,
-    brand: 'CleanCare',
-    name: 'Sterile Cotton Balls',
-    description: 'Non-sterile cotton balls, large, 200 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-saline-solution',
-    gtin: '05056789012340',
-    brand: 'MediCare',
-    name: 'Sodium Chloride 0.9% Solution',
-    description: 'Sterile normal saline solution, 500ml bottle',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-saline-solution-1l',
-    gtin: '05056789012364',
-    brand: 'MediCare',
-    name: 'Sodium Chloride 0.9% Solution - 1L',
-    description: 'Sterile normal saline solution, 1000ml bottle',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-iodine-prep',
-    gtin: '05056789012357',
-    brand: 'CleanCare',
-    name: 'Povidone Iodine Prep Solution',
-    description: '10% povidone iodine antiseptic solution, 250ml',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-hydrogen-peroxide',
-    gtin: null,
-    brand: 'CleanCare',
-    name: 'Hydrogen Peroxide 3%',
-    description: 'Antiseptic hydrogen peroxide solution, 500ml',
-    isGs1Product: false,
-  },
-  
-  // Equipment Consumables
-  {
-    id: 'seed-prod-thermometer-covers',
-    gtin: null,
-    brand: 'SafeMed',
-    name: 'Thermometer Probe Covers',
-    description: 'Disposable probe covers for digital thermometers, 100 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-bp-cuff-covers',
-    gtin: null,
-    brand: 'SafeMed',
-    name: 'Blood Pressure Cuff Covers',
-    description: 'Disposable BP cuff covers, universal size, 50 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-stethoscope-covers',
-    gtin: null,
-    brand: 'SafeMed',
-    name: 'Stethoscope Covers',
-    description: 'Disposable stethoscope covers, 100 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-tongue-depressors',
-    gtin: null,
-    brand: 'SafeMed',
-    name: 'Wooden Tongue Depressors',
-    description: 'Non-sterile wooden tongue depressors, 500 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-specimen-containers',
-    gtin: '05078901234518',
-    brand: 'SafeMed',
-    name: 'Specimen Collection Containers',
-    description: 'Sterile specimen containers with screw cap, 120ml, 100 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-urine-cups',
-    gtin: null,
-    brand: 'SafeMed',
-    name: 'Urine Collection Cups',
-    description: 'Sterile urine collection cups, 100ml, 100 pack',
-    isGs1Product: false,
-  },
-  
-  // ========== DENTAL SUPPLIES ==========
-  {
-    id: 'seed-prod-dental-mirror',
-    gtin: null,
-    brand: 'DentalEx',
-    name: 'Dental Mouth Mirror',
-    description: 'Front surface mouth mirror, #5 size, 12 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-dental-bibs',
-    gtin: null,
-    brand: 'DentalEx',
-    name: 'Disposable Dental Bibs',
-    description: '2-ply dental bibs with adhesive, blue, 500 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-dental-gloves',
-    gtin: '05089012345625',
-    brand: 'DentalEx',
-    name: 'Dental Examination Gloves',
-    description: 'Powder-free nitrile gloves for dental procedures, 300 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-dental-suction-tips',
-    gtin: null,
-    brand: 'DentalEx',
-    name: 'Saliva Ejector Tips',
-    description: 'Disposable saliva ejector tips, clear, 100 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-dental-needles',
-    gtin: '05089012345632',
-    brand: 'DentalEx',
-    name: 'Dental Anesthetic Needles 27G',
-    description: 'Short dental needles, 27 gauge x 30mm, 100 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-dental-cotton-rolls',
-    gtin: null,
-    brand: 'DentalEx',
-    name: 'Dental Cotton Rolls',
-    description: 'Cotton rolls for moisture control, medium, 2000 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-dental-gauze',
-    gtin: null,
-    brand: 'DentalEx',
-    name: 'Dental Gauze Sponges',
-    description: 'Non-woven gauze sponges, 2x2 inch, 200 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-prophy-paste',
-    gtin: '05089012345649',
-    brand: 'DentalEx',
-    name: 'Prophy Paste - Mint',
-    description: 'Prophylaxis cleaning paste, medium grit, mint flavor, 200 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-articulating-paper',
-    gtin: null,
-    brand: 'DentalEx',
-    name: 'Articulating Paper',
-    description: 'Blue articulating paper for bite marking, 300 sheets',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-impression-trays',
-    gtin: null,
-    brand: 'DentalEx',
-    name: 'Disposable Impression Trays',
-    description: 'Plastic impression trays, assorted sizes, 100 pack',
-    isGs1Product: false,
-  },
-  
-  // ========== SURGICAL SUPPLIES ==========
-  {
-    id: 'seed-prod-surgical-blades',
-    gtin: '05090123456732',
-    brand: 'SurgiPro',
-    name: 'Surgical Blades #15',
-    description: 'Sterile carbon steel surgical blades, size 15, 100 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-surgical-blades-11',
-    gtin: '05090123456749',
-    brand: 'SurgiPro',
-    name: 'Surgical Blades #11',
-    description: 'Sterile carbon steel surgical blades, size 11, 100 pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-suture-vicryl',
-    gtin: '05090123456756',
-    brand: 'SurgiPro',
-    name: 'Absorbable Suture - Vicryl 3-0',
-    description: 'Polyglactin 910 absorbable suture, 3-0, 18" with needle',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-suture-nylon',
-    gtin: '05090123456763',
-    brand: 'SurgiPro',
-    name: 'Non-Absorbable Suture - Nylon 4-0',
-    description: 'Nylon monofilament suture, 4-0, 18" with needle',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-surgical-drape',
-    gtin: '05090123456770',
-    brand: 'SurgiPro',
-    name: 'Sterile Surgical Drape',
-    description: 'Sterile fenestrated surgical drape, 60cm x 90cm, single pack',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-suture-removal-kit',
-    gtin: null,
-    brand: 'SurgiPro',
-    name: 'Suture Removal Kit',
-    description: 'Sterile suture removal kit with scissors and forceps',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-sterile-gloves-6',
-    gtin: '05090123456787',
-    brand: 'SurgiPro',
-    name: 'Sterile Surgical Gloves Size 6.5',
-    description: 'Latex sterile surgical gloves, powder-free, size 6.5, 50 pairs',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-sterile-gloves-7',
-    gtin: '05090123456794',
-    brand: 'SurgiPro',
-    name: 'Sterile Surgical Gloves Size 7.5',
-    description: 'Latex sterile surgical gloves, powder-free, size 7.5, 50 pairs',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-hemostatic-gauze',
-    gtin: '05090123456800',
-    brand: 'SurgiPro',
-    name: 'Hemostatic Gauze',
-    description: 'Absorbable hemostatic gauze for bleeding control, 5cm x 5cm',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-surgical-sponges',
-    gtin: '05090123456817',
-    brand: 'SurgiPro',
-    name: 'Surgical Lap Sponges',
-    description: 'X-ray detectable lap sponges, 18" x 18", 10 pack',
-    isGs1Product: true,
-  },
-  
-  // ========== OFFICE SUPPLIES ==========
-  {
-    id: 'seed-prod-printer-paper',
-    gtin: null,
-    brand: 'OfficePro',
-    name: 'A4 Printer Paper',
-    description: 'White copier paper, 80gsm, 2500 sheets (5 reams)',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-folders-manila',
-    gtin: null,
-    brand: 'OfficePro',
-    name: 'Manila File Folders',
-    description: 'Letter size manila folders, 100 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-pens-black',
-    gtin: null,
-    brand: 'OfficePro',
-    name: 'Ballpoint Pens - Black',
-    description: 'Medium point ballpoint pens, black ink, 50 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-pens-blue',
-    gtin: null,
-    brand: 'OfficePro',
-    name: 'Ballpoint Pens - Blue',
-    description: 'Medium point ballpoint pens, blue ink, 50 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-sticky-notes',
-    gtin: null,
-    brand: 'OfficePro',
-    name: 'Sticky Notes 3x3',
-    description: 'Yellow sticky notes, 3x3 inch, 12 pads per pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-labels-address',
-    gtin: null,
-    brand: 'OfficePro',
-    name: 'Address Labels',
-    description: 'White address labels for laser/inkjet, 30 per sheet, 100 sheets',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-envelopes',
-    gtin: null,
-    brand: 'OfficePro',
-    name: 'White Envelopes #10',
-    description: 'Business envelopes with security tint, 500 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-clipboards',
-    gtin: null,
-    brand: 'OfficePro',
-    name: 'Medical Clipboards',
-    description: 'Plastic clipboards with storage compartment, 12 pack',
-    isGs1Product: false,
-  },
-  {
-    id: 'seed-prod-hand-sanitizer',
-    gtin: '05012345678937',
-    brand: 'CleanCare',
-    name: 'Hand Sanitizer Gel 500ml',
-    description: '70% alcohol hand sanitizer gel with aloe, 500ml pump bottle',
-    isGs1Product: true,
-  },
-  {
-    id: 'seed-prod-tissues',
-    gtin: null,
-    brand: 'OfficePro',
-    name: 'Facial Tissues',
-    description: '2-ply facial tissues, 100 sheets per box, 30 boxes',
-    isGs1Product: false,
-  },
-];
+async function main() {
+  console.log('🌱 Starting seed...');
 
-const SUPPLIERS_DATA = [
-  {
-    id: 'seed-supplier-medsupply',
-    name: 'MedSupply Europe',
-    email: 'orders@medsupply-eu.com',
-    phone: '+31 20 555 0100',
-    website: 'https://www.medsupply-eu.com',
-    notes: 'Primary supplier for general medical supplies. Standard delivery 3-5 business days.',
-    integrationType: IntegrationType.MANUAL,
-    linkToPractice: true,
-    accountNumber: 'GWC-45789',
-    isPreferred: true,
-  },
-  {
-    id: 'seed-supplier-fasttrack',
-    name: 'FastTrack Medical',
-    email: 'sales@fasttrack-medical.com',
-    phone: '+31 20 555 0200',
-    website: 'https://www.fasttrack-medical.com',
-    notes: 'Premium supplier with same-day delivery for urgent orders. API integration available.',
-    integrationType: IntegrationType.API,
-    linkToPractice: true,
-    accountNumber: 'GRWD-23456',
-    isPreferred: false,
-  },
-  {
-    id: 'seed-supplier-bulkcare',
-    name: 'BulkCare Wholesale',
-    email: 'info@bulkcare.nl',
-    phone: '+31 20 555 0300',
-    website: 'https://www.bulkcare.nl',
-    notes: 'Best prices for bulk orders. Higher minimum order quantities. Delivery 7-10 days.',
-    integrationType: IntegrationType.MANUAL,
-    linkToPractice: true,
-    accountNumber: null,
-    isPreferred: false,
-  },
-  {
-    id: 'seed-supplier-dentalpro',
-    name: 'DentalPro Supplies',
-    email: 'support@dentalpro.eu',
-    phone: '+31 20 555 0400',
-    website: 'https://www.dentalpro.eu',
-    notes: 'Specialized dental and orthodontic supplies. Expert support team.',
-    integrationType: IntegrationType.MANUAL,
-    linkToPractice: false, // Not linked - available for "Add Supplier" demo
-    accountNumber: null,
-    isPreferred: false,
-  },
-  {
-    id: 'seed-supplier-officepro',
-    name: 'OfficePro Medical',
-    email: 'sales@officepro.nl',
-    phone: '+31 20 555 0600',
-    website: 'https://www.officepro.nl',
-    notes: 'Office supplies, furniture, and administrative materials for medical practices.',
-    integrationType: IntegrationType.MANUAL,
-    linkToPractice: false, // Not linked - available for "Add Supplier" demo
-    accountNumber: null,
-    isPreferred: false,
-  },
-  {
-    id: 'seed-supplier-surgical',
-    name: 'SurgicalTech Solutions',
-    email: 'contact@surgicaltech.eu',
-    phone: '+31 20 555 0700',
-    website: 'https://www.surgicaltech.eu',
-    notes: 'Specialized surgical instruments and equipment. Premium quality products.',
-    integrationType: IntegrationType.API,
-    linkToPractice: false, // Not linked - available for "Add Supplier" demo
-    accountNumber: null,
-    isPreferred: false,
-  },
-];
+  // Clean existing data
+  console.log('🧹 Cleaning existing data...');
+  await prisma.activityLog.deleteMany();
+  await prisma.goodsReceiptLine.deleteMany();
+  await prisma.goodsReceipt.deleteMany();
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.orderTemplateItem.deleteMany();
+  await prisma.orderTemplate.deleteMany();
+  await prisma.stockAdjustment.deleteMany();
+  await prisma.inventory.deleteMany();
+  await prisma.supplierItem.deleteMany();
+  await prisma.supplierCatalog.deleteMany();
+  await prisma.item.deleteMany();
+  await prisma.location.deleteMany();
+  await prisma.practiceSupplier.deleteMany();
+  await prisma.globalSupplier.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.practiceUser.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.account.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.practice.deleteMany();
 
-// Items with inventory distribution (quantity per location)
-// Format: { productId, sku, name, unit, description, defaultSupplier, reorderPoint, reorderQty, inventory: { locationCode: qty } }
-const ITEMS_DATA = [
-  {
-    id: 'seed-item-gloves-nitrile-l',
-    productId: 'seed-prod-gloves-nitrile-l',
-    sku: 'GLV-NIT-L-001',
-    name: 'Nitrile Gloves - Large',
-    unit: 'box',
-    description: 'Powder-free nitrile gloves, size L (100 pcs/box)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 20,
-    reorderQuantity: 100,
-    inventory: {
-      'PHARM-STOR': 6,
-      'TR-01': 2,
-      'EMER-CAB': 0,
-    },
-  },
-  {
-    id: 'seed-item-gloves-nitrile-m',
-    productId: 'seed-prod-gloves-nitrile-m',
-    sku: 'GLV-NIT-M-002',
-    name: 'Nitrile Gloves - Medium',
-    unit: 'box',
-    description: 'Powder-free nitrile gloves, size M (100 pcs/box)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 25,
-    reorderQuantity: 100,
-    inventory: {
-      'PHARM-STOR': 8,
-      'TR-01': 4,
-      'TR-02': 3,
-      'EMER-CAB': 1,
-    },
-  },
-  {
-    id: 'seed-item-gloves-latex-l',
-    productId: 'seed-prod-gloves-latex-l',
-    sku: 'GLV-LAT-L-003',
-    name: 'Latex Gloves - Large',
-    unit: 'box',
-    description: 'Powdered latex gloves, size L (100 pcs/box)',
-    defaultSupplier: 'bulkcare',
-    reorderPoint: 15,
-    reorderQuantity: 50,
-    inventory: {
-      'PHARM-STOR': 28,
-      'TR-01': 3,
-    },
-  },
-  {
-    id: 'seed-item-syringe-5ml',
-    productId: 'seed-prod-syringe-5ml',
-    sku: 'SYR-5ML-004',
-    name: 'Syringes 5ml',
-    unit: 'pack',
-    description: 'Sterile single-use syringes, 5ml (50 pcs/pack)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 25,
-    reorderQuantity: 50,
-    inventory: {
-      'PHARM-STOR': 8,
-      'TR-01': 4,
-      'EMER-CAB': 2,
-    },
-  },
-  {
-    id: 'seed-item-syringe-10ml',
-    productId: 'seed-prod-syringe-10ml',
-    sku: 'SYR-10ML-005',
-    name: 'Syringes 10ml',
-    unit: 'pack',
-    description: 'Sterile single-use syringes, 10ml (50 pcs/pack)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 15,
-    reorderQuantity: 30,
-    inventory: {
-      'PHARM-STOR': 22,
-      'TR-02': 3,
-      'EMER-CAB': 2,
-    },
-  },
-  {
-    id: 'seed-item-needles-23g',
-    productId: 'seed-prod-needles-23g',
-    sku: 'NDL-23G-006',
-    name: 'Needles 23G',
-    unit: 'pack',
-    description: 'Hypodermic needles 23G x 25mm (100 pcs/pack)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 20,
-    reorderQuantity: 40,
-    inventory: {
-      'PHARM-STOR': 35,
-      'TR-01': 5,
-      'TR-02': 4,
-    },
-  },
-  {
-    id: 'seed-item-gauze-4x4',
-    productId: 'seed-prod-gauze-4x4',
-    sku: 'GAU-4X4-007',
-    name: 'Sterile Gauze 4x4',
-    unit: 'pack',
-    description: 'Sterile gauze pads, 4x4 inch (100 pcs/pack)',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 15,
-    reorderQuantity: 30,
-    inventory: {
-      'PHARM-STOR': 3,
-      'TR-01': 2,
-      'EMER-CAB': 1,
-    },
-  },
-  {
-    id: 'seed-item-bandage-elastic',
-    productId: 'seed-prod-bandage-elastic',
-    sku: 'BND-EL-008',
-    name: 'Elastic Bandage 10cm',
-    unit: 'roll',
-    description: 'Elastic medical bandage, 10cm x 4.5m',
-    defaultSupplier: 'bulkcare',
-    reorderPoint: 20,
-    reorderQuantity: 50,
-    inventory: {
-      'PHARM-STOR': 48,
-      'TR-01': 6,
-      'TR-02': 5,
-      'EMER-CAB': 2,
-    },
-  },
-  {
-    id: 'seed-item-bandage-adhesive',
-    productId: 'seed-prod-bandage-adhesive',
-    sku: 'BND-ADH-009',
-    name: 'Adhesive Bandages',
-    unit: 'box',
-    description: 'Assorted adhesive bandages (100 pcs/box)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 20,
-    reorderQuantity: 50,
-    inventory: {
-      'PHARM-STOR': 4,
-      'TR-01': 2,
-      'TR-02': 1,
-    },
-  },
-  {
-    id: 'seed-item-wound-dressing',
-    productId: 'seed-prod-wound-dressing',
-    sku: 'WND-DRS-010',
-    name: 'Advanced Wound Dressing',
-    unit: 'each',
-    description: 'Hydrocolloid wound dressing, 10x10cm',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 10,
-    reorderQuantity: 25,
-    inventory: {
-      'PHARM-STOR': 18,
-      'TR-01': 3,
-      'TR-02': 2,
-    },
-  },
-  {
-    id: 'seed-item-medical-tape',
-    productId: 'seed-prod-medical-tape',
-    sku: 'TAPE-MED-011',
-    name: 'Medical Tape',
-    unit: 'roll',
-    description: 'Non-woven adhesive tape, 2.5cm x 9m',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 15,
-    reorderQuantity: 40,
-    inventory: {
-      'PHARM-STOR': 32,
-      'TR-01': 4,
-      'TR-02': 3,
-    },
-  },
-  {
-    id: 'seed-item-masks-surgical',
-    productId: 'seed-prod-masks-surgical',
-    sku: 'MSK-SUR-012',
-    name: 'Surgical Masks',
-    unit: 'box',
-    description: '3-ply surgical masks, Type II (50 pcs/box)',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 30,
-    reorderQuantity: 100,
-    inventory: {
-      'PHARM-STOR': 10,
-      'TR-01': 4,
-      'TR-02': 4,
-      'EMER-CAB': 2,
-    },
-  },
-  {
-    id: 'seed-item-face-shield',
-    productId: 'seed-prod-face-shield',
-    sku: 'PPE-SHIELD-013',
-    name: 'Face Shield',
-    unit: 'each',
-    description: 'Reusable protective face shield',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 5,
-    reorderQuantity: 15,
-    inventory: {
-      'PHARM-STOR': 8,
-      'TR-01': 2,
-      'TR-02': 2,
-    },
-  },
-  {
-    id: 'seed-item-gown-disposable',
-    productId: 'seed-prod-gown-disposable',
-    sku: 'PPE-GOWN-014',
-    name: 'Isolation Gown',
-    unit: 'each',
-    description: 'Level 2 disposable isolation gown',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 10,
-    reorderQuantity: 30,
-    inventory: {
-      'PHARM-STOR': 25,
-      'TR-01': 3,
-      'EMER-CAB': 4,
-    },
-  },
-  {
-    id: 'seed-item-alcohol-wipes',
-    productId: 'seed-prod-alcohol-wipes',
-    sku: 'ALC-WIPE-015',
-    name: 'Alcohol Wipes',
-    unit: 'box',
-    description: '70% isopropyl alcohol pads (100 count/box)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 20,
-    reorderQuantity: 50,
-    inventory: {
-      'PHARM-STOR': 42,
-      'TR-01': 8,
-      'TR-02': 6,
-      'EMER-CAB': 3,
-    },
-  },
-  {
-    id: 'seed-item-cotton-swabs',
-    productId: 'seed-prod-cotton-swabs',
-    sku: 'COT-SWB-016',
-    name: 'Cotton Swabs',
-    unit: 'pack',
-    description: 'Sterile cotton-tipped applicators (100 pcs/pack)',
-    defaultSupplier: 'bulkcare',
-    reorderPoint: 15,
-    reorderQuantity: 30,
-    inventory: {
-      'PHARM-STOR': 28,
-      'TR-01': 4,
-      'TR-02': 3,
-    },
-  },
-  {
-    id: 'seed-item-saline-solution',
-    productId: 'seed-prod-saline-solution',
-    sku: 'SAL-SOL-017',
-    name: 'Saline Solution 0.9%',
-    unit: 'bottle',
-    description: 'Sterile normal saline, 500ml',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 10,
-    reorderQuantity: 24,
-    inventory: {
-      'PHARM-STOR': 18,
-      'TR-01': 2,
-      'TR-02': 2,
-      'EMER-CAB': 2,
-    },
-  },
-  {
-    id: 'seed-item-iodine-prep',
-    productId: 'seed-prod-iodine-prep',
-    sku: 'IOD-PREP-018',
-    name: 'Iodine Prep Solution',
-    unit: 'bottle',
-    description: '10% povidone iodine solution, 250ml',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 8,
-    reorderQuantity: 20,
-    inventory: {
-      'PHARM-STOR': 12,
-      'TR-02': 2,
-      'EMER-CAB': 1,
-    },
-  },
-  {
-    id: 'seed-item-thermometer-covers',
-    productId: 'seed-prod-thermometer-covers',
-    sku: 'THERM-CVR-019',
-    name: 'Thermometer Covers',
-    unit: 'pack',
-    description: 'Disposable probe covers (100 pcs/pack)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 10,
-    reorderQuantity: 25,
-    inventory: {
-      'PHARM-STOR': 22,
-      'TR-01': 3,
-      'TR-02': 2,
-    },
-  },
-  {
-    id: 'seed-item-bp-cuff-covers',
-    productId: 'seed-prod-bp-cuff-covers',
-    sku: 'BP-CVR-020',
-    name: 'BP Cuff Covers',
-    unit: 'pack',
-    description: 'Disposable BP cuff covers (50 pcs/pack)',
-    defaultSupplier: 'bulkcare',
-    reorderPoint: 8,
-    reorderQuantity: 20,
-    inventory: {
-      'PHARM-STOR': 16,
-      'TR-01': 2,
-      'TR-02': 2,
-    },
-  },
-  {
-    id: 'seed-item-gloves-nitrile-s',
-    productId: 'seed-prod-gloves-nitrile-s',
-    sku: 'GLV-NIT-S-021',
-    name: 'Nitrile Gloves - Small',
-    unit: 'box',
-    description: 'Powder-free nitrile gloves, size S (100 pcs/box)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 15,
-    reorderQuantity: 50,
-    inventory: {
-      'PHARM-STOR': 18,
-      'TR-01': 2,
-      'TR-02': 2,
-    },
-  },
-  {
-    id: 'seed-item-syringe-3ml',
-    productId: 'seed-prod-syringe-3ml',
-    sku: 'SYR-3ML-022',
-    name: 'Syringes 3ml',
-    unit: 'pack',
-    description: 'Sterile single-use syringes, 3ml (50 pcs/pack)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 20,
-    reorderQuantity: 40,
-    inventory: {
-      'PHARM-STOR': 12,
-      'TR-01': 3,
-      'TR-02': 2,
-      'EMER-CAB': 1,
-    },
-  },
-  {
-    id: 'seed-item-needles-25g',
-    productId: 'seed-prod-needles-25g',
-    sku: 'NDL-25G-023',
-    name: 'Needles 25G',
-    unit: 'pack',
-    description: 'Hypodermic needles 25G x 16mm (100 pcs/pack)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 15,
-    reorderQuantity: 30,
-    inventory: {
-      'PHARM-STOR': 28,
-      'TR-01': 4,
-      'TR-02': 3,
-    },
-  },
-  {
-    id: 'seed-item-gauze-2x2',
-    productId: 'seed-prod-gauze-2x2',
-    sku: 'GAU-2X2-024',
-    name: 'Sterile Gauze 2x2',
-    unit: 'pack',
-    description: 'Sterile gauze pads, 2x2 inch (200 pcs/pack)',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 20,
-    reorderQuantity: 40,
-    inventory: {
-      'PHARM-STOR': 8,
-      'TR-01': 3,
-      'TR-02': 2,
-      'EMER-CAB': 2,
-    },
-  },
-  {
-    id: 'seed-item-foam-dressing',
-    productId: 'seed-prod-foam-dressing',
-    sku: 'FOAM-DRS-025',
-    name: 'Foam Wound Dressing',
-    unit: 'each',
-    description: 'Absorbent foam dressing, 15cm x 15cm',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 12,
-    reorderQuantity: 25,
-    inventory: {
-      'PHARM-STOR': 15,
-      'TR-01': 2,
-      'TR-02': 3,
-    },
-  },
-  {
-    id: 'seed-item-surgical-tape',
-    productId: 'seed-prod-surgical-tape',
-    sku: 'TAPE-SUR-026',
-    name: 'Surgical Tape',
-    unit: 'roll',
-    description: 'Micropore surgical tape, 5cm x 9m',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 10,
-    reorderQuantity: 25,
-    inventory: {
-      'PHARM-STOR': 22,
-      'TR-01': 3,
-      'TR-02': 2,
-    },
-  },
-  {
-    id: 'seed-item-masks-n95',
-    productId: 'seed-prod-masks-n95',
-    sku: 'MSK-N95-027',
-    name: 'N95 Respirator Masks',
-    unit: 'box',
-    description: 'NIOSH-approved N95 respirator (20 pcs/box)',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 10,
-    reorderQuantity: 20,
-    inventory: {
-      'PHARM-STOR': 4,
-      'TR-01': 1,
-      'EMER-CAB': 2,
-    },
-  },
-  {
-    id: 'seed-item-gown-level3',
-    productId: 'seed-prod-gown-level3',
-    sku: 'GOWN-L3-028',
-    name: 'Level 3 Surgical Gown',
-    unit: 'each',
-    description: 'Sterile surgical gown, Level 3 protection',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 15,
-    reorderQuantity: 30,
-    inventory: {
-      'PHARM-STOR': 18,
-      'TR-02': 3,
-      'EMER-CAB': 2,
-    },
-  },
-  {
-    id: 'seed-item-shoe-covers',
-    productId: 'seed-prod-shoe-covers',
-    sku: 'SHOE-CVR-029',
-    name: 'Disposable Shoe Covers',
-    unit: 'pack',
-    description: 'Non-slip shoe covers (100 pcs/pack)',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 20,
-    reorderQuantity: 40,
-    inventory: {
-      'PHARM-STOR': 35,
-      'TR-01': 5,
-      'TR-02': 4,
-    },
-  },
-  {
-    id: 'seed-item-hair-caps',
-    productId: 'seed-prod-hair-caps',
-    sku: 'HAIR-CAP-030',
-    name: 'Disposable Hair Caps',
-    unit: 'pack',
-    description: 'Bouffant caps (100 pcs/pack)',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 15,
-    reorderQuantity: 30,
-    inventory: {
-      'PHARM-STOR': 28,
-      'TR-01': 3,
-      'TR-02': 3,
-    },
-  },
-  {
-    id: 'seed-item-chlorhexidine-wipes',
-    productId: 'seed-prod-chlorhexidine-wipes',
-    sku: 'CHX-WIPE-031',
-    name: 'Chlorhexidine Wipes',
-    unit: 'pack',
-    description: '2% chlorhexidine prep wipes (50 count/pack)',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 10,
-    reorderQuantity: 20,
-    inventory: {
-      'PHARM-STOR': 14,
-      'TR-02': 2,
-      'EMER-CAB': 1,
-    },
-  },
-  {
-    id: 'seed-item-hydrogen-peroxide',
-    productId: 'seed-prod-hydrogen-peroxide',
-    sku: 'H2O2-032',
-    name: 'Hydrogen Peroxide 3%',
-    unit: 'bottle',
-    description: 'Antiseptic hydrogen peroxide, 500ml',
-    defaultSupplier: 'bulkcare',
-    reorderPoint: 8,
-    reorderQuantity: 20,
-    inventory: {
-      'PHARM-STOR': 10,
-      'TR-01': 1,
-      'TR-02': 1,
-    },
-  },
-  {
-    id: 'seed-item-specimen-containers',
-    productId: 'seed-prod-specimen-containers',
-    sku: 'SPEC-CONT-033',
-    name: 'Specimen Containers',
-    unit: 'pack',
-    description: 'Sterile specimen containers (100 pcs/pack)',
-    defaultSupplier: 'medsupply',
-    reorderPoint: 10,
-    reorderQuantity: 20,
-    inventory: {
-      'PHARM-STOR': 18,
-      'TR-01': 2,
-      'TR-02': 2,
-    },
-  },
-  {
-    id: 'seed-item-urine-cups',
-    productId: 'seed-prod-urine-cups',
-    sku: 'URINE-CUP-034',
-    name: 'Urine Collection Cups',
-    unit: 'pack',
-    description: 'Sterile urine collection cups (100 pcs/pack)',
-    defaultSupplier: 'bulkcare',
-    reorderPoint: 15,
-    reorderQuantity: 25,
-    inventory: {
-      'PHARM-STOR': 24,
-      'TR-01': 3,
-      'TR-02': 2,
-    },
-  },
-  {
-    id: 'seed-item-hand-sanitizer',
-    productId: 'seed-prod-hand-sanitizer',
-    sku: 'SANIT-500-035',
-    name: 'Hand Sanitizer 500ml',
-    unit: 'bottle',
-    description: '70% alcohol hand sanitizer gel with aloe',
-    defaultSupplier: 'fasttrack',
-    reorderPoint: 20,
-    reorderQuantity: 50,
-    inventory: {
-      'PHARM-STOR': 8,
-      'TR-01': 4,
-      'TR-02': 3,
-      'EMER-CAB': 1,
-    },
-  },
-];
+  // Create Global Suppliers
+  console.log('🏢 Creating global suppliers...');
+  const globalSuppliers = await Promise.all([
+    prisma.globalSupplier.create({
+      data: {
+        name: 'Remka Medical',
+        slug: 'remka-medical',
+        website: 'https://remka.nl',
+        contactEmail: 'orders@remka.nl',
+        contactPhone: '+31 20 123 4567',
+        street: 'Hoofdweg 123',
+        city: 'Amsterdam',
+        postalCode: '1012 AB',
+        country: 'Netherlands',
+        isActive: true,
+      },
+    }),
+    prisma.globalSupplier.create({
+      data: {
+        name: 'Medical Supplies NL',
+        slug: 'medical-supplies-nl',
+        website: 'https://medicalsupplies.nl',
+        contactEmail: 'info@medicalsupplies.nl',
+        contactPhone: '+31 30 987 6543',
+        street: 'Kerkstraat 45',
+        city: 'Utrecht',
+        postalCode: '3511 AB',
+        country: 'Netherlands',
+        isActive: true,
+      },
+    }),
+    prisma.globalSupplier.create({
+      data: {
+        name: 'DemoLab Supplies',
+        slug: 'demolab-supplies',
+        website: 'https://demolab.com',
+        contactEmail: 'sales@demolab.com',
+        contactPhone: '+31 10 555 1234',
+        street: 'Industrieweg 78',
+        city: 'Rotterdam',
+        postalCode: '3012 CD',
+        country: 'Netherlands',
+        isActive: true,
+      },
+    }),
+  ]);
 
-// Supplier pricing for items (multiple suppliers can offer same product)
-const SUPPLIER_CATALOG_DATA = [
-  // ========== MedSupply Europe (General medical supplies) - 20 products ==========
-  { supplierId: 'medsupply', productId: 'seed-prod-gloves-nitrile-l', sku: 'MSE-GLV-NIT-L', price: 12.50, minQty: 10 },
-  { supplierId: 'medsupply', productId: 'seed-prod-gloves-nitrile-m', sku: 'MSE-GLV-NIT-M', price: 12.50, minQty: 10 },
-  { supplierId: 'medsupply', productId: 'seed-prod-gloves-nitrile-s', sku: 'MSE-GLV-NIT-S', price: 12.50, minQty: 10 },
-  { supplierId: 'medsupply', productId: 'seed-prod-syringe-3ml', sku: 'MSE-SYR-3ML', price: 16.00, minQty: 5 },
-  { supplierId: 'medsupply', productId: 'seed-prod-syringe-5ml', sku: 'MSE-SYR-5ML', price: 18.00, minQty: 5 },
-  { supplierId: 'medsupply', productId: 'seed-prod-syringe-10ml', sku: 'MSE-SYR-10ML', price: 22.50, minQty: 5 },
-  { supplierId: 'medsupply', productId: 'seed-prod-needles-23g', sku: 'MSE-NDL-23G', price: 15.75, minQty: 5 },
-  { supplierId: 'medsupply', productId: 'seed-prod-needles-25g', sku: 'MSE-NDL-25G', price: 16.50, minQty: 5 },
-  { supplierId: 'medsupply', productId: 'seed-prod-bandage-adhesive', sku: 'MSE-BND-ADH', price: 8.25, minQty: 10 },
-  { supplierId: 'medsupply', productId: 'seed-prod-medical-tape', sku: 'MSE-TAPE', price: 2.80, minQty: 10 },
-  { supplierId: 'medsupply', productId: 'seed-prod-gown-disposable', sku: 'MSE-GOWN', price: 3.50, minQty: 20 },
-  { supplierId: 'medsupply', productId: 'seed-prod-alcohol-wipes', sku: 'MSE-ALC', price: 6.50, minQty: 10 },
-  { supplierId: 'medsupply', productId: 'seed-prod-saline-solution', sku: 'MSE-SAL', price: 4.25, minQty: 12 },
-  { supplierId: 'medsupply', productId: 'seed-prod-saline-solution-1l', sku: 'MSE-SAL-1L', price: 7.50, minQty: 12 },
-  { supplierId: 'medsupply', productId: 'seed-prod-thermometer-covers', sku: 'MSE-THERM', price: 12.00, minQty: 5 },
-  { supplierId: 'medsupply', productId: 'seed-prod-tongue-depressors', sku: 'MSE-TONG', price: 8.75, minQty: 10 },
-  { supplierId: 'medsupply', productId: 'seed-prod-specimen-containers', sku: 'MSE-SPEC', price: 22.50, minQty: 5 },
-  { supplierId: 'medsupply', productId: 'seed-prod-cotton-swabs', sku: 'MSE-COTTON', price: 5.50, minQty: 10 },
-  { supplierId: 'medsupply', productId: 'seed-prod-cotton-balls', sku: 'MSE-BALLS', price: 4.25, minQty: 10 },
-  { supplierId: 'medsupply', productId: 'seed-prod-masks-surgical', sku: 'MSE-MASK', price: 9.50, minQty: 20 },
-  
-  // ========== FastTrack Medical (Premium/urgent supplies) - 18 products ==========
-  { supplierId: 'fasttrack', productId: 'seed-prod-gloves-nitrile-l', sku: 'FTM-GLVL', price: 14.25, minQty: 5 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-gloves-nitrile-m', sku: 'FTM-GLVM', price: 14.25, minQty: 5 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-gauze-2x2', sku: 'FTM-GAUZE-2', price: 7.50, minQty: 10 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-gauze-4x4', sku: 'FTM-GAUZE-4', price: 8.99, minQty: 10 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-wound-dressing', sku: 'FTM-WNDDR', price: 4.50, minQty: 10 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-foam-dressing', sku: 'FTM-FOAM', price: 6.75, minQty: 10 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-masks-surgical', sku: 'FTM-MASK', price: 9.75, minQty: 20 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-masks-n95', sku: 'FTM-N95', price: 35.00, minQty: 5 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-face-shield', sku: 'FTM-SHIELD', price: 8.50, minQty: 10 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-gown-level3', sku: 'FTM-GOWN-L3', price: 12.50, minQty: 10 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-iodine-prep', sku: 'FTM-IOD', price: 7.80, minQty: 6 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-chlorhexidine-wipes', sku: 'FTM-CHX', price: 18.50, minQty: 5 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-butterfly-needles', sku: 'FTM-BUTTERFLY', price: 28.00, minQty: 5 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-syringe-20ml', sku: 'FTM-SYR-20', price: 25.00, minQty: 5 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-shoe-covers', sku: 'FTM-SHOE', price: 12.00, minQty: 10 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-hair-caps', sku: 'FTM-HAIR', price: 8.50, minQty: 10 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-stethoscope-covers', sku: 'FTM-STETH', price: 14.00, minQty: 5 },
-  { supplierId: 'fasttrack', productId: 'seed-prod-hand-sanitizer', sku: 'FTM-SANIT', price: 8.99, minQty: 12 },
-  
-  // ========== BulkCare Wholesale (Budget bulk items) - 15 products ==========
-  { supplierId: 'bulkcare', productId: 'seed-prod-gloves-nitrile-l', sku: 'BCW-GLVL', price: 11.00, minQty: 50 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-gloves-nitrile-m', sku: 'BCW-GLVM', price: 11.00, minQty: 50 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-gloves-nitrile-s', sku: 'BCW-GLVS', price: 11.00, minQty: 50 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-gloves-latex-l', sku: 'BCW-LATL', price: 9.50, minQty: 30 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-gloves-latex-m', sku: 'BCW-LATM', price: 9.50, minQty: 30 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-bandage-elastic', sku: 'BCW-BNDEL', price: 3.25, minQty: 30 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-cotton-swabs', sku: 'BCW-COTTON', price: 5.20, minQty: 20 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-cotton-balls', sku: 'BCW-BALLS', price: 3.80, minQty: 30 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-bp-cuff-covers', sku: 'BCW-BPCUFF', price: 14.50, minQty: 15 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-masks-surgical', sku: 'BCW-MASK', price: 7.50, minQty: 100 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-alcohol-wipes', sku: 'BCW-ALC', price: 5.50, minQty: 50 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-gauze-4x4', sku: 'BCW-GAUZE', price: 7.25, minQty: 50 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-medical-tape', sku: 'BCW-TAPE', price: 2.25, minQty: 50 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-urine-cups', sku: 'BCW-URINE', price: 18.00, minQty: 20 },
-  { supplierId: 'bulkcare', productId: 'seed-prod-tissues', sku: 'BCW-TISSUE', price: 45.00, minQty: 10 },
-  
-  // ========== DentalPro Supplies (Dental-specific) - 18 products ==========
-  { supplierId: 'dentalpro', productId: 'seed-prod-dental-mirror', sku: 'DPS-MIR-5', price: 18.50, minQty: 5 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-dental-bibs', sku: 'DPS-BIB-500', price: 22.00, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-dental-gloves', sku: 'DPS-GLOVES', price: 35.00, minQty: 5 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-dental-suction-tips', sku: 'DPS-SUCT', price: 12.50, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-dental-needles', sku: 'DPS-NDL-27', price: 24.00, minQty: 5 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-dental-cotton-rolls', sku: 'DPS-COTTON', price: 28.00, minQty: 5 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-dental-gauze', sku: 'DPS-GAUZE', price: 15.00, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-prophy-paste', sku: 'DPS-PROPHY', price: 42.00, minQty: 5 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-articulating-paper', sku: 'DPS-ARTIC', price: 8.50, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-impression-trays', sku: 'DPS-TRAY', price: 32.00, minQty: 5 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-gloves-nitrile-m', sku: 'DPS-GLVM', price: 13.50, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-gloves-nitrile-s', sku: 'DPS-GLVS', price: 13.50, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-masks-surgical', sku: 'DPS-MASK', price: 10.25, minQty: 20 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-face-shield', sku: 'DPS-SHIELD', price: 9.50, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-gauze-2x2', sku: 'DPS-GAUZE2', price: 8.00, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-cotton-swabs', sku: 'DPS-SWAB', price: 6.00, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-alcohol-wipes', sku: 'DPS-ALC', price: 7.00, minQty: 10 },
-  { supplierId: 'dentalpro', productId: 'seed-prod-hand-sanitizer', sku: 'DPS-SANIT', price: 9.50, minQty: 12 },
-  
-  // ========== SurgicalTech Solutions (Surgical instruments) - 16 products ==========
-  { supplierId: 'surgical', productId: 'seed-prod-surgical-blades', sku: 'STS-BLADE-15', price: 42.00, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-surgical-blades-11', sku: 'STS-BLADE-11', price: 42.00, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-suture-vicryl', sku: 'STS-VICRYL-3', price: 125.00, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-suture-nylon', sku: 'STS-NYLON-4', price: 85.00, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-surgical-drape', sku: 'STS-DRAPE', price: 8.50, minQty: 10 },
-  { supplierId: 'surgical', productId: 'seed-prod-suture-removal-kit', sku: 'STS-REMKIT', price: 4.25, minQty: 10 },
-  { supplierId: 'surgical', productId: 'seed-prod-sterile-gloves-6', sku: 'STS-GLOVES-6', price: 95.00, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-sterile-gloves-7', sku: 'STS-GLOVES-7', price: 95.00, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-hemostatic-gauze', sku: 'STS-HEMO', price: 18.50, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-surgical-sponges', sku: 'STS-SPONGE', price: 28.00, minQty: 10 },
-  { supplierId: 'surgical', productId: 'seed-prod-gloves-nitrile-l', sku: 'STS-GLVL-PREM', price: 15.99, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-gloves-nitrile-m', sku: 'STS-GLVM-PREM', price: 15.99, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-wound-dressing', sku: 'STS-WNDDR-ADV', price: 5.25, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-gauze-4x4', sku: 'STS-GAUZE-STER', price: 9.50, minQty: 10 },
-  { supplierId: 'surgical', productId: 'seed-prod-needles-21g', sku: 'STS-NDL-21', price: 18.00, minQty: 5 },
-  { supplierId: 'surgical', productId: 'seed-prod-syringe-10ml', sku: 'STS-SYR10', price: 24.00, minQty: 5 },
-  
-  // ========== OfficePro Medical (Office/admin supplies) - 15 products ==========
-  { supplierId: 'officepro', productId: 'seed-prod-printer-paper', sku: 'OPM-PAPER', price: 35.00, minQty: 5 },
-  { supplierId: 'officepro', productId: 'seed-prod-folders-manila', sku: 'OPM-FOLDER', price: 18.50, minQty: 10 },
-  { supplierId: 'officepro', productId: 'seed-prod-pens-black', sku: 'OPM-PEN-BLK', price: 12.00, minQty: 10 },
-  { supplierId: 'officepro', productId: 'seed-prod-pens-blue', sku: 'OPM-PEN-BLU', price: 12.00, minQty: 10 },
-  { supplierId: 'officepro', productId: 'seed-prod-sticky-notes', sku: 'OPM-STICKY', price: 15.50, minQty: 10 },
-  { supplierId: 'officepro', productId: 'seed-prod-labels-address', sku: 'OPM-LABEL', price: 28.00, minQty: 5 },
-  { supplierId: 'officepro', productId: 'seed-prod-envelopes', sku: 'OPM-ENV', price: 32.00, minQty: 5 },
-  { supplierId: 'officepro', productId: 'seed-prod-clipboards', sku: 'OPM-CLIP', price: 42.00, minQty: 5 },
-  { supplierId: 'officepro', productId: 'seed-prod-tissues', sku: 'OPM-TISSUE', price: 48.00, minQty: 5 },
-  { supplierId: 'officepro', productId: 'seed-prod-masks-surgical', sku: 'OPM-MASK-50', price: 8.50, minQty: 50 },
-  { supplierId: 'officepro', productId: 'seed-prod-gloves-nitrile-l', sku: 'OPM-GLVL', price: 11.75, minQty: 20 },
-  { supplierId: 'officepro', productId: 'seed-prod-gloves-nitrile-m', sku: 'OPM-GLVM', price: 11.75, minQty: 20 },
-  { supplierId: 'officepro', productId: 'seed-prod-medical-tape', sku: 'OPM-TAPE', price: 2.50, minQty: 20 },
-  { supplierId: 'officepro', productId: 'seed-prod-thermometer-covers', sku: 'OPM-THERM', price: 11.00, minQty: 10 },
-  { supplierId: 'officepro', productId: 'seed-prod-hand-sanitizer', sku: 'OPM-SANIT', price: 7.99, minQty: 24 },
-];
+  console.log(`✅ Created ${globalSuppliers.length} global suppliers`);
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-async function createPracticeAndUsers(passwordHash: string) {
-  console.log('\n📋 Creating practice and users...');
-  
-  const practice = await prisma.practice.upsert({
-    where: { slug: PRACTICE_DATA.slug },
-    update: {},
-    create: PRACTICE_DATA,
+  // Create Practice
+  console.log('🏥 Creating practice...');
+  const practice = await prisma.practice.create({
+    data: {
+      name: 'Demo Veterinary Clinic',
+      slug: 'demo-vet-clinic',
+      street: 'Dierenweg 12',
+      city: 'Amsterdam',
+      postalCode: '1015 XY',
+      country: 'Netherlands',
+      contactEmail: 'info@demovet.nl',
+      contactPhone: '+31 20 555 9999',
+      onboardingCompletedAt: daysAgo(30),
+    },
   });
 
-  const createdUsers = [];
-  for (const userData of USERS_DATA) {
-    const user = await prisma.user.upsert({
-      where: { email: userData.email },
-      update: {
-        name: userData.name,
-        passwordHash,
-      },
-      create: {
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        passwordHash,
-      },
-    });
+  console.log(`✅ Created practice: ${practice.name}`);
 
-    if (userData.hasMembership) {
-      await prisma.practiceUser.upsert({
-        where: {
-          practiceId_userId: {
-            practiceId: practice.id,
-            userId: user.id,
-          },
+  // Create Users
+  console.log('👥 Creating users...');
+  const passwordHash = await hash('password123', 10);
+
+  const adminUser = await prisma.user.create({
+    data: {
+      email: 'admin@demovet.nl',
+      name: 'Admin User',
+      passwordHash,
+      emailVerified: new Date(),
+    },
+  });
+
+  const staffUser = await prisma.user.create({
+    data: {
+      email: 'staff@demovet.nl',
+      name: 'Staff User',
+      passwordHash,
+      emailVerified: new Date(),
+    },
+  });
+
+  const viewerUser = await prisma.user.create({
+    data: {
+      email: 'viewer@demovet.nl',
+      name: 'Viewer User',
+      passwordHash,
+      emailVerified: new Date(),
+    },
+  });
+
+  // Create Practice Memberships
+  await Promise.all([
+    prisma.practiceUser.create({
+      data: {
+        practiceId: practice.id,
+        userId: adminUser.id,
+        role: PracticeRole.ADMIN,
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.practiceUser.create({
+      data: {
+        practiceId: practice.id,
+        userId: staffUser.id,
+        role: PracticeRole.STAFF,
+        status: 'ACTIVE',
+      },
+    }),
+    prisma.practiceUser.create({
+      data: {
+        practiceId: practice.id,
+        userId: viewerUser.id,
+        role: PracticeRole.VIEWER,
+        status: 'ACTIVE',
+      },
+    }),
+  ]);
+
+  console.log(`✅ Created 3 users with memberships`);
+
+  // Create Practice Suppliers (link practice to global suppliers)
+  console.log('🔗 Creating practice suppliers...');
+  const practiceSuppliers = await Promise.all([
+    prisma.practiceSupplier.create({
+      data: {
+        practiceId: practice.id,
+        globalSupplierId: globalSuppliers[0].id,
+        customLabel: null, // Use global supplier name
+        accountNumber: 'ACC-001-REMKA',
+        orderingNotes: 'Standard delivery on Tuesdays and Thursdays',
+        isPreferred: true,
+        isBlocked: false,
+      },
+    }),
+    prisma.practiceSupplier.create({
+      data: {
+        practiceId: practice.id,
+        globalSupplierId: globalSuppliers[1].id,
+        customLabel: 'MedSupply', // Custom label
+        accountNumber: 'ACC-002-MEDSUP',
+        orderingNotes: 'Minimum order €100',
+        isPreferred: false,
+        isBlocked: false,
+      },
+    }),
+    prisma.practiceSupplier.create({
+      data: {
+        practiceId: practice.id,
+        globalSupplierId: globalSuppliers[2].id,
+        customLabel: null,
+        accountNumber: 'ACC-003-DEMO',
+        orderingNotes: null,
+        isPreferred: false,
+        isBlocked: false,
+      },
+    }),
+  ]);
+
+  console.log(`✅ Created ${practiceSuppliers.length} practice suppliers`);
+
+  // Create Locations
+  console.log('📍 Creating locations...');
+  const locations = await Promise.all([
+    prisma.location.create({
+      data: {
+        practiceId: practice.id,
+        name: 'General Storage',
+        description: 'Main storage area for general supplies',
+        isActive: true,
+      },
+    }),
+    prisma.location.create({
+      data: {
+        practiceId: practice.id,
+        name: 'Consultation Room 1',
+        description: 'Primary consultation room',
+        isActive: true,
+      },
+    }),
+    prisma.location.create({
+      data: {
+        practiceId: practice.id,
+        name: 'Consultation Room 2',
+        description: 'Secondary consultation room',
+        isActive: true,
+      },
+    }),
+    prisma.location.create({
+      data: {
+        practiceId: practice.id,
+        name: 'Lab Room',
+        description: 'Laboratory and testing area',
+        isActive: true,
+      },
+    }),
+    prisma.location.create({
+      data: {
+        practiceId: practice.id,
+        name: 'Surgery Room',
+        description: 'Surgical procedures room',
+        isActive: true,
+      },
+    }),
+  ]);
+
+  console.log(`✅ Created ${locations.length} locations`);
+
+  // Create Products (for catalog)
+  console.log('📦 Creating products...');
+  const productData = [
+    { name: 'Disposable Gloves (Box)', category: 'PPE', gtin: '8712345678901' },
+    { name: 'Surgical Masks (Box)', category: 'PPE', gtin: '8712345678902' },
+    { name: 'Syringes 5ml (Pack)', category: 'Consumables', gtin: '8712345678903' },
+    { name: 'Syringes 10ml (Pack)', category: 'Consumables', gtin: '8712345678904' },
+    { name: 'Needles 21G (Box)', category: 'Consumables', gtin: '8712345678905' },
+    { name: 'Needles 23G (Box)', category: 'Consumables', gtin: '8712345678906' },
+    { name: 'Bandages 5cm (Roll)', category: 'Wound Care', gtin: '8712345678907' },
+    { name: 'Bandages 10cm (Roll)', category: 'Wound Care', gtin: '8712345678908' },
+    { name: 'Gauze Pads (Pack)', category: 'Wound Care', gtin: '8712345678909' },
+    { name: 'Alcohol Swabs (Box)', category: 'Disinfection', gtin: '8712345678910' },
+    { name: 'Disinfectant Spray 500ml', category: 'Disinfection', gtin: '8712345678911' },
+    { name: 'Hand Sanitizer 1L', category: 'Hygiene', gtin: '8712345678912' },
+    { name: 'Surgical Drapes (Pack)', category: 'Surgery', gtin: '8712345678913' },
+    { name: 'Scalpel Blades (Box)', category: 'Surgery', gtin: '8712345678914' },
+    { name: 'Suture Kit', category: 'Surgery', gtin: '8712345678915' },
+    { name: 'IV Catheters 20G (Box)', category: 'IV Supplies', gtin: '8712345678916' },
+    { name: 'IV Catheters 22G (Box)', category: 'IV Supplies', gtin: '8712345678917' },
+    { name: 'IV Fluid Set (Pack)', category: 'IV Supplies', gtin: '8712345678918' },
+    { name: 'Blood Collection Tubes (Box)', category: 'Laboratory', gtin: '8712345678919' },
+    { name: 'Urine Sample Containers (Pack)', category: 'Laboratory', gtin: '8712345678920' },
+    { name: 'Microscope Slides (Box)', category: 'Laboratory', gtin: '8712345678921' },
+    { name: 'Cotton Swabs (Pack)', category: 'Consumables', gtin: '8712345678922' },
+    { name: 'Thermometer Covers (Box)', category: 'Consumables', gtin: '8712345678923' },
+    { name: 'Exam Table Paper (Roll)', category: 'Consumables', gtin: '8712345678924' },
+    { name: 'Waste Bags Biohazard (Roll)', category: 'Waste Management', gtin: '8712345678925' },
+    { name: 'Sharps Container 2L', category: 'Waste Management', gtin: '8712345678926' },
+    { name: 'Pet Carrier Small', category: 'Equipment', gtin: '8712345678927' },
+    { name: 'Pet Carrier Large', category: 'Equipment', gtin: '8712345678928' },
+    { name: 'Elizabethan Collar Small', category: 'Recovery', gtin: '8712345678929' },
+    { name: 'Elizabethan Collar Large', category: 'Recovery', gtin: '8712345678930' },
+  ];
+
+  const products = await Promise.all(
+    productData.map((p) =>
+      prisma.product.create({
+        data: {
+          name: p.name,
+          category: p.category,
+          gtin: p.gtin,
+          description: `High-quality ${p.name.toLowerCase()} for veterinary use`,
         },
-        update: {
-          role: userData.role,
-          status: MembershipStatus.ACTIVE,
-          acceptedAt: new Date(),
-        },
-        create: {
+      })
+    )
+  );
+
+  console.log(`✅ Created ${products.length} products`);
+
+  // Create Items
+  console.log('📋 Creating items...');
+  const items = await Promise.all(
+    products.map((product, index) => {
+      // Assign a default practice supplier (rotate through them)
+      const defaultPracticeSupplier = practiceSuppliers[index % practiceSuppliers.length];
+
+      return prisma.item.create({
+        data: {
           practiceId: practice.id,
-          userId: user.id,
-          role: userData.role,
-          status: MembershipStatus.ACTIVE,
-          invitedAt: new Date(),
-          acceptedAt: new Date(),
-        },
-      });
-    }
-
-    createdUsers.push(user);
-  }
-
-  console.log(`  ✓ Practice: ${practice.name}`);
-  console.log(`  ✓ Users: ${createdUsers.length} (${USERS_DATA.filter(u => u.hasMembership).length} with membership)`);
-
-  return { practice, users: createdUsers };
-}
-
-async function createLocations(practiceId: string) {
-  console.log('\n📍 Creating location hierarchy...');
-  
-  const locationMap = new Map();
-
-  // Create locations in order (parent first)
-  for (const locData of LOCATIONS_DATA) {
-    const parentId = locData.parentCode 
-      ? locationMap.get(locData.parentCode)?.id 
-      : null;
-
-    const location = await prisma.location.upsert({
-      where: { id: locData.id },
-      update: {
-        name: locData.name,
-        practiceId,
-      },
-      create: {
-        id: locData.id,
-        practiceId,
-        name: locData.name,
-        code: locData.code,
-        description: locData.description,
-        parentId,
-      },
-    });
-
-    locationMap.set(locData.code, location);
-  }
-
-  console.log(`  ✓ Locations: ${LOCATIONS_DATA.length} created`);
-  return locationMap;
-}
-
-async function createItems(
-  practiceId: string, 
-  locationMap: Map<string, any>, 
-  supplierMap: Map<string, any>,
-  practiceSupplierMap: Map<string, any>
-) {
-  console.log('\n📦 Creating items and inventory...');
-  
-  const itemMap = new Map();
-  let lowStockCount = 0;
-  let supplierItemsCreated = 0;
-
-  // Create items and inventory
-  for (const itemData of ITEMS_DATA) {
-    const defaultSupplierId = supplierMap.get(itemData.defaultSupplier)?.id;
-    const defaultPracticeSupplierId = practiceSupplierMap.get(itemData.defaultSupplier)?.id;
-
-    const item = await prisma.item.upsert({
-      where: { id: itemData.id },
-      update: {
-        name: itemData.name,
-        sku: itemData.sku,
-      },
-      create: {
-        id: itemData.id,
-        practiceId,
-        productId: itemData.productId,
-        name: itemData.name,
-        sku: itemData.sku,
-        unit: itemData.unit,
-        description: itemData.description,
-        defaultSupplierId,
-        defaultPracticeSupplierId,
-      },
-    });
-
-    itemMap.set(itemData.id, item);
-
-    // Create SupplierItem record linking this item to its default supplier with pricing
-    if (defaultSupplierId && defaultPracticeSupplierId) {
-      // Find the catalog entry for this product and supplier to get the price
-      const catalogEntry = await prisma.supplierCatalog.findUnique({
-        where: {
-          supplierId_productId: {
-            supplierId: defaultSupplierId,
-            productId: itemData.productId,
-          },
-        },
-      });
-
-      if (catalogEntry) {
-        await prisma.supplierItem.upsert({
-          where: {
-            supplierId_itemId: {
-              supplierId: defaultSupplierId,
-              itemId: item.id,
-            },
-          },
-          update: {
-            practiceSupplierId: defaultPracticeSupplierId,
-            unitPrice: catalogEntry.unitPrice,
-            currency: catalogEntry.currency,
-            minOrderQty: catalogEntry.minOrderQty,
-            supplierSku: catalogEntry.supplierSku,
-          },
-          create: {
-            supplierId: defaultSupplierId,
-            practiceSupplierId: defaultPracticeSupplierId,
-            itemId: item.id,
-            unitPrice: catalogEntry.unitPrice,
-            currency: catalogEntry.currency,
-            minOrderQty: catalogEntry.minOrderQty,
-            supplierSku: catalogEntry.supplierSku,
-          },
-        });
-        supplierItemsCreated++;
-      }
-    }
-
-    // Create inventory at each location
-    let totalQty = 0;
-    for (const [locationCode, quantity] of Object.entries(itemData.inventory)) {
-      const location = locationMap.get(locationCode);
-      if (location) {
-        await prisma.locationInventory.upsert({
-          where: {
-            locationId_itemId: {
-              locationId: location.id,
-              itemId: item.id,
-            },
-          },
-          update: {
-            quantity,
-            reorderPoint: itemData.reorderPoint,
-            reorderQuantity: itemData.reorderQuantity,
-          },
-          create: {
-            locationId: location.id,
-            itemId: item.id,
-            quantity,
-            reorderPoint: itemData.reorderPoint,
-            reorderQuantity: itemData.reorderQuantity,
-          },
-        });
-        totalQty += quantity;
-      }
-    }
-
-    if (totalQty < itemData.reorderPoint) {
-      lowStockCount++;
-    }
-  }
-
-  console.log(`  ✓ Items: ${ITEMS_DATA.length} (${lowStockCount} below reorder point)`);
-  console.log(`  ✓ SupplierItems: ${supplierItemsCreated} (item-supplier pricing links)`);
-
-  return itemMap;
-}
-
-async function createSuppliersAndCatalog(practiceId: string) {
-  console.log('\n🚚 Creating suppliers and catalog...');
-  
-  const supplierMap = new Map();
-  const globalSupplierMap = new Map();
-  const practiceSupplierMap = new Map();
-
-  for (const suppData of SUPPLIERS_DATA) {
-    // Map by short name for easy reference
-    const shortName = suppData.id.replace('seed-supplier-', '');
-    
-    // Create GlobalSupplier (new architecture) - always create all global suppliers
-    const globalSupplier = await prisma.globalSupplier.upsert({
-      where: { id: `global-${suppData.id}` },
-      update: {
-        name: suppData.name,
-      },
-      create: {
-        id: `global-${suppData.id}`,
-        name: suppData.name,
-        email: suppData.email,
-        phone: suppData.phone,
-        website: suppData.website,
-        notes: suppData.notes,
-      },
-    });
-
-    globalSupplierMap.set(shortName, globalSupplier);
-
-    // Only create legacy Supplier if linked to practice (for backward compatibility)
-    if (suppData.linkToPractice) {
-      const supplier = await prisma.supplier.upsert({
-        where: { id: suppData.id },
-        update: {
-          name: suppData.name,
-        },
-        create: {
-          id: suppData.id,
-          practiceId,
-          name: suppData.name,
-          email: suppData.email,
-          phone: suppData.phone,
-          website: suppData.website,
-          notes: suppData.notes,
-        },
-      });
-
-      supplierMap.set(shortName, supplier);
-
-      // Create PracticeSupplier link for linked suppliers
-      const practiceSupplier = await prisma.practiceSupplier.upsert({
-        where: {
-          practiceId_globalSupplierId: {
-            practiceId,
-            globalSupplierId: globalSupplier.id,
-          },
-        },
-        update: {
-          migratedFromSupplierId: supplier.id,
-          accountNumber: suppData.accountNumber || null,
-          customLabel: (suppData as any).customLabel || null,
-          isPreferred: suppData.isPreferred || false,
-        },
-        create: {
-          practiceId,
-          globalSupplierId: globalSupplier.id,
-          migratedFromSupplierId: supplier.id,
-          accountNumber: suppData.accountNumber || null,
-          customLabel: (suppData as any).customLabel || null,
-          isPreferred: suppData.isPreferred || false,
-          isBlocked: false,
-        },
-      });
-
-      practiceSupplierMap.set(shortName, practiceSupplier);
-    }
-  }
-
-  // Create supplier catalog entries
-  for (const catalogData of SUPPLIER_CATALOG_DATA) {
-    const supplier = supplierMap.get(catalogData.supplierId);
-    if (supplier) {
-      const integrationConfig = catalogData.supplierId === 'fasttrack' 
-        ? {
-            apiEndpoint: 'https://api.fasttrack-medical.com/v1/catalog',
-            apiKey: 'demo_key_12345',
-            syncFrequency: 'hourly',
-          }
-        : null;
-
-      const integrationType = catalogData.supplierId === 'fasttrack'
-        ? IntegrationType.API
-        : IntegrationType.MANUAL;
-
-      await prisma.supplierCatalog.upsert({
-        where: {
-          supplierId_productId: {
-            supplierId: supplier.id,
-            productId: catalogData.productId,
-          },
-        },
-        update: {
-          unitPrice: catalogData.price,
-          minOrderQty: catalogData.minQty,
-        },
-        create: {
-          supplierId: supplier.id,
-          productId: catalogData.productId,
-          supplierSku: catalogData.sku,
-          unitPrice: catalogData.price,
-          currency: 'EUR',
-          minOrderQty: catalogData.minQty,
-          integrationType,
-          ...(integrationConfig ? { integrationConfig } : {}),
+          name: product.name,
+          sku: `SKU-${String(index + 1).padStart(4, '0')}`,
+          unit: randomElement(['box', 'pack', 'roll', 'bottle', 'piece']),
+          description: product.description,
+          defaultPracticeSupplierId: defaultPracticeSupplier.id,
           isActive: true,
         },
       });
+    })
+  );
+
+  console.log(`✅ Created ${items.length} items`);
+
+  // Create Supplier Catalog entries
+  console.log('📚 Creating supplier catalog...');
+  const catalogEntries = [];
+  for (const product of products) {
+    // Each product is available from 1-2 suppliers
+    const numSuppliers = randomInt(1, 2);
+    const availableSuppliers = [...practiceSuppliers].sort(() => Math.random() - 0.5).slice(0, numSuppliers);
+
+    for (const practiceSupplier of availableSuppliers) {
+      const entry = await prisma.supplierCatalog.create({
+        data: {
+          productId: product.id,
+          practiceSupplierId: practiceSupplier.id,
+          supplierSku: `SUP-${practiceSupplier.id.slice(0, 4)}-${product.gtin?.slice(-6)}`,
+          unitPrice: randomPrice(5, 150),
+          currency: 'EUR',
+          minOrderQuantity: randomInt(1, 5),
+          packSize: randomInt(1, 100),
+          isActive: true,
+        },
+      });
+      catalogEntries.push(entry);
     }
   }
 
-  const linkedCount = SUPPLIERS_DATA.filter(s => s.linkToPractice).length;
-  const unlinkedCount = SUPPLIERS_DATA.filter(s => !s.linkToPractice).length;
-  
-  console.log(`  ✓ GlobalSuppliers: ${SUPPLIERS_DATA.length} (platform-wide)`);
-  console.log(`  ✓ Linked to practice: ${linkedCount} suppliers`);
-  console.log(`  ✓ Available to link: ${unlinkedCount} suppliers (for "Add Supplier" demo)`);
-  console.log(`  ✓ Legacy Suppliers: ${linkedCount} (backward compatibility)`);
-  console.log(`  ✓ Catalog entries: ${SUPPLIER_CATALOG_DATA.length}`);
-  
-  return { supplierMap, practiceSupplierMap };
-}
+  console.log(`✅ Created ${catalogEntries.length} catalog entries`);
 
-async function createOrders(practiceId: string, userId: string, supplierMap: Map<string, any>, practiceSupplierMap: Map<string, any>, itemMap: Map<string, any>) {
-  console.log('\n📦 Creating orders...');
-  
-  const now = new Date();
-  const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  // Create Supplier Items (linking items to practice suppliers with pricing)
+  console.log('💰 Creating supplier items...');
+  const supplierItems = [];
+  for (const item of items) {
+    // Each item is available from 1-3 suppliers
+    const numSuppliers = randomInt(1, 3);
+    const availableSuppliers = [...practiceSuppliers].sort(() => Math.random() - 0.5).slice(0, numSuppliers);
 
-  const ordersData = [
-    {
-      id: 'seed-order-001-draft',
-      status: OrderStatus.DRAFT,
-      supplier: 'medsupply',
-      reference: 'PO-2024-101',
-      notes: 'Restocking low inventory items - urgent',
-      createdAt: daysAgo(2),
-      sentAt: null,
-      expectedAt: null,
-      receivedAt: null,
-      items: [
-        { itemId: 'seed-item-gloves-nitrile-l', quantity: 100, unitPrice: 12.50 },
-        { itemId: 'seed-item-gloves-nitrile-s', quantity: 50, unitPrice: 12.50 },
-        { itemId: 'seed-item-syringe-3ml', quantity: 40, unitPrice: 16.00 },
-        { itemId: 'seed-item-syringe-5ml', quantity: 50, unitPrice: 18.00 },
-        { itemId: 'seed-item-needles-25g', quantity: 30, unitPrice: 16.50 },
-        { itemId: 'seed-item-bandage-adhesive', quantity: 50, unitPrice: 8.25 },
-        { itemId: 'seed-item-specimen-containers', quantity: 20, unitPrice: 22.50 },
-      ],
+    for (const practiceSupplier of availableSuppliers) {
+      const supplierItem = await prisma.supplierItem.create({
+        data: {
+          itemId: item.id,
+          practiceSupplierId: practiceSupplier.id,
+          supplierSku: `SI-${practiceSupplier.id.slice(0, 4)}-${item.sku}`,
+          unitPrice: randomPrice(5, 150),
+          currency: 'EUR',
+          minOrderQuantity: randomInt(1, 5),
+          leadTimeDays: randomInt(1, 7),
+          isPreferred: practiceSupplier.id === item.defaultPracticeSupplierId,
+        },
+      });
+      supplierItems.push(supplierItem);
+    }
+  }
+
+  console.log(`✅ Created ${supplierItems.length} supplier items`);
+
+  // Create Inventory
+  console.log('📊 Creating inventory...');
+  let inventoryCount = 0;
+  for (const item of items) {
+    // Each item has inventory in 2-4 locations
+    const numLocations = randomInt(2, 4);
+    const itemLocations = [...locations].sort(() => Math.random() - 0.5).slice(0, numLocations);
+
+    for (const location of itemLocations) {
+      await prisma.inventory.create({
+        data: {
+          itemId: item.id,
+          locationId: location.id,
+          quantity: randomInt(0, 100),
+          reorderPoint: randomInt(5, 20),
+        },
+      });
+      inventoryCount++;
+    }
+  }
+
+  console.log(`✅ Created ${inventoryCount} inventory records`);
+
+  // Create Order Templates
+  console.log('📝 Creating order templates...');
+  const template1 = await prisma.orderTemplate.create({
+    data: {
+      practiceId: practice.id,
+      name: 'Weekly Consumables Order',
+      description: 'Standard weekly order for consumable supplies',
+      createdById: adminUser.id,
     },
-    {
-      id: 'seed-order-002-sent',
+  });
+
+  const template2 = await prisma.orderTemplate.create({
+    data: {
+      practiceId: practice.id,
+      name: 'Monthly PPE Restock',
+      description: 'Monthly restock of personal protective equipment',
+      createdById: staffUser.id,
+    },
+  });
+
+  // Add items to templates
+  const template1Items = items.slice(0, 8);
+  for (const item of template1Items) {
+    await prisma.orderTemplateItem.create({
+      data: {
+        templateId: template1.id,
+        itemId: item.id,
+        defaultQuantity: randomInt(5, 20),
+        practiceSupplierId: item.defaultPracticeSupplierId,
+      },
+    });
+  }
+
+  const template2Items = items.slice(8, 15);
+  for (const item of template2Items) {
+    await prisma.orderTemplateItem.create({
+      data: {
+        templateId: template2.id,
+        itemId: item.id,
+        defaultQuantity: randomInt(10, 30),
+        practiceSupplierId: item.defaultPracticeSupplierId,
+      },
+    });
+  }
+
+  console.log(`✅ Created 2 order templates with items`);
+
+  // Create Orders
+  console.log('📦 Creating orders...');
+  
+  // Order 1: Sent order (awaiting receipt)
+  const order1 = await prisma.order.create({
+    data: {
+      practiceId: practice.id,
+      practiceSupplierId: practiceSuppliers[0].id,
+      reference: 'PO-2024-001',
       status: OrderStatus.SENT,
-      supplier: 'fasttrack',
-      reference: 'PO-2024-102',
-      notes: 'Emergency order - gauze, masks, and PPE needed',
-      createdAt: daysAgo(7),
-      sentAt: daysAgo(7),
-      expectedAt: daysAgo(1),
-      receivedAt: null,
-      items: [
-        { itemId: 'seed-item-gauze-4x4', quantity: 30, unitPrice: 8.99 },
-        { itemId: 'seed-item-gauze-2x2', quantity: 40, unitPrice: 7.50 },
-        { itemId: 'seed-item-masks-surgical', quantity: 100, unitPrice: 9.75 },
-        { itemId: 'seed-item-masks-n95', quantity: 20, unitPrice: 35.00 },
-        { itemId: 'seed-item-hand-sanitizer', quantity: 50, unitPrice: 8.99 },
-      ],
+      notes: 'Urgent order for low stock items',
+      createdById: staffUser.id,
+      sentAt: daysAgo(3),
+      createdAt: daysAgo(3),
     },
-    {
-      id: 'seed-order-003-sent',
-      status: OrderStatus.SENT,
-      supplier: 'bulkcare',
-      reference: 'PO-2024-103',
-      notes: 'Monthly bulk order',
-      createdAt: daysAgo(5),
-      sentAt: daysAgo(5),
-      expectedAt: now,
-      receivedAt: null,
-      items: [
-        { itemId: 'seed-item-gloves-latex-l', quantity: 50, unitPrice: 9.50 },
-        { itemId: 'seed-item-bandage-elastic', quantity: 50, unitPrice: 3.25 },
-        { itemId: 'seed-item-cotton-swabs', quantity: 30, unitPrice: 5.20 },
-      ],
-    },
-    {
-      id: 'seed-order-004-partial',
+  });
+
+  const order1Items = items.slice(0, 5);
+  for (const item of order1Items) {
+    const supplierItem = supplierItems.find(
+      (si) => si.itemId === item.id && si.practiceSupplierId === practiceSuppliers[0].id
+    );
+    await prisma.orderItem.create({
+      data: {
+        orderId: order1.id,
+        itemId: item.id,
+        quantity: randomInt(10, 50),
+        unitPrice: supplierItem?.unitPrice || randomPrice(10, 100),
+        currency: 'EUR',
+      },
+    });
+  }
+
+  // Order 2: Partially received order
+  const order2 = await prisma.order.create({
+    data: {
+      practiceId: practice.id,
+      practiceSupplierId: practiceSuppliers[1].id,
+      reference: 'PO-2024-002',
       status: OrderStatus.PARTIALLY_RECEIVED,
-      supplier: 'medsupply',
-      reference: 'PO-2024-104',
-      notes: 'Regular restock - partially delivered',
-      createdAt: daysAgo(14),
+      notes: 'Regular monthly order',
+      createdById: adminUser.id,
+      sentAt: daysAgo(7),
+      createdAt: daysAgo(7),
+    },
+  });
+
+  const order2Items = items.slice(5, 12);
+  for (const item of order2Items) {
+    const supplierItem = supplierItems.find(
+      (si) => si.itemId === item.id && si.practiceSupplierId === practiceSuppliers[1].id
+    );
+    await prisma.orderItem.create({
+      data: {
+        orderId: order2.id,
+        itemId: item.id,
+        quantity: randomInt(10, 50),
+        unitPrice: supplierItem?.unitPrice || randomPrice(10, 100),
+        currency: 'EUR',
+      },
+    });
+  }
+
+  // Order 3: Received order
+  const order3 = await prisma.order.create({
+    data: {
+      practiceId: practice.id,
+      practiceSupplierId: practiceSuppliers[2].id,
+      reference: 'PO-2024-003',
+      status: OrderStatus.RECEIVED,
+      notes: 'Lab supplies restock',
+      createdById: staffUser.id,
       sentAt: daysAgo(14),
-      expectedAt: daysAgo(10),
-      receivedAt: daysAgo(9),
-      items: [
-        { itemId: 'seed-item-syringe-10ml', quantity: 30, unitPrice: 22.50 },
-        { itemId: 'seed-item-needles-23g', quantity: 40, unitPrice: 15.75 },
-        { itemId: 'seed-item-alcohol-wipes', quantity: 50, unitPrice: 6.50 },
-      ],
+      createdAt: daysAgo(14),
     },
-    {
-      id: 'seed-order-005-received',
-      status: OrderStatus.RECEIVED,
-      supplier: 'medsupply',
-      reference: 'PO-2024-105',
-      notes: 'Weekly consumables restock',
-      createdAt: daysAgo(21),
-      sentAt: daysAgo(21),
-      expectedAt: daysAgo(18),
-      receivedAt: daysAgo(17),
-      items: [
-        { itemId: 'seed-item-gloves-nitrile-m', quantity: 100, unitPrice: 12.50 },
-        { itemId: 'seed-item-alcohol-wipes', quantity: 50, unitPrice: 6.50 },
-        { itemId: 'seed-item-medical-tape', quantity: 40, unitPrice: 2.80 },
-      ],
-    },
-    {
-      id: 'seed-order-006-received',
-      status: OrderStatus.RECEIVED,
-      supplier: 'fasttrack',
-      reference: 'PO-2024-106',
-      notes: 'PPE supplies',
-      createdAt: daysAgo(18),
-      sentAt: daysAgo(18),
-      expectedAt: daysAgo(16),
-      receivedAt: daysAgo(15),
-      items: [
-        { itemId: 'seed-item-face-shield', quantity: 15, unitPrice: 8.50 },
-        { itemId: 'seed-item-wound-dressing', quantity: 25, unitPrice: 4.50 },
-      ],
-    },
-    {
-      id: 'seed-order-007-received',
-      status: OrderStatus.RECEIVED,
-      supplier: 'medsupply',
-      reference: 'PO-2024-107',
-      notes: 'General supplies',
-      createdAt: daysAgo(28),
-      sentAt: daysAgo(28),
-      expectedAt: daysAgo(25),
-      receivedAt: daysAgo(24),
-      items: [
-        { itemId: 'seed-item-saline-solution', quantity: 24, unitPrice: 4.25 },
-        { itemId: 'seed-item-thermometer-covers', quantity: 25, unitPrice: 12.00 },
-        { itemId: 'seed-item-gown-disposable', quantity: 30, unitPrice: 3.50 },
-      ],
-    },
-    {
-      id: 'seed-order-008-cancelled',
-      status: OrderStatus.CANCELLED,
-      supplier: 'bulkcare',
-      reference: 'PO-2024-108',
-      notes: 'Cancelled - found better pricing elsewhere',
-      createdAt: daysAgo(12),
-      sentAt: null,
-      expectedAt: null,
-      receivedAt: null,
-      items: [
-        { itemId: 'seed-item-gloves-latex-l', quantity: 100, unitPrice: 9.50 },
-      ],
-    },
-  ];
+  });
 
-  for (const orderData of ordersData) {
-    const practiceSupplier = practiceSupplierMap.get(orderData.supplier);
-    if (!practiceSupplier) continue;
-
-    const order = await prisma.order.upsert({
-      where: { id: orderData.id },
-      update: {
-        status: orderData.status,
-      },
-      create: {
-        id: orderData.id,
-        practiceId,
-        practiceSupplierId: practiceSupplier.id,
-        status: orderData.status,
-        createdById: userId,
-        reference: orderData.reference,
-        notes: orderData.notes,
-        sentAt: orderData.sentAt,
-        expectedAt: orderData.expectedAt,
-        receivedAt: orderData.receivedAt,
-        createdAt: orderData.createdAt,
+  const order3Items = items.slice(12, 18);
+  for (const item of order3Items) {
+    const supplierItem = supplierItems.find(
+      (si) => si.itemId === item.id && si.practiceSupplierId === practiceSuppliers[2].id
+    );
+    await prisma.orderItem.create({
+      data: {
+        orderId: order3.id,
+        itemId: item.id,
+        quantity: randomInt(10, 50),
+        unitPrice: supplierItem?.unitPrice || randomPrice(10, 100),
+        currency: 'EUR',
       },
     });
-
-    // Create order items
-    for (const itemData of orderData.items) {
-      const item = itemMap.get(itemData.itemId);
-      if (item) {
-        await prisma.orderItem.upsert({
-          where: {
-            orderId_itemId: {
-              orderId: order.id,
-              itemId: item.id,
-            },
-          },
-          update: {
-            quantity: itemData.quantity,
-            unitPrice: itemData.unitPrice,
-          },
-          create: {
-            orderId: order.id,
-            itemId: item.id,
-            quantity: itemData.quantity,
-            unitPrice: itemData.unitPrice,
-          },
-        });
-      }
-    }
   }
 
-  console.log(`  ✓ Orders: ${ordersData.length} (1 draft, 2 sent, 1 partial, 3 received, 1 cancelled)`);
-}
+  // Order 4: Draft order
+  const order4 = await prisma.order.create({
+    data: {
+      practiceId: practice.id,
+      practiceSupplierId: practiceSuppliers[0].id,
+      reference: null,
+      status: OrderStatus.DRAFT,
+      notes: 'Draft order for review',
+      createdById: staffUser.id,
+      createdAt: daysAgo(1),
+    },
+  });
 
-async function createGoodsReceipts(
-  practiceId: string,
-  userId: string,
-  locationMap: Map<string, any>,
-  supplierMap: Map<string, any>,
-  itemMap: Map<string, any>
-) {
-  console.log('\n📥 Creating goods receipts...');
-  
-  const now = new Date();
-  const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-  const pharmLocation = locationMap.get('PHARM-STOR');
-
-  const receiptsData = [
-    {
-      id: 'seed-receipt-001',
-      orderId: 'seed-order-005-received',
-      supplier: 'medsupply',
-      status: GoodsReceiptStatus.CONFIRMED,
-      receivedAt: daysAgo(17),
-      createdAt: daysAgo(17),
-      notes: 'Full delivery received and checked',
-      lines: [
-        { itemId: 'seed-item-gloves-nitrile-m', quantity: 100, batchNumber: 'GLV-M-20241101', expiryDate: new Date('2026-11-01') },
-        { itemId: 'seed-item-alcohol-wipes', quantity: 50, batchNumber: 'ALC-20241015', expiryDate: new Date('2027-10-15') },
-        { itemId: 'seed-item-medical-tape', quantity: 40, batchNumber: null, expiryDate: null },
-      ],
-    },
-    {
-      id: 'seed-receipt-002',
-      orderId: 'seed-order-006-received',
-      supplier: 'fasttrack',
-      status: GoodsReceiptStatus.CONFIRMED,
-      receivedAt: daysAgo(15),
-      createdAt: daysAgo(15),
-      notes: 'PPE items received in good condition',
-      lines: [
-        { itemId: 'seed-item-face-shield', quantity: 15, batchNumber: null, expiryDate: null },
-        { itemId: 'seed-item-wound-dressing', quantity: 25, batchNumber: 'WD-20241020', expiryDate: new Date('2027-10-20') },
-      ],
-    },
-    {
-      id: 'seed-receipt-003',
-      orderId: 'seed-order-007-received',
-      supplier: 'medsupply',
-      status: GoodsReceiptStatus.CONFIRMED,
-      receivedAt: daysAgo(24),
-      createdAt: daysAgo(24),
-      notes: 'Complete order received',
-      lines: [
-        { itemId: 'seed-item-saline-solution', quantity: 24, batchNumber: 'SAL-20241001', expiryDate: new Date('2026-10-01') },
-        { itemId: 'seed-item-thermometer-covers', quantity: 25, batchNumber: null, expiryDate: null },
-        { itemId: 'seed-item-gown-disposable', quantity: 30, batchNumber: 'GOWN-20241010', expiryDate: new Date('2027-10-10') },
-      ],
-    },
-    {
-      id: 'seed-receipt-004',
-      orderId: 'seed-order-004-partial',
-      supplier: 'medsupply',
-      status: GoodsReceiptStatus.CONFIRMED,
-      receivedAt: daysAgo(9),
-      createdAt: daysAgo(9),
-      notes: 'Partial delivery - needles still pending',
-      lines: [
-        { itemId: 'seed-item-syringe-10ml', quantity: 30, batchNumber: 'SYR10-20241105', expiryDate: new Date('2027-11-05') },
-        { itemId: 'seed-item-alcohol-wipes', quantity: 50, batchNumber: 'ALC-20241101', expiryDate: new Date('2027-11-01') },
-        // Note: needles from order not received yet (demonstrates partial)
-      ],
-    },
-    {
-      id: 'seed-receipt-005',
-      orderId: null,
-      supplier: 'fasttrack',
-      status: GoodsReceiptStatus.CONFIRMED,
-      receivedAt: daysAgo(6),
-      createdAt: daysAgo(6),
-      notes: 'Ad-hoc emergency delivery (no PO)',
-      lines: [
-        { itemId: 'seed-item-gauze-4x4', quantity: 10, batchNumber: 'GAU-20241108', expiryDate: new Date('2027-11-08') },
-        { itemId: 'seed-item-masks-surgical', quantity: 20, batchNumber: 'MSK-20241108', expiryDate: new Date('2026-11-08') },
-      ],
-    },
-    {
-      id: 'seed-receipt-006',
-      orderId: 'seed-order-002-sent',
-      supplier: 'fasttrack',
-      status: GoodsReceiptStatus.DRAFT,
-      receivedAt: null,
-      createdAt: now,
-      notes: 'Delivery arrived - verification in progress',
-      lines: [
-        { itemId: 'seed-item-gauze-4x4', quantity: 30, batchNumber: null, expiryDate: null },
-        { itemId: 'seed-item-masks-surgical', quantity: 100, batchNumber: null, expiryDate: null },
-      ],
-    },
-  ];
-
-  for (const receiptData of receiptsData) {
-    const supplier = supplierMap.get(receiptData.supplier);
-    if (!supplier || !pharmLocation) continue;
-
-    const receipt = await prisma.goodsReceipt.upsert({
-      where: { id: receiptData.id },
-      update: {
-        status: receiptData.status,
-      },
-      create: {
-        id: receiptData.id,
-        practiceId,
-        locationId: pharmLocation.id,
-        orderId: receiptData.orderId,
-        supplierId: supplier.id,
-        status: receiptData.status,
-        createdById: userId,
-        receivedAt: receiptData.receivedAt,
-        notes: receiptData.notes,
-        createdAt: receiptData.createdAt,
+  const order4Items = items.slice(18, 23);
+  for (const item of order4Items) {
+    const supplierItem = supplierItems.find(
+      (si) => si.itemId === item.id && si.practiceSupplierId === practiceSuppliers[0].id
+    );
+    await prisma.orderItem.create({
+      data: {
+        orderId: order4.id,
+        itemId: item.id,
+        quantity: randomInt(5, 30),
+        unitPrice: supplierItem?.unitPrice || randomPrice(10, 100),
+        currency: 'EUR',
       },
     });
-
-    // Create receipt lines
-    for (const lineData of receiptData.lines) {
-      const item = itemMap.get(lineData.itemId);
-      if (item) {
-        await prisma.goodsReceiptLine.upsert({
-          where: { id: `${receiptData.id}-${lineData.itemId}` },
-          update: {
-            quantity: lineData.quantity,
-          },
-          create: {
-            id: `${receiptData.id}-${lineData.itemId}`,
-            receiptId: receipt.id,
-            itemId: item.id,
-            quantity: lineData.quantity,
-            batchNumber: lineData.batchNumber,
-            expiryDate: lineData.expiryDate,
-          },
-        });
-      }
-    }
   }
 
-  console.log(`  ✓ Goods receipts: ${receiptsData.length} (4 confirmed, 1 ad-hoc, 1 draft)`);
-}
+  console.log(`✅ Created 4 orders with items`);
 
-async function createStockCounts(
-  practiceId: string,
-  userId: string,
-  locationMap: Map<string, any>,
-  itemMap: Map<string, any>
-) {
-  console.log('\n📊 Creating stock count sessions...');
-  
-  const now = new Date();
-  const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-  
-  const pharmLocation = locationMap.get('PHARM-STOR');
-  const tr1Location = locationMap.get('TR-01');
-  const emergLocation = locationMap.get('EMER-CAB');
+  // Create Goods Receipts
+  console.log('📥 Creating goods receipts...');
 
-  const stockCountsData = [
-    {
-      id: 'seed-stockcount-001',
-      locationId: pharmLocation?.id,
-      status: StockCountStatus.COMPLETED,
-      createdAt: daysAgo(10),
-      completedAt: daysAgo(10),
-      notes: 'Monthly inventory count - Storage',
-      lines: [
-        { itemId: 'seed-item-gloves-nitrile-l', countedQty: 6, systemQty: 8, variance: -2 },
-        { itemId: 'seed-item-gloves-nitrile-m', countedQty: 8, systemQty: 8, variance: 0 },
-        { itemId: 'seed-item-syringe-5ml', countedQty: 8, systemQty: 8, variance: 0 },
-        { itemId: 'seed-item-gauze-4x4', countedQty: 5, systemQty: 3, variance: 2, notes: 'Found extra box in back' },
-        { itemId: 'seed-item-bandage-elastic', countedQty: 48, systemQty: 48, variance: 0 },
-        { itemId: 'seed-item-masks-surgical', countedQty: 10, systemQty: 12, variance: -2, notes: 'Missing boxes' },
-        { itemId: 'seed-item-alcohol-wipes', countedQty: 42, systemQty: 42, variance: 0 },
-        { itemId: 'seed-item-saline-solution', countedQty: 18, systemQty: 18, variance: 0 },
-      ],
-    },
-    {
-      id: 'seed-stockcount-002',
-      locationId: tr1Location?.id,
-      status: StockCountStatus.IN_PROGRESS,
-      createdAt: now,
-      completedAt: null,
-      notes: 'Weekly spot check - Treatment Room 1',
-      lines: [
-        { itemId: 'seed-item-gloves-nitrile-l', countedQty: 2, systemQty: 2, variance: 0 },
-        { itemId: 'seed-item-gloves-nitrile-m', countedQty: 4, systemQty: 4, variance: 0 },
-        { itemId: 'seed-item-syringe-5ml', countedQty: 4, systemQty: 4, variance: 0 },
-        { itemId: 'seed-item-gauze-4x4', countedQty: 2, systemQty: 2, variance: 0 },
-        { itemId: 'seed-item-masks-surgical', countedQty: 4, systemQty: 4, variance: 0 },
-        { itemId: 'seed-item-alcohol-wipes', countedQty: 8, systemQty: 8, variance: 0 },
-      ],
-    },
-    {
-      id: 'seed-stockcount-003',
-      locationId: emergLocation?.id,
-      status: StockCountStatus.COMPLETED,
+  // Receipt 1: Partial receipt for order 2
+  const receipt1 = await prisma.goodsReceipt.create({
+    data: {
+      practiceId: practice.id,
+      orderId: order2.id,
+      practiceSupplierId: practiceSuppliers[1].id,
+      locationId: locations[0].id,
+      status: GoodsReceiptStatus.CONFIRMED,
+      notes: 'Partial delivery - remaining items on backorder',
+      receivedAt: daysAgo(5),
+      createdById: staffUser.id,
       createdAt: daysAgo(5),
-      completedAt: daysAgo(5),
-      notes: 'Emergency cabinet audit',
-      lines: [
-        { itemId: 'seed-item-gloves-nitrile-m', countedQty: 1, systemQty: 1, variance: 0 },
-        { itemId: 'seed-item-syringe-5ml', countedQty: 2, systemQty: 2, variance: 0 },
-        { itemId: 'seed-item-gauze-4x4', countedQty: 0, systemQty: 1, variance: -1, notes: 'Used in emergency' },
-        { itemId: 'seed-item-gown-disposable', countedQty: 4, systemQty: 4, variance: 0 },
-      ],
+    },
+  });
+
+  // Add some items from order 2 (partial receipt)
+  const order2ItemsForReceipt = await prisma.orderItem.findMany({
+    where: { orderId: order2.id },
+    take: 4,
+  });
+
+  for (const orderItem of order2ItemsForReceipt) {
+    const receivedQty = Math.floor(orderItem.quantity * 0.7); // Receive 70%
+    await prisma.goodsReceiptLine.create({
+      data: {
+        receiptId: receipt1.id,
+        itemId: orderItem.itemId,
+        orderItemId: orderItem.id,
+        quantityOrdered: orderItem.quantity,
+        quantityReceived: receivedQty,
+        unitPrice: orderItem.unitPrice,
+        currency: orderItem.currency || 'EUR',
+      },
+    });
+  }
+
+  // Receipt 2: Full receipt for order 3
+  const receipt2 = await prisma.goodsReceipt.create({
+    data: {
+      practiceId: practice.id,
+      orderId: order3.id,
+      practiceSupplierId: practiceSuppliers[2].id,
+      locationId: locations[0].id,
+      status: GoodsReceiptStatus.CONFIRMED,
+      notes: 'Complete delivery received',
+      receivedAt: daysAgo(12),
+      createdById: adminUser.id,
+      createdAt: daysAgo(12),
+    },
+  });
+
+  const order3ItemsForReceipt = await prisma.orderItem.findMany({
+    where: { orderId: order3.id },
+  });
+
+  for (const orderItem of order3ItemsForReceipt) {
+    await prisma.goodsReceiptLine.create({
+      data: {
+        receiptId: receipt2.id,
+        itemId: orderItem.itemId,
+        orderItemId: orderItem.id,
+        quantityOrdered: orderItem.quantity,
+        quantityReceived: orderItem.quantity, // Full receipt
+        unitPrice: orderItem.unitPrice,
+        currency: orderItem.currency || 'EUR',
+      },
+    });
+  }
+
+  // Receipt 3: Standalone receipt (no order)
+  const receipt3 = await prisma.goodsReceipt.create({
+    data: {
+      practiceId: practice.id,
+      orderId: null,
+      practiceSupplierId: practiceSuppliers[0].id,
+      locationId: locations[1].id,
+      status: GoodsReceiptStatus.CONFIRMED,
+      notes: 'Emergency delivery - no PO',
+      receivedAt: daysAgo(2),
+      createdById: staffUser.id,
+      createdAt: daysAgo(2),
+    },
+  });
+
+  // Add some items to standalone receipt
+  const standaloneItems = items.slice(23, 26);
+  for (const item of standaloneItems) {
+    const supplierItem = supplierItems.find(
+      (si) => si.itemId === item.id && si.practiceSupplierId === practiceSuppliers[0].id
+    );
+    await prisma.goodsReceiptLine.create({
+      data: {
+        receiptId: receipt3.id,
+        itemId: item.id,
+        orderItemId: null,
+        quantityOrdered: 0,
+        quantityReceived: randomInt(5, 20),
+        unitPrice: supplierItem?.unitPrice || randomPrice(10, 100),
+        currency: 'EUR',
+      },
+    });
+  }
+
+  console.log(`✅ Created 3 goods receipts with lines`);
+
+  // Create Activity Logs
+  console.log('📝 Creating activity logs...');
+  
+  const activityLogs = [
+    {
+      practiceId: practice.id,
+      userId: adminUser.id,
+      action: 'ORDER_CREATED',
+      entityType: 'Order',
+      entityId: order1.id,
+      description: `Created order ${order1.reference}`,
+      metadata: { orderId: order1.id, reference: order1.reference },
+      createdAt: daysAgo(3),
+    },
+    {
+      practiceId: practice.id,
+      userId: staffUser.id,
+      action: 'ORDER_SENT',
+      entityType: 'Order',
+      entityId: order1.id,
+      description: `Sent order ${order1.reference} to supplier`,
+      metadata: { orderId: order1.id, supplierId: practiceSuppliers[0].id },
+      createdAt: daysAgo(3),
+    },
+    {
+      practiceId: practice.id,
+      userId: adminUser.id,
+      action: 'ORDER_CREATED',
+      entityType: 'Order',
+      entityId: order2.id,
+      description: `Created order ${order2.reference}`,
+      metadata: { orderId: order2.id, reference: order2.reference },
+      createdAt: daysAgo(7),
+    },
+    {
+      practiceId: practice.id,
+      userId: staffUser.id,
+      action: 'GOODS_RECEIPT_CREATED',
+      entityType: 'GoodsReceipt',
+      entityId: receipt1.id,
+      description: 'Created goods receipt for partial delivery',
+      metadata: { receiptId: receipt1.id, orderId: order2.id },
+      createdAt: daysAgo(5),
+    },
+    {
+      practiceId: practice.id,
+      userId: adminUser.id,
+      action: 'GOODS_RECEIPT_CONFIRMED',
+      entityType: 'GoodsReceipt',
+      entityId: receipt2.id,
+      description: 'Confirmed goods receipt',
+      metadata: { receiptId: receipt2.id, orderId: order3.id },
+      createdAt: daysAgo(12),
+    },
+    {
+      practiceId: practice.id,
+      userId: staffUser.id,
+      action: 'ITEM_CREATED',
+      entityType: 'Item',
+      entityId: items[0].id,
+      description: `Created item ${items[0].name}`,
+      metadata: { itemId: items[0].id, itemName: items[0].name },
+      createdAt: daysAgo(30),
+    },
+    {
+      practiceId: practice.id,
+      userId: adminUser.id,
+      action: 'LOCATION_CREATED',
+      entityType: 'Location',
+      entityId: locations[0].id,
+      description: `Created location ${locations[0].name}`,
+      metadata: { locationId: locations[0].id, locationName: locations[0].name },
+      createdAt: daysAgo(30),
+    },
+    {
+      practiceId: practice.id,
+      userId: staffUser.id,
+      action: 'TEMPLATE_CREATED',
+      entityType: 'OrderTemplate',
+      entityId: template1.id,
+      description: `Created order template ${template1.name}`,
+      metadata: { templateId: template1.id, templateName: template1.name },
+      createdAt: daysAgo(20),
     },
   ];
 
-  for (const countData of stockCountsData) {
-    if (!countData.locationId) continue;
-
-    const stockCount = await prisma.stockCountSession.upsert({
-      where: { id: countData.id },
-      update: {
-        status: countData.status,
-      },
-      create: {
-        id: countData.id,
-        practiceId,
-        locationId: countData.locationId,
-        status: countData.status,
-        createdById: userId,
-        completedAt: countData.completedAt,
-        notes: countData.notes,
-        createdAt: countData.createdAt,
-      },
-    });
-
-    // Create count lines
-    for (const lineData of countData.lines) {
-      const item = itemMap.get(lineData.itemId);
-      if (item) {
-        await prisma.stockCountLine.upsert({
-          where: { id: `${countData.id}-${lineData.itemId}` },
-          update: {
-            countedQuantity: lineData.countedQty,
-          },
-          create: {
-            id: `${countData.id}-${lineData.itemId}`,
-            sessionId: stockCount.id,
-            itemId: item.id,
-            countedQuantity: lineData.countedQty,
-            systemQuantity: lineData.systemQty,
-            variance: lineData.variance,
-            notes: 'notes' in lineData ? lineData.notes : null,
-          },
-        });
-      }
-    }
-  }
-
-  console.log(`  ✓ Stock count sessions: ${stockCountsData.length} (2 completed, 1 in-progress)`);
-}
-
-async function createOrderTemplates(
-  practiceId: string,
-  userId: string,
-  supplierMap: Map<string, any>,
-  itemMap: Map<string, any>
-) {
-  console.log('\n📝 Creating order templates...');
-  
-  const templatesData = [
-    {
-      id: 'seed-template-001',
-      name: 'Weekly Consumables Restock',
-      description: 'Standard weekly order for frequently used consumable items',
-      items: [
-        { itemId: 'seed-item-gloves-nitrile-l', quantity: 50, supplier: 'medsupply' },
-        { itemId: 'seed-item-gloves-nitrile-m', quantity: 50, supplier: 'medsupply' },
-        { itemId: 'seed-item-syringe-5ml', quantity: 30, supplier: 'medsupply' },
-        { itemId: 'seed-item-alcohol-wipes', quantity: 30, supplier: 'medsupply' },
-        { itemId: 'seed-item-gauze-4x4', quantity: 20, supplier: 'fasttrack' },
-        { itemId: 'seed-item-masks-surgical', quantity: 50, supplier: 'fasttrack' },
-        { itemId: 'seed-item-bandage-adhesive', quantity: 30, supplier: 'medsupply' },
-        { itemId: 'seed-item-medical-tape', quantity: 20, supplier: 'medsupply' },
-      ],
-    },
-    {
-      id: 'seed-template-002',
-      name: 'Monthly Bulk Order',
-      description: 'Large monthly order for bulk items from wholesale supplier',
-      items: [
-        { itemId: 'seed-item-gloves-latex-l', quantity: 100, supplier: 'bulkcare' },
-        { itemId: 'seed-item-bandage-elastic', quantity: 100, supplier: 'bulkcare' },
-        { itemId: 'seed-item-cotton-swabs', quantity: 50, supplier: 'bulkcare' },
-        { itemId: 'seed-item-bp-cuff-covers', quantity: 40, supplier: 'bulkcare' },
-        { itemId: 'seed-item-gloves-nitrile-l', quantity: 100, supplier: 'bulkcare' },
-      ],
-    },
-  ];
-
-  for (const templateData of templatesData) {
-    const template = await prisma.orderTemplate.upsert({
-      where: { id: templateData.id },
-      update: {
-        name: templateData.name,
-      },
-      create: {
-        id: templateData.id,
-        practiceId,
-        name: templateData.name,
-        description: templateData.description,
-        createdById: userId,
-      },
-    });
-
-    // Create template items
-    for (const itemData of templateData.items) {
-      const item = itemMap.get(itemData.itemId);
-      const supplier = supplierMap.get(itemData.supplier);
-      if (item) {
-        await prisma.orderTemplateItem.upsert({
-          where: {
-            templateId_itemId: {
-              templateId: template.id,
-              itemId: item.id,
-            },
-          },
-          update: {
-            defaultQuantity: itemData.quantity,
-          },
-          create: {
-            templateId: template.id,
-            itemId: item.id,
-            defaultQuantity: itemData.quantity,
-            supplierId: supplier?.id,
-          },
-        });
-      }
-    }
-  }
-
-  console.log(`  ✓ Order templates: ${templatesData.length}`);
-}
-
-// ============================================================================
-// MAIN SEED FUNCTION
-// ============================================================================
-
-async function main() {
-  console.log('🌱 Starting Greenwood Medical Clinic seed...\n');
-  console.log('═'.repeat(60));
-
-  const passwordHash = await hash('Demo1234!', 12);
-
-  // Create practice and users
-  const { practice, users } = await createPracticeAndUsers(passwordHash);
-  const adminUser = users[0];
-
-  // Create locations
-  const locationMap = await createLocations(practice.id);
-
-  // Create products first (needed for supplier catalog)
-  console.log('\n🏥 Creating products...');
-  for (const prodData of PRODUCTS_DATA) {
-    await prisma.product.upsert({
-      where: { id: prodData.id },
-      update: {
-        name: prodData.name,
-        brand: prodData.brand,
-        description: prodData.description,
-      },
-      create: {
-        id: prodData.id,
-        gtin: prodData.gtin,
-        brand: prodData.brand,
-        name: prodData.name,
-        description: prodData.description,
-        isGs1Product: prodData.isGs1Product,
-        gs1VerificationStatus: Gs1VerificationStatus.UNVERIFIED,
-      },
+  for (const log of activityLogs) {
+    await prisma.activityLog.create({
+      data: log,
     });
   }
-  const gs1Count = PRODUCTS_DATA.filter(p => p.isGs1Product).length;
-  console.log(`  ✓ Products: ${PRODUCTS_DATA.length} (${gs1Count} with GTIN)`);
 
-  // Create suppliers and catalog (needs products to exist first)
-  const { supplierMap, practiceSupplierMap } = await createSuppliersAndCatalog(practice.id);
+  console.log(`✅ Created ${activityLogs.length} activity logs`);
 
-  // Create items with inventory
-  const itemMap = await createItems(practice.id, locationMap, supplierMap, practiceSupplierMap);
-
-  // Create orders
-  await createOrders(practice.id, adminUser.id, supplierMap, practiceSupplierMap, itemMap);
-
-  // Create goods receipts
-  await createGoodsReceipts(practice.id, adminUser.id, locationMap, supplierMap, itemMap);
-
-  // Create stock count sessions
-  await createStockCounts(practice.id, adminUser.id, locationMap, itemMap);
-
-  // Create order templates
-  await createOrderTemplates(practice.id, adminUser.id, supplierMap, itemMap);
-
-  console.log('\n' + '═'.repeat(60));
-  console.log('✅ Seed completed successfully!\n');
-  console.log('📋 Summary:');
-  console.log(`   • Practice: ${practice.name}`);
-  console.log(`   • Users: ${users.length} (login: sarah.mitchell@greenwood-clinic.nl / Demo1234!)`);
-  console.log(`   • Locations: ${LOCATIONS_DATA.length} (hierarchical structure)`);
-  console.log(`   • Products: ${PRODUCTS_DATA.length} (${PRODUCTS_DATA.filter(p => p.isGs1Product).length} with GTIN)`);
-  console.log(`   • Items: ${ITEMS_DATA.length} (distributed across locations)`);
-  
-  const linkedSuppliersCount = SUPPLIERS_DATA.filter(s => s.linkToPractice).length;
-  const unlinkedSuppliersCount = SUPPLIERS_DATA.filter(s => !s.linkToPractice).length;
-  console.log(`   • Global Suppliers: ${SUPPLIERS_DATA.length} total (${linkedSuppliersCount} linked, ${unlinkedSuppliersCount} available to add)`);
-  console.log(`   • Supplier Catalog: ${SUPPLIER_CATALOG_DATA.length} entries (10-20 products per supplier)`);
-  console.log(`   • Orders: 8 (various statuses)`);
-  console.log(`   • Goods Receipts: 6 (with batch/expiry tracking)`);
-  console.log(`   • Stock Counts: 3 (2 completed, 1 in-progress)`);
-  console.log(`   • Order Templates: 2`);
-  console.log('\n💡 Demo Features:');
-  console.log(`   • Comprehensive catalogs: MedSupply (20), FastTrack (18), BulkCare (15)`);
-  console.log(`   • Specialty suppliers: DentalPro (18), SurgicalTech (16), OfficePro (15)`);
-  console.log(`   • Low-stock items ready for testing order workflows`);
-  console.log(`   • ${unlinkedSuppliersCount} unlinked suppliers available to demonstrate "Add Supplier" flow`);
-  console.log(`   • Realistic product flow: Supplier Catalog → My Items → Orders → Receiving → Inventory`);
+  // Summary
+  console.log('\n✅ Seed completed successfully!');
+  console.log('\n📊 Summary:');
+  console.log(`   - Global Suppliers: ${globalSuppliers.length}`);
+  console.log(`   - Practice: 1`);
+  console.log(`   - Users: 3`);
+  console.log(`   - Practice Suppliers: ${practiceSuppliers.length}`);
+  console.log(`   - Locations: ${locations.length}`);
+  console.log(`   - Products: ${products.length}`);
+  console.log(`   - Items: ${items.length}`);
+  console.log(`   - Catalog Entries: ${catalogEntries.length}`);
+  console.log(`   - Supplier Items: ${supplierItems.length}`);
+  console.log(`   - Inventory Records: ${inventoryCount}`);
+  console.log(`   - Order Templates: 2`);
+  console.log(`   - Orders: 4`);
+  console.log(`   - Goods Receipts: 3`);
+  console.log(`   - Activity Logs: ${activityLogs.length}`);
+  console.log('\n🎉 Database is ready for testing!');
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (error) => {
-    console.error('❌ Seed error:', error);
-    await prisma.$disconnect();
+  .catch((e) => {
+    console.error('❌ Seed failed:', e);
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });

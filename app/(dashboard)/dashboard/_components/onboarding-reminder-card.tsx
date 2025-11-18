@@ -190,7 +190,7 @@ export function OnboardingReminderCard({ hasLocations, hasSuppliers, hasItems, h
               disabled={isPending}
               className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
             >
-              Don't show again
+              Don&apos;t show again
             </button>
           </div>
         </div>

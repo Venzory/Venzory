@@ -156,9 +156,9 @@ export default async function ReceivingPage() {
                             {receipt.location?.name || 'Unknown'}
                           </span>
                         </div>
-                        {receipt.supplier && (
+                        {receipt.practiceSupplier && (
                           <div className="text-sm text-slate-600 dark:text-slate-400">
-                            Supplier: {receipt.supplier.name}
+                            Supplier: {receipt.practiceSupplier.customLabel || receipt.practiceSupplier.globalSupplier.name}
                           </div>
                         )}
                       </div>

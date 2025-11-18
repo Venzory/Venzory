@@ -3,7 +3,7 @@
  * These models represent the business entities for inventory management
  */
 
-import type { BaseEntity, Location, Supplier } from './common';
+import type { BaseEntity, Location } from './common';
 import type { Product } from './products';
 import type { PracticeSupplier, PracticeSupplierWithRelations } from './suppliers';
 
@@ -13,8 +13,7 @@ import type { PracticeSupplier, PracticeSupplierWithRelations } from './supplier
 export interface Item extends BaseEntity {
   practiceId: string;
   productId: string;
-  defaultSupplierId: string | null;
-  defaultPracticeSupplierId: string | null; // Phase 2: optional PracticeSupplier reference
+  defaultPracticeSupplierId: string | null;
   name: string;
   sku: string | null;
   description: string | null;
@@ -26,8 +25,7 @@ export interface Item extends BaseEntity {
  */
 export interface ItemWithRelations extends Item {
   product?: Product;
-  defaultSupplier?: Supplier | null;
-  defaultPracticeSupplier?: PracticeSupplierWithRelations | null; // Phase 2: practice-specific supplier info with global supplier
+  defaultPracticeSupplier?: PracticeSupplierWithRelations | null;
   inventory?: LocationInventory[];
   supplierItems?: SupplierItem[];
 }
@@ -83,13 +81,20 @@ export interface InventoryTransfer extends BaseEntity {
  * Supplier item pricing and details
  */
 export interface SupplierItem extends BaseEntity {
-  supplierId: string;
-  practiceSupplierId: string | null; // Phase 2: optional PracticeSupplier reference
+  practiceSupplierId: string;
   itemId: string;
   supplierSku: string | null;
   unitPrice: number | null;
   currency: string | null;
   minOrderQty: number | null;
+}
+
+export interface UpsertSupplierItemInput {
+  supplierSku?: string | null;
+  unitPrice?: number | null;
+  currency?: string | null;
+  minOrderQty?: number | null;
+  practiceSupplierId?: string;
 }
 
 /**
@@ -102,8 +107,7 @@ export interface CreateItemInput {
   sku?: string | null;
   description?: string | null;
   unit?: string | null;
-  defaultSupplierId?: string | null;
-  defaultPracticeSupplierId?: string | null; // Phase 2: optional PracticeSupplier reference
+  defaultPracticeSupplierId?: string | null;
 }
 
 /**
@@ -114,8 +118,7 @@ export interface UpdateItemInput {
   sku?: string | null;
   description?: string | null;
   unit?: string | null;
-  defaultSupplierId?: string | null;
-  defaultPracticeSupplierId?: string | null; // Phase 2: optional PracticeSupplier reference
+  defaultPracticeSupplierId?: string | null;
 }
 
 /**
@@ -147,9 +150,8 @@ export interface InventoryFilters {
   practiceId: string;
   search?: string;
   locationId?: string;
-  supplierId?: string;
-  practiceSupplierId?: string; // Phase 2: filter by PracticeSupplier
-  productId?: string; // Phase 2: filter by Product (for catalog management)
+  practiceSupplierId?: string;
+  productId?: string;
   lowStockOnly?: boolean;
 }
 

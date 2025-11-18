@@ -82,9 +82,10 @@ export class ReceivingService {
     // Verify location exists
     await this.userRepository.findLocationById(input.locationId, ctx.practiceId);
 
-    // Verify supplier exists if provided
-    if (input.supplierId) {
-      await this.userRepository.findSupplierById(input.supplierId, ctx.practiceId);
+    // Verify practice supplier exists if provided
+    if (input.practiceSupplierId) {
+      const practiceSupplierRepo = require('@/src/repositories/suppliers').getPracticeSupplierRepository();
+      await practiceSupplierRepo.findPracticeSupplierById(input.practiceSupplierId, ctx.practiceId);
     }
 
     return withTransaction(async (tx) => {
@@ -355,7 +356,7 @@ export class ReceivingService {
         {
           locationId: receipt.locationId,
           orderId: receipt.orderId,
-          supplierId: receipt.supplierId,
+          supplierId: receipt.practiceSupplierId ?? null,
         },
         tx
       );

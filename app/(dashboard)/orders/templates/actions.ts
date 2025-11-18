@@ -18,7 +18,7 @@ const createTemplateSchema = z.object({
     z.object({
       itemId: z.string().cuid(),
       defaultQuantity: z.coerce.number().int().positive(),
-      supplierId: z.string().cuid().optional().transform((value) => value || null),
+      practiceSupplierId: z.string().cuid().optional().transform((value) => value || null),
     })
   ).min(1, 'At least one item is required'),
 });
@@ -33,13 +33,13 @@ const addTemplateItemSchema = z.object({
   templateId: z.string().cuid(),
   itemId: z.string().cuid(),
   defaultQuantity: z.coerce.number().int().positive(),
-  supplierId: z.string().cuid().optional().transform((value) => value || null),
+  practiceSupplierId: z.string().cuid().optional().transform((value) => value || null),
 });
 
 const updateTemplateItemSchema = z.object({
   templateItemId: z.string().cuid(),
   defaultQuantity: z.coerce.number().int().positive(),
-  supplierId: z.string().cuid().optional().transform((value) => value || null),
+  practiceSupplierId: z.string().cuid().optional().transform((value) => value || null),
 });
 
 export async function createTemplateAction(_prevState: unknown, formData: FormData) {
@@ -173,20 +173,20 @@ export async function addTemplateItemAction(_prevState: unknown, formData: FormD
     templateId: formData.get('templateId'),
     itemId: formData.get('itemId'),
     defaultQuantity: formData.get('defaultQuantity'),
-    supplierId: formData.get('supplierId'),
+    practiceSupplierId: formData.get('supplierId'), // Form field is still named supplierId
   });
 
   if (!parsed.success) {
     return { error: 'Invalid item data' } as const;
   }
 
-  const { templateId, itemId, defaultQuantity, supplierId } = parsed.data;
+  const { templateId, itemId, defaultQuantity, practiceSupplierId } = parsed.data;
 
   try {
     await getOrderService().addTemplateItem(ctx, templateId, {
       itemId,
       defaultQuantity,
-      supplierId,
+      practiceSupplierId,
     });
 
     revalidatePath(`/orders/templates/${templateId}`);
@@ -216,18 +216,18 @@ export async function updateTemplateItemAction(formData: FormData) {
   const parsed = updateTemplateItemSchema.safeParse({
     templateItemId: formData.get('templateItemId'),
     defaultQuantity: formData.get('defaultQuantity'),
-    supplierId: formData.get('supplierId'),
+    practiceSupplierId: formData.get('supplierId'), // Form field is still named supplierId
   });
 
   if (!parsed.success) {
     throw new Error('Invalid item data');
   }
 
-  const { templateItemId, defaultQuantity, supplierId } = parsed.data;
+  const { templateItemId, defaultQuantity, practiceSupplierId } = parsed.data;
 
   const result = await getOrderService().updateTemplateItem(ctx, templateItemId, {
     defaultQuantity,
-    supplierId,
+    practiceSupplierId,
   });
 
   revalidatePath(`/orders/templates/${result.templateId}`);
@@ -257,7 +257,7 @@ export async function removeTemplateItemAction(templateItemId: string) {
 export async function createOrdersFromTemplateAction(
   templateId: string,
   orderData: {
-    supplierId: string; // Legacy supplierId from templates
+    supplierId: string; // This is actually a practiceSupplierId (naming kept for backward compat with client)
     items: { itemId: string; quantity: number; unitPrice: number | null }[];
   }[]
 ) {
@@ -281,29 +281,12 @@ export async function createOrdersFromTemplateAction(
   }
 
   try {
-    // Map legacy supplierId to practiceSupplierId
-    const { getPracticeSupplierRepository } = await import('@/src/repositories/suppliers');
-    const practiceSupplierRepo = getPracticeSupplierRepository();
-    
-    const mappedOrderData = [];
-    for (const group of orderData) {
-      // Find PracticeSupplier for this legacy Supplier
-      const practiceSupplier = await practiceSupplierRepo.findPracticeSupplierByMigratedId(
-        practiceId,
-        group.supplierId
-      );
-      
-      if (practiceSupplier) {
-        mappedOrderData.push({
-          practiceSupplierId: practiceSupplier.id,
-          items: group.items,
-        });
-      }
-    }
-    
-    if (mappedOrderData.length === 0) {
-      return { error: 'No valid suppliers found for the selected items' } as const;
-    }
+    // Map to the format expected by the service
+    // Note: supplierId is actually a practiceSupplierId from the client
+    const mappedOrderData = orderData.map(group => ({
+      practiceSupplierId: group.supplierId,
+      items: group.items,
+    }));
     
     const result = await getOrderService().createOrdersFromTemplate(ctx, templateId, mappedOrderData);
 

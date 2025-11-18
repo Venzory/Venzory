@@ -52,17 +52,12 @@ export class InventoryRepository extends BaseRepository {
       };
     }
 
-    // Filter by supplier
-    if (filters?.supplierId) {
-      where.defaultSupplierId = filters.supplierId;
-    }
-
-    // Filter by practice supplier (Phase 2)
+    // Filter by practice supplier
     if (filters?.practiceSupplierId) {
       where.defaultPracticeSupplierId = filters.practiceSupplierId;
     }
 
-    // Filter by product (Phase 2: Catalog management)
+    // Filter by product
     if (filters?.productId) {
       where.productId = filters.productId;
     }
@@ -71,9 +66,6 @@ export class InventoryRepository extends BaseRepository {
       where,
       include: {
         product: true,
-        defaultSupplier: {
-          select: { id: true, name: true, email: true, phone: true },
-        },
         defaultPracticeSupplier: {
           include: {
             globalSupplier: true,
@@ -82,7 +74,6 @@ export class InventoryRepository extends BaseRepository {
         supplierItems: {
           select: {
             id: true,
-            supplierId: true,
             practiceSupplierId: true,
             unitPrice: true,
             currency: true,
@@ -134,17 +125,12 @@ export class InventoryRepository extends BaseRepository {
       };
     }
 
-    // Filter by supplier
-    if (filters?.supplierId) {
-      where.defaultSupplierId = filters.supplierId;
-    }
-
-    // Filter by practice supplier (Phase 2)
+    // Filter by practice supplier
     if (filters?.practiceSupplierId) {
       where.defaultPracticeSupplierId = filters.practiceSupplierId;
     }
 
-    // Filter by product (Phase 2: Catalog management)
+    // Filter by product
     if (filters?.productId) {
       where.productId = filters.productId;
     }
@@ -166,7 +152,6 @@ export class InventoryRepository extends BaseRepository {
       where: { id: itemId, practiceId },
       include: {
         product: true,
-        defaultSupplier: true,
         defaultPracticeSupplier: {
           include: {
             globalSupplier: true,
@@ -175,7 +160,6 @@ export class InventoryRepository extends BaseRepository {
         supplierItems: {
           select: {
             id: true,
-            supplierId: true,
             practiceSupplierId: true,
             unitPrice: true,
             currency: true,
@@ -239,7 +223,6 @@ export class InventoryRepository extends BaseRepository {
         sku: input.sku ?? null,
         description: input.description ?? null,
         unit: input.unit ?? null,
-        defaultSupplierId: input.defaultSupplierId ?? null,
         defaultPracticeSupplierId: input.defaultPracticeSupplierId ?? null,
       },
     });
@@ -265,7 +248,6 @@ export class InventoryRepository extends BaseRepository {
         sku: input.sku,
         description: input.description,
         unit: input.unit,
-        defaultSupplierId: input.defaultSupplierId,
         defaultPracticeSupplierId: input.defaultPracticeSupplierId,
       },
     });
@@ -653,7 +635,7 @@ export class InventoryRepository extends BaseRepository {
    * Get or create supplier item pricing
    */
   async upsertSupplierItem(
-    supplierId: string,
+    practiceSupplierId: string,
     itemId: string,
     data: {
       supplierSku?: string | null;
@@ -667,10 +649,10 @@ export class InventoryRepository extends BaseRepository {
 
     const supplierItem = await client.supplierItem.upsert({
       where: {
-        supplierId_itemId: { supplierId, itemId },
+        practiceSupplierId_itemId: { practiceSupplierId, itemId },
       },
       create: {
-        supplierId,
+        practiceSupplierId,
         itemId,
         supplierSku: data.supplierSku ?? null,
         unitPrice: data.unitPrice ?? null,
@@ -689,16 +671,65 @@ export class InventoryRepository extends BaseRepository {
   }
 
   /**
+   * Find supplier item by practice supplier and item
+   */
+  async findSupplierItemByPracticeSupplier(
+    itemId: string,
+    practiceSupplierId: string,
+    options?: FindOptions
+  ): Promise<SupplierItem | null> {
+    const client = this.getClient(options?.tx);
+
+    const supplierItem = await client.supplierItem.findFirst({
+      where: {
+        itemId,
+        practiceSupplierId,
+      },
+      include: options?.include ?? undefined,
+    });
+
+    return supplierItem as SupplierItem | null;
+  }
+
+  /**
+   * Delete a specific supplier item
+   */
+  async deleteSupplierItem(
+    supplierItemId: string,
+    options?: RepositoryOptions
+  ): Promise<void> {
+    const client = this.getClient(options?.tx);
+
+    await client.supplierItem.delete({
+      where: { id: supplierItemId },
+    });
+  }
+
+  /**
+   * Delete all supplier items for an item
+   */
+  async deleteSupplierItemsForItem(
+    itemId: string,
+    options?: RepositoryOptions
+  ): Promise<void> {
+    const client = this.getClient(options?.tx);
+
+    await client.supplierItem.deleteMany({
+      where: { itemId },
+    });
+  }
+
+  /**
    * Find supplier items
    */
   async findSupplierItems(
-    supplierId: string,
+    practiceSupplierId: string,
     options?: FindOptions
   ): Promise<SupplierItem[]> {
     const client = this.getClient(options?.tx);
 
     const supplierItems = await client.supplierItem.findMany({
-      where: { supplierId },
+      where: { practiceSupplierId },
       include: options?.include ?? undefined,
     });
 
@@ -739,7 +770,6 @@ export class InventoryRepository extends BaseRepository {
       },
       include: {
         product: true,
-        defaultSupplier: true,
         defaultPracticeSupplier: {
           include: {
             globalSupplier: true,
@@ -748,7 +778,6 @@ export class InventoryRepository extends BaseRepository {
         supplierItems: {
           select: {
             id: true,
-            supplierId: true,
             practiceSupplierId: true,
             unitPrice: true,
             currency: true,

@@ -23,7 +23,6 @@ export interface PracticeSupplier extends BaseEntity {
   orderingNotes: string | null;
   isPreferred: boolean;
   isBlocked: boolean;
-  migratedFromSupplierId: string | null;
 }
 
 /**

@@ -66,18 +66,6 @@ export interface Location extends BaseEntity {
 }
 
 /**
- * Supplier information
- */
-export interface Supplier extends BaseEntity {
-  practiceId: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  website: string | null;
-  notes: string | null;
-}
-
-/**
  * Pagination parameters
  */
 export interface PaginationParams {
@@ -113,9 +101,9 @@ export type FilterOperator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 
 /**
  * Generic filter condition
  */
-export interface FilterCondition<T = any> {
+export interface FilterCondition<T = Record<string, unknown>> {
   field: keyof T;
   operator: FilterOperator;
-  value: any;
+  value: unknown;
 }
 

@@ -1,19 +1,20 @@
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-import { PracticeRole, OrderStatus } from '@prisma/client';
+import { PracticeRole } from '@prisma/client';
 
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getOrderService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Package } from 'lucide-react';
 import { calculateOrderTotal } from '@/lib/prisma-transforms';
 import { selectQuickTemplates } from './_utils/quick-reorder';
 import { QuickOrderButton } from './_components/quick-order-button';
+import { getOrderSupplierDisplay } from '../dashboard/_utils/order-display';
+import { OrderStatusBadge } from '../dashboard/_utils/order-status-badge';
 
 export default async function OrdersPage() {
   const { session, practiceId } = await requireActivePractice();
@@ -124,9 +125,8 @@ function OrdersList({
               const itemCount = order.items?.length ?? 0;
               const total = calculateOrderTotal(order.items || []);
 
-              // Get supplier display name and ID for linking
-              const supplierName = order.practiceSupplier?.customLabel || order.practiceSupplier?.globalSupplier?.name || 'Unknown Supplier';
-              const supplierLinkId = order.practiceSupplier?.id || '';
+              // Get supplier display name and ID for linking (same logic as dashboard)
+              const { name: supplierName, linkId: supplierLinkId } = getOrderSupplierDisplay(order);
 
               return (
                 <tr key={order.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
@@ -151,7 +151,7 @@ function OrdersList({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={order.status} />
+                    <OrderStatusBadge status={order.status} />
                   </td>
                   <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">
                     {itemCount} {itemCount === 1 ? 'item' : 'items'}
@@ -178,18 +178,6 @@ function OrdersList({
       </div>
     </Card>
   );
-}
-
-function StatusBadge({ status }: { status: OrderStatus }) {
-  const variantMap = {
-    [OrderStatus.DRAFT]: 'neutral' as const,
-    [OrderStatus.SENT]: 'info' as const,
-    [OrderStatus.PARTIALLY_RECEIVED]: 'warning' as const,
-    [OrderStatus.RECEIVED]: 'success' as const,
-    [OrderStatus.CANCELLED]: 'error' as const,
-  };
-
-  return <Badge variant={variantMap[status]}>{status.replace('_', ' ')}</Badge>;
 }
 
 function QuickReorderSection({ templates }: { templates: any[] }) {
