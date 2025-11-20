@@ -62,9 +62,9 @@ export async function sendPasswordResetEmail({
     const displayName = name || 'there';
 
     await resend.emails.send({
-      from: 'Remcura <noreply@remcura.com>',
+      from: 'Venzory <noreply@venzory.com>',
       to: email,
-      subject: 'Reset your Remcura password',
+      subject: 'Reset your Venzory password',
       html: `
         <!DOCTYPE html>
         <html>
@@ -82,7 +82,7 @@ export async function sendPasswordResetEmail({
                 <p style="margin: 0 0 16px; font-size: 16px;">Hi ${displayName},</p>
                 
                 <p style="margin: 0 0 16px; font-size: 16px;">
-                  We received a request to reset your password for your Remcura account. 
+                  We received a request to reset your password for your Venzory account. 
                   Click the button below to create a new password:
                 </p>
                 
@@ -115,7 +115,7 @@ export async function sendPasswordResetEmail({
               
               <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
                 <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                  © ${new Date().getFullYear()} Remcura. All rights reserved.
+                  © ${new Date().getFullYear()} Venzory. All rights reserved.
                 </p>
               </div>
             </div>
@@ -125,7 +125,7 @@ export async function sendPasswordResetEmail({
       text: `
 Hi ${displayName},
 
-We received a request to reset your password for your Remcura account.
+We received a request to reset your password for your Venzory account.
 
 To reset your password, click the following link:
 ${resetUrl}
@@ -134,7 +134,7 @@ This link will expire in 60 minutes for security reasons.
 
 If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
 
-© ${new Date().getFullYear()} Remcura. All rights reserved.
+© ${new Date().getFullYear()} Venzory. All rights reserved.
       `.trim(),
     });
 
@@ -182,7 +182,7 @@ export async function sendUserInviteEmail({
     }
 
     await resend.emails.send({
-      from: 'Remcura <noreply@remcura.com>',
+      from: 'Venzory <noreply@venzory.com>',
       to: email,
       subject: `You've been invited to join ${practiceName}`,
       html: `
@@ -202,7 +202,7 @@ export async function sendUserInviteEmail({
                 <p style="margin: 0 0 16px; font-size: 16px;">Hi there,</p>
                 
                 <p style="margin: 0 0 16px; font-size: 16px;">
-                  ${inviter} has invited you to join <strong>${practiceName}</strong> on Remcura as a <strong>${roleDisplay}</strong>.
+                  ${inviter} has invited you to join <strong>${practiceName}</strong> on Venzory as a <strong>${roleDisplay}</strong>.
                 </p>
                 
                 <p style="margin: 0 0 24px; font-size: 16px;">
@@ -237,7 +237,7 @@ export async function sendUserInviteEmail({
               
               <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
                 <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                  © ${new Date().getFullYear()} Remcura. All rights reserved.
+                  © ${new Date().getFullYear()} Venzory. All rights reserved.
                 </p>
               </div>
             </div>
@@ -247,7 +247,7 @@ export async function sendUserInviteEmail({
       text: `
 Hi there,
 
-${inviter} has invited you to join ${practiceName} on Remcura as a ${roleDisplay}.
+${inviter} has invited you to join ${practiceName} on Venzory as a ${roleDisplay}.
 
 To accept the invitation and set up your account, click the following link:
 ${inviteUrl}
@@ -256,7 +256,7 @@ This invitation link will expire in 7 days for security reasons.
 
 If you didn't expect this invitation, you can safely ignore this email.
 
-© ${new Date().getFullYear()} Remcura. All rights reserved.
+© ${new Date().getFullYear()} Venzory. All rights reserved.
       `.trim(),
     });
 
@@ -333,7 +333,7 @@ export async function sendOrderEmail({
     ).join('\n\n');
 
     await resend.emails.send({
-      from: 'Remcura <noreply@remcura.com>',
+      from: 'Venzory <noreply@venzory.com>',
       to: supplierEmail,
       subject: `New Order from ${practiceName}${orderReference ? ` - ${orderReference}` : ''}`,
       html: `
@@ -402,7 +402,7 @@ export async function sendOrderEmail({
               
               <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
                 <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                  © ${new Date().getFullYear()} Remcura. All rights reserved.
+                  © ${new Date().getFullYear()} Venzory. All rights reserved.
                 </p>
               </div>
             </div>
@@ -425,7 +425,7 @@ Order Total: €${orderTotal.toFixed(2)}
 
 If you have any questions about this order, please contact ${practiceName} directly.
 
-© ${new Date().getFullYear()} Remcura. All rights reserved.
+© ${new Date().getFullYear()} Venzory. All rights reserved.
       `.trim(),
     });
 

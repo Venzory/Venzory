@@ -111,7 +111,7 @@ This migration adds critical database-level constraints to enforce business inva
 
 ```bash
 # Navigate to project directory
-cd /path/to/RemcuraV2
+cd /path/to/Venzory
 
 # Run validation queries
 npx tsx scripts/run-validation-queries.ts

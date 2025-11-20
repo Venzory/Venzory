@@ -10,7 +10,7 @@ interface OnboardingState {
   isOpen: boolean;
 }
 
-const STORAGE_KEY = 'remcura-onboarding-state';
+const STORAGE_KEY = 'venzory-onboarding-state';
 
 /**
  * Hook to manage onboarding state with localStorage persistence

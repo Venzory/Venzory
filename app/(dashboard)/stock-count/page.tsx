@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 
 export const metadata = {
-  title: 'Stock Count - Remcura',
+  title: 'Stock Count - Venzory',
 };
 
 export default async function StockCountPage() {

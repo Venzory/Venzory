@@ -597,16 +597,16 @@ describe('Inventory Operations', () => {
 
     it('should pass supplierId filter to repository', async () => {
       const ctx = createTestContext({ role: 'STAFF' });
-      const supplierId = 'supplier-123';
+      const practiceSupplierId = 'supplier-123';
 
       mockInventoryRepo.findItems.mockResolvedValue([]);
       mockInventoryRepo.countItems.mockResolvedValue(0);
 
-      await inventoryService.findItems(ctx, { supplierId });
+      await inventoryService.findItems(ctx, { practiceSupplierId });
 
       expect(mockInventoryRepo.findItems).toHaveBeenCalledWith(
         ctx.practiceId,
-        { supplierId },
+        { practiceSupplierId },
         expect.any(Object)
       );
     });

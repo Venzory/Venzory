@@ -43,18 +43,30 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const canSortServerSide = !sortBy || sortBy === 'name' || sortBy === 'sku';
   const serverSortBy = canSortServerSide ? (sortBy as 'name' | 'sku' | undefined) : undefined;
 
-  // Fetch items using InventoryService with filters and pagination
-  // Note: lowStockOnly filter is applied client-side after calculating stock info
-  const { items, totalCount } = await getInventoryService().findItems(ctx, {
-    search,
-    locationId: location,
-    practiceSupplierId: supplier,
-  }, {
-    page: canSortServerSide ? currentPage : 1,
-    limit: canSortServerSide ? itemsPerPage : 10000, // Fetch all if client-side sorting needed
-    sortBy: serverSortBy,
-    sortOrder: canSortServerSide ? (sortOrder as 'asc' | 'desc') : undefined,
-  });
+  // Fetch all data in parallel to avoid waterfall
+  const [
+    { items, totalCount },
+    practiceSuppliers,
+    locations,
+    adjustments
+  ] = await Promise.all([
+    getInventoryService().findItems(ctx, {
+      search,
+      locationId: location,
+      practiceSupplierId: supplier,
+    }, {
+      page: canSortServerSide ? currentPage : 1,
+      limit: canSortServerSide ? itemsPerPage : 10000, // Fetch all if client-side sorting needed
+      sortBy: serverSortBy,
+      sortOrder: canSortServerSide ? (sortOrder as 'asc' | 'desc') : undefined,
+    }),
+    getPracticeSupplierRepository().findPracticeSuppliers(
+      practiceId,
+      { includeBlocked: false }
+    ),
+    getInventoryService().getLocations(ctx),
+    getInventoryService().getRecentAdjustments(ctx, 10),
+  ]);
 
   // Transform items to convert Prisma Decimal to number for client component serialization
   const transformedItems = items.map(item => ({
@@ -110,22 +122,11 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   // Calculate pagination UI values
   const totalPages = Math.ceil(finalTotalCount / itemsPerPage);
 
-  // Get practice suppliers (Phase 2)
-  const practiceSuppliers = await getPracticeSupplierRepository().findPracticeSuppliers(
-    practiceId,
-    { includeBlocked: false }
-  );
-  
   // Map to simple { id, name } shape for the form component
   const suppliers = practiceSuppliers.map(ps => ({
     id: ps.id,
     name: ps.customLabel || ps.globalSupplier.name,
   }));
-
-  const [locations, adjustments] = await Promise.all([
-    getInventoryService().getLocations(ctx),
-    getInventoryService().getRecentAdjustments(ctx, 10),
-  ]);
 
   const canManage = hasRole({
     memberships: session.user.memberships,

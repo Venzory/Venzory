@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard';
 
 export const metadata = {
-  title: 'Welcome to Remcura',
+  title: 'Welcome to Venzory',
 };
 
 export default async function OnboardingPage() {

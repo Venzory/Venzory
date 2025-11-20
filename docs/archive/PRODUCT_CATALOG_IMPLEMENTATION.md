@@ -1,7 +1,7 @@
 # Product Catalog Management Implementation Summary
 
 ## Overview
-Successfully implemented a comprehensive Product & Supplier Catalog management UI for the Remcura V2 application. The implementation adds first-class product management while maintaining the existing RBAC model and architecture.
+Successfully implemented a comprehensive Product & Supplier Catalog management UI for the Venzory application. The implementation adds first-class product management while maintaining the existing RBAC model and architecture.
 
 ## Architecture Decisions Implemented
 

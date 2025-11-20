@@ -15,7 +15,7 @@ export function OnboardingHeader() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white font-bold">
           R
         </div>
-        <span className="text-xl font-bold text-slate-900 dark:text-white">Remcura</span>
+        <span className="text-xl font-bold text-slate-900 dark:text-white">Venzory</span>
       </div>
 
       <Button 

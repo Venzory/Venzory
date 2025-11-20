@@ -52,7 +52,7 @@ Order Total: €${orderTotal.toFixed(2)}
 
 If you have any questions about this order, please contact ${practiceName} directly.
 
-© ${new Date().getFullYear()} Remcura. All rights reserved.
+© ${new Date().getFullYear()} Venzory. All rights reserved.
   `.trim();
 }
 

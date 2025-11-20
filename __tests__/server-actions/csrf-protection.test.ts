@@ -170,13 +170,14 @@ describe('Server Actions CSRF Protection', () => {
         get: vi.fn(() => null),
       } as any);
 
-      const { upsertLocationAction, upsertSupplierAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { upsertLocationAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { updatePracticeSupplierAction } = await import('@/app/(dashboard)/suppliers/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test');
       
       await expect(upsertLocationAction(null, formData)).rejects.toThrow('Invalid request');
-      await expect(upsertSupplierAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(updatePracticeSupplierAction(null, formData)).rejects.toThrow('Invalid request');
     });
 
     it('should protect order actions', async () => {

@@ -1,6 +1,6 @@
-## Remcura V2
+## Venzory
 
-Remcura V2 is a multi-tenant inventory platform for medical practices. This repository uses a single Next.js 15
+Venzory is a multi-tenant inventory platform for medical practices. This repository uses a single Next.js 15
 application with App Router, Tailwind CSS, and Prisma for data access.
 
 ### Stack

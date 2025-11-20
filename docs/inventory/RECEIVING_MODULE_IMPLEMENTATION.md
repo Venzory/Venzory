@@ -6,7 +6,7 @@
 
 ## Overview
 
-Successfully implemented a comprehensive **Receiving Module** for Remcura V2, including goods receipt functionality and quick stock count capabilities. The module is fully mobile-optimized with barcode/QR scanning support.
+Successfully implemented a comprehensive **Receiving Module** for Venzory, including goods receipt functionality and quick stock count capabilities. The module is fully mobile-optimized with barcode/QR scanning support.
 
 **Note:** This is the canonical receiving implementation. The legacy `OrderItemReceipt` model has been removed in favor of the unified `GoodsReceipt` system.
 

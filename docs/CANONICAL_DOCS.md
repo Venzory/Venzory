@@ -1,6 +1,6 @@
 # Canonical Documentation Index
 
-**Purpose:** Authoritative "source of truth" documents for RemcuraV2  
+**Purpose:** Authoritative "source of truth" documents for Venzory  
 **Last Updated:** November 18, 2025  
 **For:** AI tools, developers, and team members
 
@@ -8,7 +8,7 @@
 
 ## How to Use This Index
 
-This document lists the **canonical** (authoritative) documentation for RemcuraV2. When there are multiple documents on a topic, the ones listed here are the **current and accurate** sources of truth.
+This document lists the **canonical** (authoritative) documentation for Venzory. When there are multiple documents on a topic, the ones listed here are the **current and accurate** sources of truth.
 
 **Rules:**
 1. ✅ **Always reference these documents** for current system state
@@ -172,7 +172,7 @@ Detailed migration guides (subdirectory: `docs/infra/migrations/`):
 |----------|------|---------|--------------|
 | **Documentation Index** | `docs/README.md` | Index of all documentation with links | Nov 11, 2025 |
 | **Documentation Inventory** | `docs/DOC_INVENTORY.md` | Complete inventory of all 62 docs with currency assessment | Nov 18, 2025 |
-| **Implementation History** | `docs/REMCURA_IMPLEMENTATION_HISTORY.md` | Chronological record of major milestones (Nov 11-17, 2025) | Nov 18, 2025 |
+| **Implementation History** | `docs/VENZORY_IMPLEMENTATION_HISTORY.md` | Chronological record of major milestones (Nov 11-17, 2025) | Nov 18, 2025 |
 
 **Use these for:** Finding documentation, understanding what's current vs historical, navigating the docs.
 
@@ -232,7 +232,7 @@ The archive contains 15 historical documents including:
 - **Architecture**: `docs/architecture/` directory
 
 ### "I need to understand what changed recently"
-1. Implementation history: `docs/REMCURA_IMPLEMENTATION_HISTORY.md`
+1. Implementation history: `docs/VENZORY_IMPLEMENTATION_HISTORY.md`
 2. MVP status: `docs/product/MVP_FLOW_STATUS_REPORT.md`
 3. Health checks: `docs/operations/HEALTH_CHECK_REPORT.md`
 

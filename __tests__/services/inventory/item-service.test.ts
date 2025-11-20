@@ -92,7 +92,6 @@ describe('ItemService', () => {
         practiceId: practice.id,
         productId: product.id,
         name: 'Test Item',
-        defaultSupplierId: null,
         defaultPracticeSupplierId: null,
         supplierItems: [],
         inventory: [],
@@ -104,7 +103,6 @@ describe('ItemService', () => {
       });
 
       expect(result.id).toBe('item-1');
-      expect(result.defaultSupplierId).toBeNull();
       expect(result.defaultPracticeSupplierId).toBeNull();
       expect(mockInventoryRepo.upsertSupplierItem).not.toHaveBeenCalled();
       expect(mockAuditService.logItemCreated).toHaveBeenCalled();
@@ -130,7 +128,6 @@ describe('ItemService', () => {
         practiceId: practice.id,
         productId: product.id,
         name: 'Test Item',
-        defaultSupplierId: supplierId,
         defaultPracticeSupplierId: practiceSupplierId,
       });
       mockInventoryRepo.upsertSupplierItem.mockResolvedValue({
@@ -147,7 +144,6 @@ describe('ItemService', () => {
         practiceId: practice.id,
         productId: product.id,
         name: 'Test Item',
-        defaultSupplierId: supplierId,
         defaultPracticeSupplierId: practiceSupplierId,
         supplierItems: [{
           id: 'si-1',
@@ -266,7 +262,6 @@ describe('ItemService', () => {
       mockInventoryRepo.updateItem.mockResolvedValue({
         ...item,
         defaultPracticeSupplierId: newPracticeSupplierId,
-        defaultSupplierId: newSupplierId,
       });
       mockInventoryRepo.findItemById.mockResolvedValueOnce(item).mockResolvedValueOnce({
         ...item,
@@ -299,12 +294,10 @@ describe('ItemService', () => {
       mockInventoryRepo.updateItem.mockResolvedValue({
         ...item,
         defaultPracticeSupplierId: null,
-        defaultSupplierId: null,
       });
       mockInventoryRepo.findItemById.mockResolvedValueOnce(item).mockResolvedValueOnce({
         ...item,
         defaultPracticeSupplierId: null,
-        defaultSupplierId: null,
       });
 
       const result = await itemService.updateItem(ctx, item.id, {
@@ -312,7 +305,6 @@ describe('ItemService', () => {
       });
 
       expect(result.defaultPracticeSupplierId).toBeNull();
-      expect(result.defaultSupplierId).toBeNull();
       expect(mockInventoryRepo.upsertSupplierItem).not.toHaveBeenCalled();
     });
   });
@@ -349,7 +341,6 @@ describe('ItemService', () => {
         productId: product.id,
         name: 'Catalog Item',
         defaultPracticeSupplierId: practiceSupplierId,
-        defaultSupplierId: supplierId,
       });
       mockInventoryRepo.upsertSupplierItem.mockResolvedValue({
         id: 'si-1',
@@ -551,12 +542,10 @@ describe('ItemService', () => {
       mockInventoryRepo.updateItem.mockResolvedValue({
         ...item,
         defaultPracticeSupplierId: null,
-        defaultSupplierId: null,
       });
       mockInventoryRepo.findItemById.mockResolvedValueOnce(item).mockResolvedValueOnce({
         ...item,
         defaultPracticeSupplierId: null,
-        defaultSupplierId: null,
       });
 
       // Mock withTransaction to pass mockTx
@@ -570,7 +559,6 @@ describe('ItemService', () => {
         item.id,
         practice.id,
         expect.objectContaining({
-          defaultSupplierId: null,
           defaultPracticeSupplierId: null,
         }),
         expect.any(Object)

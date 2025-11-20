@@ -8,11 +8,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { prisma } from '@/lib/prisma';
 import { InventoryService } from '@/src/services/inventory/inventory-service';
+import { ItemService } from '@/src/services/inventory/item-service';
 import { InventoryRepository } from '@/src/repositories/inventory';
 import { ProductRepository } from '@/src/repositories/products';
 import { LocationRepository } from '@/src/repositories/locations';
 import { StockCountRepository } from '@/src/repositories/stock-count';
 import { UserRepository } from '@/src/repositories/users';
+import { PracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { AuditService } from '@/src/services/audit/audit-service';
 import { AuditRepository } from '@/src/repositories/audit';
 import type { RequestContext } from '@/src/lib/context/request-context';
@@ -22,6 +24,7 @@ import assert from 'assert';
 
 describe('Service Layer - Constraint Validation', () => {
   let service: InventoryService;
+  let itemService: ItemService;
   let userRepository: UserRepository;
   let testPracticeId: string;
   let testUserId: string;
@@ -83,6 +86,13 @@ describe('Service Layer - Constraint Validation', () => {
       new AuditService(new AuditRepository())
     );
 
+    itemService = new ItemService(
+      new InventoryRepository(),
+      new ProductRepository(),
+      new PracticeSupplierRepository(),
+      new AuditService(new AuditRepository())
+    );
+
     userRepository = new UserRepository();
   });
 
@@ -113,13 +123,13 @@ describe('Service Layer - Constraint Validation', () => {
 
   describe('InventoryService.createItem - Duplicate Name Handling', () => {
     it('should create item successfully with unique name', async () => {
-      const item = await service.createItem(ctx, {
+      const item = await itemService.createItem(ctx, {
         productId: testProductId,
         name: 'Unique Item',
         sku: 'SKU-001',
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
       expect(item).toBeDefined();
@@ -128,36 +138,36 @@ describe('Service Layer - Constraint Validation', () => {
 
     it('should throw error when creating item with duplicate name', async () => {
       // Create first item
-      await service.createItem(ctx, {
+      await itemService.createItem(ctx, {
         productId: testProductId,
         name: 'Duplicate Item',
         sku: 'SKU-001',
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
       // Try to create item with duplicate name
       await expect(
-        service.createItem(ctx, {
+        itemService.createItem(ctx, {
           productId: testProductId,
           name: 'Duplicate Item',
           sku: 'SKU-002', // Different SKU
           description: null,
           unit: null,
-          defaultSupplierId: null,
+          defaultPracticeSupplierId: null,
         })
       ).rejects.toThrow();
 
       // Verify error is caught and handled (not raw Prisma error)
       try {
-        await service.createItem(ctx, {
+        await itemService.createItem(ctx, {
           productId: testProductId,
           name: 'Duplicate Item',
           sku: 'SKU-003',
           description: null,
           unit: null,
-          defaultSupplierId: null,
+          defaultPracticeSupplierId: null,
         });
         assert.fail('Should have thrown an error');
       } catch (error) {
@@ -169,13 +179,13 @@ describe('Service Layer - Constraint Validation', () => {
 
   describe('InventoryService.createItem - Duplicate SKU Handling', () => {
     it('should create item successfully with unique SKU', async () => {
-      const item = await service.createItem(ctx, {
+      const item = await itemService.createItem(ctx, {
         productId: testProductId,
         name: 'Item 1',
         sku: 'UNIQUE-SKU',
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
       expect(item).toBeDefined();
@@ -184,46 +194,46 @@ describe('Service Layer - Constraint Validation', () => {
 
     it('should throw error when creating item with duplicate SKU', async () => {
       // Create first item
-      await service.createItem(ctx, {
+      await itemService.createItem(ctx, {
         productId: testProductId,
         name: 'Item 1',
         sku: 'DUP-SKU',
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
       // Try to create item with duplicate SKU
       await expect(
-        service.createItem(ctx, {
+        itemService.createItem(ctx, {
           productId: testProductId,
           name: 'Item 2', // Different name
           sku: 'DUP-SKU',
           description: null,
           unit: null,
-          defaultSupplierId: null,
+          defaultPracticeSupplierId: null,
         })
       ).rejects.toThrow();
     });
 
     it('should allow multiple items with NULL SKU', async () => {
       // Create multiple items without SKU - should all succeed
-      const item1 = await service.createItem(ctx, {
+      const item1 = await itemService.createItem(ctx, {
         productId: testProductId,
         name: 'Item Without SKU 1',
         sku: null,
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
-      const item2 = await service.createItem(ctx, {
+      const item2 = await itemService.createItem(ctx, {
         productId: testProductId,
         name: 'Item Without SKU 2',
         sku: null,
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
       expect(item1.sku).toBeNull();
@@ -334,23 +344,23 @@ describe('Service Layer - Constraint Validation', () => {
 
     it('should allow same item name in different practices', async () => {
       // Create item in first practice
-      const item1 = await service.createItem(ctx, {
+      const item1 = await itemService.createItem(ctx, {
         productId: testProductId,
         name: 'Shared Item Name',
         sku: 'SKU-P1',
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
       // Create item with same name in second practice - should succeed
-      const item2 = await service.createItem(secondCtx, {
+      const item2 = await itemService.createItem(secondCtx, {
         productId: testProductId,
         name: 'Shared Item Name',
         sku: 'SKU-P2',
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
       expect(item1.name).toBe(item2.name);
@@ -359,23 +369,23 @@ describe('Service Layer - Constraint Validation', () => {
 
     it('should allow same item SKU in different practices', async () => {
       // Create item in first practice
-      const item1 = await service.createItem(ctx, {
+      const item1 = await itemService.createItem(ctx, {
         productId: testProductId,
         name: 'Item P1',
         sku: 'SHARED-SKU',
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
       // Create item with same SKU in second practice - should succeed
-      const item2 = await service.createItem(secondCtx, {
+      const item2 = await itemService.createItem(secondCtx, {
         productId: testProductId,
         name: 'Item P2',
         sku: 'SHARED-SKU',
         description: null,
         unit: null,
-        defaultSupplierId: null,
+        defaultPracticeSupplierId: null,
       });
 
       expect(item1.sku).toBe(item2.sku);

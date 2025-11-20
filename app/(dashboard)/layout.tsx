@@ -3,8 +3,6 @@ import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
 import { DashboardLayoutClient } from '@/components/layout/dashboard-layout-client';
-import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
-import { getSettingsService } from '@/src/services';
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -24,17 +22,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     memberships.find((m) => m.practiceId === activePracticeId) ?? memberships[0] ?? null;
 
   // Fetch practice name if possible
-  let practiceName: string | null = activeMembership?.practice.name ?? null;
-
-  if (activePracticeId) {
-    try {
-      const ctx = buildRequestContextFromSession(session);
-      const settings = await getSettingsService().getPracticeSettings(ctx);
-      practiceName = settings.name;
-    } catch (e) {
-      // Ignore error, fallback to session data
-    }
-  }
+  const practiceName: string | null = activeMembership?.practice.name ?? null;
 
   return (
     <DashboardLayoutClient

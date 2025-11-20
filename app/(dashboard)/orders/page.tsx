@@ -20,18 +20,20 @@ export default async function OrdersPage() {
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 
-  const orders = await getOrderService().findOrders(ctx, {});
-
   const canManage = hasRole({
     memberships: session.user.memberships,
     practiceId,
     minimumRole: PracticeRole.STAFF,
   });
 
+  const [orders, allTemplates] = await Promise.all([
+    getOrderService().findOrders(ctx, {}),
+    canManage ? getOrderService().findTemplates(ctx) : Promise.resolve([]),
+  ]);
+
   // Fetch templates for quick reorder (only if user can manage orders)
   let quickTemplates: any[] = [];
   if (canManage) {
-    const allTemplates = await getOrderService().findTemplates(ctx);
     quickTemplates = selectQuickTemplates(allTemplates, 5);
   }
 

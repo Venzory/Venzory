@@ -174,7 +174,7 @@ export async function addTemplateItemAction(_prevState: unknown, formData: FormD
     templateId: formData.get('templateId'),
     itemId: formData.get('itemId'),
     defaultQuantity: formData.get('defaultQuantity'),
-    practiceSupplierId: formData.get('supplierId'), // Form field is still named supplierId
+    practiceSupplierId: formData.get('practiceSupplierId'),
   });
 
   if (!parsed.success) {
@@ -217,7 +217,7 @@ export async function updateTemplateItemAction(formData: FormData) {
   const parsed = updateTemplateItemSchema.safeParse({
     templateItemId: formData.get('templateItemId'),
     defaultQuantity: formData.get('defaultQuantity'),
-    practiceSupplierId: formData.get('supplierId'), // Form field is still named supplierId
+    practiceSupplierId: formData.get('practiceSupplierId'),
   });
 
   if (!parsed.success) {
@@ -351,5 +351,3 @@ export async function quickCreateOrderFromTemplateAction(templateId: string) {
     throw new Error(message);
   }
 }
-
-

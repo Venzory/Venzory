@@ -121,8 +121,8 @@ If needed, the migration can be rolled back:
 npx prisma migrate resolve --rolled-back 20251111112724_add_global_and_practice_suppliers
 
 # Drop the tables manually
-psql -d remcura_v2 -c 'DROP TABLE "PracticeSupplier" CASCADE;'
-psql -d remcura_v2 -c 'DROP TABLE "GlobalSupplier" CASCADE;'
+psql -d venzory -c 'DROP TABLE "PracticeSupplier" CASCADE;'
+psql -d venzory -c 'DROP TABLE "GlobalSupplier" CASCADE;'
 ```
 
 **Note:** This will delete all data in the new tables. The legacy Supplier model and data remain intact.

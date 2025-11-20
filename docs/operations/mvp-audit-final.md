@@ -1,4 +1,4 @@
-# Remcura V2 MVP Functional Audit - FINAL REPORT
+# Venzory MVP Functional Audit - FINAL REPORT
 
 **Audit Date**: November 17, 2025  
 **Environment**: Local development (http://localhost:3000)  

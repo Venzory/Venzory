@@ -7,8 +7,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'], display: 'swap' 
 
 export const metadata: Metadata = {
   title: {
-    default: 'Remcura V2',
-    template: '%s | Remcura V2',
+    default: 'Venzory',
+    template: '%s | Venzory',
   },
   description: 'Inventory, ordering, and supplier management for medical practices.',
 };

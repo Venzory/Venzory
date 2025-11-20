@@ -7,7 +7,7 @@ import { updateTemplateItemAction } from '../../actions';
 interface EditTemplateItemFormProps {
   templateItemId: string;
   currentQuantity: number;
-  currentSupplierId: string | null;
+  currentPracticeSupplierId: string | null;
   suppliers: {
     id: string;
     name: string;
@@ -22,21 +22,21 @@ interface EditTemplateItemFormProps {
 export function EditTemplateItemForm({
   templateItemId,
   currentQuantity,
-  currentSupplierId,
+  currentPracticeSupplierId,
   suppliers,
   itemUnit,
   mode = 'quantity',
 }: EditTemplateItemFormProps) {
   const [quantity, setQuantity] = useState(currentQuantity);
-  const [supplierId, setSupplierId] = useState(currentSupplierId || '');
+  const [practiceSupplierId, setPracticeSupplierId] = useState(currentPracticeSupplierId || '');
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     const changed =
       quantity !== currentQuantity ||
-      supplierId !== (currentSupplierId || '');
+      practiceSupplierId !== (currentPracticeSupplierId || '');
     setHasChanges(changed);
-  }, [quantity, supplierId, currentQuantity, currentSupplierId]);
+  }, [quantity, practiceSupplierId, currentQuantity, currentPracticeSupplierId]);
 
   const handleBlur = async () => {
     if (!hasChanges) return;
@@ -44,7 +44,7 @@ export function EditTemplateItemForm({
     const formData = new FormData();
     formData.set('templateItemId', templateItemId);
     formData.set('defaultQuantity', quantity.toString());
-    formData.set('supplierId', supplierId);
+    formData.set('practiceSupplierId', practiceSupplierId);
 
     try {
       await updateTemplateItemAction(formData);
@@ -53,7 +53,7 @@ export function EditTemplateItemForm({
     } catch (error) {
       // Revert on error
       setQuantity(currentQuantity);
-      setSupplierId(currentSupplierId || '');
+      setPracticeSupplierId(currentPracticeSupplierId || '');
       toast.error('Failed to update item');
     }
   };
@@ -78,14 +78,14 @@ export function EditTemplateItemForm({
 
       {mode === 'supplier' && (
         <select
-          value={supplierId}
+          value={practiceSupplierId}
           onChange={(e) => {
-            setSupplierId(e.target.value);
+            setPracticeSupplierId(e.target.value);
             // Trigger update on next effect/blur, or we can rely on the effect + blur on the select
             // But select usually needs explicit blur or we can trigger save on change?
             // For consistency with quantity, let's let the user change it and then blur to save,
             // OR we can just trigger save on blur.
-            // Since setSupplierId is async, we can't call handleBlur immediately here with the new value if handleBlur uses state.
+            // Since setPracticeSupplierId is async, we can't call handleBlur immediately here with the new value if handleBlur uses state.
             // But handleBlur uses state closure? No, it uses component state which is updated on render.
           }}
           onBlur={handleBlur}
@@ -112,4 +112,3 @@ export function EditTemplateItemForm({
     </div>
   );
 }
-

@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive style guide has been implemented at `/style-guide` that serves as the central reference for all UI decisions and design tokens in Remcura.
+A comprehensive style guide has been implemented at `/style-guide` that serves as the central reference for all UI decisions and design tokens in Venzory.
 
 ## Implementation Date
 
@@ -121,7 +121,7 @@ Comprehensive markdown documentation covering:
 - All colors defined as CSS custom properties in `app/globals.css`
 - Tailwind theme extensions in `tailwind.config.ts`
 - Automatic light/dark mode adaptation via `.dark` class
-- No new tokens created - uses existing Remcura design system
+- No new tokens created - uses existing Venzory design system
 
 ### Responsive Design
 - Mobile-first approach with responsive breakpoints
@@ -283,7 +283,7 @@ Potential additions for future iterations:
 
 ## Compliance
 
-✅ **No new design tokens created** - Uses existing Remcura tokens only
+✅ **No new design tokens created** - Uses existing Venzory tokens only
 ✅ **No breaking changes** - All existing components remain unchanged
 ✅ **Fully responsive** - Works on mobile, tablet, and desktop
 ✅ **Accessible** - WCAG 2.1 AA compliant
@@ -313,7 +313,7 @@ Potential additions for future iterations:
 
 ## Conclusion
 
-The Remcura Style Guide is now complete and production-ready. It provides a comprehensive, interactive reference for all design tokens, typography, components, and UI patterns used throughout the application. The guide maintains consistency with existing Remcura design tokens and serves as the central source of truth for all future UI development.
+The Venzory Style Guide is now complete and production-ready. It provides a comprehensive, interactive reference for all design tokens, typography, components, and UI patterns used throughout the application. The guide maintains consistency with existing Venzory design tokens and serves as the central source of truth for all future UI development.
 
 ---
 

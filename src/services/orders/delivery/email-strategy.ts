@@ -1,7 +1,7 @@
 import { OrderDeliveryStrategy } from './types';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import type { OrderWithRelations } from '@/src/domain/models';
-import { enqueueEmailJob } from '@/src/lib/jobs/email-queue';
+import { sendOrderEmail } from '@/src/lib/email/sendOrderEmail';
 import { calculateOrderTotal, decimalToNumber } from '@/lib/prisma-transforms';
 import logger from '@/lib/logger';
 
@@ -17,15 +17,7 @@ export class EmailOrderDeliveryStrategy implements OrderDeliveryStrategy {
           'Unknown supplier';
 
         // Extract practice information
-        // In the original action, 'practice' was cast from result as any.
-        // We should check if practice is available on the order object.
-        // The OrderWithRelations interface in src/domain/models/orders.ts extends Order
-        // but Order doesn't seem to have 'practice' directly in the interface definition I saw earlier.
-        // However, Prisma usually includes it if included in the query.
-        // Let's verify if 'practice' is fetched in OrderService.sendOrder -> findOrderById.
-        // For now I will use 'as any' or optional chaining compatible with what was there, 
-        // but ideally I should type it if I can.
-        const practice = (order as any).practice;
+        const practice = order.practice;
         const practiceName = practice?.name || 'Unknown Practice';
 
         // Build practice address
@@ -57,20 +49,25 @@ export class EmailOrderDeliveryStrategy implements OrderDeliveryStrategy {
           };
         });
 
-        await enqueueEmailJob(
-          'ORDER_CONFIRMATION',
+        const result = await sendOrderEmail({
           supplierEmail,
-          {
-            supplierEmail,
-            supplierName,
-            practiceName,
-            practiceAddress,
-            orderReference: order.reference,
-            orderNotes: order.notes,
-            items,
-            orderTotal: calculateOrderTotal(order.items || []),
-          }
-        );
+          supplierName,
+          practiceName,
+          practiceAddress,
+          orderReference: order.reference,
+          orderNotes: order.notes,
+          items,
+          orderTotal: calculateOrderTotal(order.items || []),
+        });
+
+        if (!result.success) {
+            logger.error({
+                action: 'EmailOrderDeliveryStrategy.send',
+                orderId: order.id,
+                error: result.error,
+            }, 'Failed to send order email via sendOrderEmail');
+            return false;
+        }
 
         return true;
       } else {
@@ -91,4 +88,3 @@ export class EmailOrderDeliveryStrategy implements OrderDeliveryStrategy {
     }
   }
 }
-

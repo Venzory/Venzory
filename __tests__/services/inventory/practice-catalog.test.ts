@@ -40,13 +40,20 @@ vi.mock('@/src/services/inventory/item-service', () => {
     detachSupplierFromItem: vi.fn(),
   };
   return {
-    ItemService: class {},
+    ItemService: class {
+      createItem = mockItemService.createItem;
+      updateItem = mockItemService.updateItem;
+      addItemFromCatalog = mockItemService.addItemFromCatalog;
+      attachSupplierToItem = mockItemService.attachSupplierToItem;
+      detachSupplierFromItem = mockItemService.detachSupplierFromItem;
+    },
     getItemService: () => mockItemService,
   };
 });
 
 describe('Practice Catalog', () => {
   let inventoryService: InventoryService;
+  let itemService: any;
   let mockInventoryRepo: any;
   let mockProductRepo: any;
   let mockLocationRepo: any;
@@ -58,12 +65,12 @@ describe('Practice Catalog', () => {
     resetCounters();
     
     // Reset the mocked ItemService
-    const mockItemService = getItemService() as any;
-    mockItemService.createItem.mockReset();
-    mockItemService.updateItem.mockReset();
-    mockItemService.addItemFromCatalog.mockReset();
-    mockItemService.attachSupplierToItem.mockReset();
-    mockItemService.detachSupplierFromItem.mockReset();
+    itemService = getItemService();
+    itemService.createItem.mockReset();
+    itemService.updateItem.mockReset();
+    itemService.addItemFromCatalog.mockReset();
+    itemService.attachSupplierToItem.mockReset();
+    itemService.detachSupplierFromItem.mockReset();
     
     // Create mock repositories
     mockInventoryRepo = {
@@ -185,10 +192,9 @@ describe('Practice Catalog', () => {
       };
 
       // Mock ItemService to return the expected item
-      const mockItemService = getItemService() as any;
-      mockItemService.addItemFromCatalog.mockResolvedValue(expectedItem);
+      itemService.addItemFromCatalog.mockResolvedValue(expectedItem);
 
-      const result = await inventoryService.addItemFromCatalog(ctx, {
+      const result = await itemService.addItemFromCatalog(ctx, {
         productId: product.id,
         practiceSupplierId,
         name: 'Test Item',
@@ -196,7 +202,7 @@ describe('Practice Catalog', () => {
       });
 
       expect(result.defaultPracticeSupplierId).toBe(practiceSupplierId);
-      expect(mockItemService.addItemFromCatalog).toHaveBeenCalledWith(
+      expect(itemService.addItemFromCatalog).toHaveBeenCalledWith(
         ctx,
         expect.objectContaining({
           productId: product.id,
@@ -213,13 +219,12 @@ describe('Practice Catalog', () => {
       const practiceSupplierId = 'ps-123';
 
       // Mock ItemService to throw the expected error
-      const mockItemService = getItemService() as any;
-      mockItemService.addItemFromCatalog.mockRejectedValue(
+      itemService.addItemFromCatalog.mockRejectedValue(
         new BusinessRuleViolationError('This product is not available from the selected supplier')
       );
 
       await expect(
-        inventoryService.addItemFromCatalog(ctx, {
+        itemService.addItemFromCatalog(ctx, {
           productId: product.id,
           practiceSupplierId,
           name: 'Test Item',
@@ -227,7 +232,7 @@ describe('Practice Catalog', () => {
       ).rejects.toThrow(BusinessRuleViolationError);
       
       await expect(
-        inventoryService.addItemFromCatalog(ctx, {
+        itemService.addItemFromCatalog(ctx, {
           productId: product.id,
           practiceSupplierId,
           name: 'Test Item',
@@ -241,13 +246,12 @@ describe('Practice Catalog', () => {
       const practiceSupplierId = 'ps-123';
 
       // Mock ItemService to throw the expected error
-      const mockItemService = getItemService() as any;
-      mockItemService.addItemFromCatalog.mockRejectedValue(
+      itemService.addItemFromCatalog.mockRejectedValue(
         new BusinessRuleViolationError('An item for this product already exists in your catalog')
       );
 
       await expect(
-        inventoryService.addItemFromCatalog(ctx, {
+        itemService.addItemFromCatalog(ctx, {
           productId: product.id,
           practiceSupplierId,
           name: 'Test Item',
@@ -255,7 +259,7 @@ describe('Practice Catalog', () => {
       ).rejects.toThrow(BusinessRuleViolationError);
       
       await expect(
-        inventoryService.addItemFromCatalog(ctx, {
+        itemService.addItemFromCatalog(ctx, {
           productId: product.id,
           practiceSupplierId,
           name: 'Test Item',
@@ -267,13 +271,12 @@ describe('Practice Catalog', () => {
       const ctx = createTestContext({ role: 'VIEWER' });
 
       // Mock ItemService to throw ForbiddenError
-      const mockItemService = getItemService() as any;
-      mockItemService.addItemFromCatalog.mockRejectedValue(
+      itemService.addItemFromCatalog.mockRejectedValue(
         new ForbiddenError('Insufficient permissions')
       );
 
       await expect(
-        inventoryService.addItemFromCatalog(ctx, {
+        itemService.addItemFromCatalog(ctx, {
           productId: 'prod-1',
           practiceSupplierId: 'ps-1',
           name: 'Test Item',

@@ -4,7 +4,7 @@ import { getInventoryService } from '@/src/services';
 import { NewCountForm } from './_components/new-count-form';
 
 export const metadata = {
-  title: 'New Stock Count - Remcura',
+  title: 'New Stock Count - Venzory',
 };
 
 export default async function NewCountPage() {

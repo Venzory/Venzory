@@ -34,10 +34,10 @@ export default function StyleGuidePage() {
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-3">
           <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Remcura Style Guide
+            Venzory Style Guide
           </h1>
           <p className="max-w-3xl text-base text-slate-600 dark:text-slate-300">
-            A comprehensive reference for all design tokens, typography, components, and UI patterns used in Remcura.
+            A comprehensive reference for all design tokens, typography, components, and UI patterns used in Venzory.
             This guide ensures consistency across the application and serves as the single source of truth for design decisions.
           </p>
         </div>
@@ -53,7 +53,7 @@ export default function StyleGuidePage() {
           <div>
             <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Purpose</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              This style guide documents all design tokens, components, and patterns used throughout Remcura. 
+              This style guide documents all design tokens, components, and patterns used throughout Venzory. 
               Use it as a reference when building new features or updating existing ones to maintain visual consistency.
             </p>
           </div>
@@ -79,7 +79,7 @@ export default function StyleGuidePage() {
           <div>
             <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">Typography</h3>
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Remcura uses <strong>Plus Jakarta Sans</strong> as the primary font family for all text. 
+              Venzory uses <strong>Plus Jakarta Sans</strong> as the primary font family for all text. 
               Headings use bold weights (600-700) while body text uses normal to medium weights (400-500).
             </p>
           </div>
@@ -506,7 +506,7 @@ export default function StyleGuidePage() {
       {/* Component Library Section */}
       <StyleSection
         title="Component Library"
-        description="Reusable components used throughout Remcura."
+        description="Reusable components used throughout Venzory."
       >
         <ComponentShowcase
           title="PageHeader"
@@ -806,7 +806,7 @@ addToast('error', 'An error occurred');`}
       {/* Footer */}
       <div className="border-t border-border pt-8 text-center">
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Remcura Style Guide • Last updated: {new Date().toLocaleDateString()} • 
+          Venzory Style Guide • Last updated: {new Date().toLocaleDateString()} • 
           <a href="/dashboard" className="ml-1 text-sky-600 hover:underline dark:text-sky-400">
             Back to Dashboard
           </a>

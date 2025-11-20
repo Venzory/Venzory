@@ -327,7 +327,7 @@ model SupplierItem {
 model Order {
   id                 String      @id @default(cuid())
   practiceId         String
-  practiceSupplierId String
+  practiceSupplierId String?
   status             OrderStatus @default(DRAFT)
   createdById        String?
   reference          String?
@@ -339,7 +339,7 @@ model Order {
   updatedAt          DateTime    @updatedAt
 
   practice         Practice         @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  practiceSupplier PracticeSupplier @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
+  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
   createdBy        User?            @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   items            OrderItem[]
   goodsReceipts    GoodsReceipt[]

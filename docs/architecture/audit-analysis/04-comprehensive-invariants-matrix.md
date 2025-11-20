@@ -1,7 +1,7 @@
 # Comprehensive Business Invariants & Enforcement Matrix
 
 ## Overview
-This document consolidates all business invariants identified across the Remcura V2 codebase and maps their enforcement mechanisms.
+This document consolidates all business invariants identified across the Venzory codebase and maps their enforcement mechanisms.
 
 **Enforcement Levels:**
 - **DB**: Database constraint (FK, UNIQUE, NOT NULL, CHECK)

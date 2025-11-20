@@ -1,4 +1,4 @@
-# Remcura V2 MVP Flow Status Report
+# Venzory MVP Flow Status Report
 
 **Generated:** November 18, 2025  
 **Purpose:** Clear, global picture of what works and what needs attention for MVP  
@@ -693,7 +693,7 @@ Each suggested task is **small and focused** - suitable for a single implementat
 
 ## Conclusion
 
-Remcura V2 has a **solid foundation** for MVP deployment:
+Venzory has a **solid foundation** for MVP deployment:
 
 ✅ All core clinic flows are functionally complete  
 ✅ Recent hardening work has addressed major edge cases  

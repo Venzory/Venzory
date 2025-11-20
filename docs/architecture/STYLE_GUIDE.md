@@ -1,8 +1,8 @@
-# Remcura Style Guide
+# Venzory Style Guide
 
 ## Overview
 
-The Remcura Style Guide is a comprehensive visual reference for all design tokens, typography, components, and UI patterns used throughout the application.
+The Venzory Style Guide is a comprehensive visual reference for all design tokens, typography, components, and UI patterns used throughout the application.
 
 ## Accessing the Style Guide
 
@@ -59,7 +59,7 @@ The theme is applied by adding/removing the `dark` class on the `<html>` element
 
 ## Typography
 
-Remcura uses **Plus Jakarta Sans** as the primary font family, loaded via Google Fonts in `app/layout.tsx`. The font is applied globally through the body element.
+Venzory uses **Plus Jakarta Sans** as the primary font family, loaded via Google Fonts in `app/layout.tsx`. The font is applied globally through the body element.
 
 ## Component Organization
 

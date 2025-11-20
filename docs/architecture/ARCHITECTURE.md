@@ -1,8 +1,8 @@
-# Remcura V2 Architecture Documentation
+# Venzory Architecture Documentation
 
 ## Overview
 
-This document describes the Go-Ready layered architecture implemented in Remcura V2. The architecture provides clear separation of concerns, making the codebase more maintainable, testable, and prepared for future migration to Go.
+This document describes the Go-Ready layered architecture implemented in Venzory. The architecture provides clear separation of concerns, making the codebase more maintainable, testable, and prepared for future migration to Go.
 
 ## Architecture Layers
 

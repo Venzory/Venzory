@@ -1,6 +1,6 @@
-# RemcuraV2 Documentation
+# Venzory Documentation
 
-This directory contains technical documentation for the RemcuraV2 inventory management system.
+This directory contains technical documentation for the Venzory inventory management system.
 
 ## Architecture Documentation
 

@@ -4,7 +4,7 @@ import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { NewReceiptForm } from './_components/new-receipt-form';
 
 export const metadata = {
-  title: 'New Receipt - Remcura',
+  title: 'New Receipt - Venzory',
 };
 
 interface NewReceiptPageProps {

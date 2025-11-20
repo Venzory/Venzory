@@ -2,7 +2,7 @@
 
 ## Overview
 
-Remcura V2 uses **Vitest** for testing with a clear separation between unit tests and integration tests.
+Venzory uses **Vitest** for testing with a clear separation between unit tests and integration tests.
 
 - **Unit tests** run quickly without a database using mocked dependencies
 - **Integration tests** require a real PostgreSQL database and test full database transactions
@@ -22,7 +22,7 @@ npm run test:unit:watch
 npm run test:coverage
 
 # Integration tests (requires test database setup - see below)
-DATABASE_URL="postgresql://remcura:remcura@localhost:5432/remcura_test" npm run test:integration
+DATABASE_URL="postgresql://venzory:venzory@localhost:5432/venzory_test" npm run test:integration
 ```
 
 ## Test Structure
@@ -174,14 +174,14 @@ Integration tests use a **real PostgreSQL database** and are kept separate from 
 
 2. **Create Test Database**
    ```bash
-   # Create remcura_test database alongside remcura_v2
-   docker exec -it remcura-postgres createdb -U remcura remcura_test
+   # Create venzory_test database alongside venzory
+   docker exec -it venzory-postgres createdb -U venzory venzory_test
    ```
 
 3. **Apply Migrations**
    ```bash
    # Set DATABASE_URL to point at test database
-   export DATABASE_URL="postgresql://remcura:remcura@localhost:5432/remcura_test"
+   export DATABASE_URL="postgresql://venzory:venzory@localhost:5432/venzory_test"
    
    # Run migrations (production-style)
    npm run db:migrate:deploy
@@ -191,7 +191,7 @@ Integration tests use a **real PostgreSQL database** and are kept separate from 
 
 ```bash
 # Set DATABASE_URL to test database
-export DATABASE_URL="postgresql://remcura:remcura@localhost:5432/remcura_test"
+export DATABASE_URL="postgresql://venzory:venzory@localhost:5432/venzory_test"
 
 # Run integration tests
 npm run test:integration
@@ -320,12 +320,12 @@ integration-tests:
     - name: Run database migrations
       run: npm run db:migrate:deploy
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/remcura_test
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/venzory_test
     
     - name: Run integration tests
       run: npm run test:integration
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/remcura_test
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/venzory_test
 ```
 
 ## FAQ
@@ -339,7 +339,7 @@ A: Integration tests require a PostgreSQL database setup and take longer to run.
 A: Yes, run them sequentially:
 ```bash
 npm run test:unit
-DATABASE_URL="postgresql://remcura:remcura@localhost:5432/remcura_test" npm run test:integration
+DATABASE_URL="postgresql://venzory:venzory@localhost:5432/venzory_test" npm run test:integration
 ```
 
 **Q: Do integration tests run in CI automatically?**

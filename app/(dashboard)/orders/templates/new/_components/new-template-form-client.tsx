@@ -26,7 +26,7 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedItems, setSelectedItems] = useState<
-    { itemId: string; defaultQuantity: number; supplierId: string | null }[]
+    { itemId: string; defaultQuantity: number; practiceSupplierId: string | null }[]
   >([]);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,7 +42,7 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
 
     setSelectedItems([
       ...selectedItems,
-      { itemId, defaultQuantity: 1, supplierId: defaultPracticeSupplierId },
+      { itemId, defaultQuantity: 1, practiceSupplierId: defaultPracticeSupplierId },
     ]);
   };
 
@@ -56,9 +56,9 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
     );
   };
 
-  const handleUpdateSupplier = (itemId: string, supplierId: string | null) => {
+  const handleUpdateSupplier = (itemId: string, practiceSupplierId: string | null) => {
     setSelectedItems(
-      selectedItems.map((i) => (i.itemId === itemId ? { ...i, supplierId } : i))
+      selectedItems.map((i) => (i.itemId === itemId ? { ...i, practiceSupplierId } : i))
     );
   };
 
@@ -220,7 +220,7 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
                         </td>
                         <td className="px-4 py-3">
                           <select
-                            value={selectedItem.supplierId || ''}
+                            value={selectedItem.practiceSupplierId || ''}
                             onChange={(e) =>
                               handleUpdateSupplier(
                                 selectedItem.itemId,
@@ -311,4 +311,3 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
     </div>
   );
 }
-

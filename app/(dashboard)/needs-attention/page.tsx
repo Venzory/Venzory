@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/data-table';
 
 export const metadata: Metadata = {
-  title: 'Needs Attention | Remcura',
+  title: 'Needs Attention | Venzory',
   description: 'Operational items requiring attention',
 };
 

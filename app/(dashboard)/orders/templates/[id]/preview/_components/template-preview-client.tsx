@@ -97,68 +97,68 @@ export function TemplatePreviewClient({
     Map<string, OrderItem[]>
   >(groupedBySupplier);
 
-  const handleUpdateQuantity = (supplierId: string, itemId: string, quantity: number) => {
+  const handleUpdateQuantity = (practiceSupplierId: string, itemId: string, quantity: number) => {
     setSupplierGroups((prev) => {
       const newGroups = new Map(prev);
-      const items = newGroups.get(supplierId);
+      const items = newGroups.get(practiceSupplierId);
       if (items) {
         const updatedItems = items.map((item) =>
           item.itemId === itemId ? { ...item, quantity } : item
         );
-        newGroups.set(supplierId, updatedItems);
+        newGroups.set(practiceSupplierId, updatedItems);
       }
       return newGroups;
     });
   };
 
-  const handleUpdatePrice = (supplierId: string, itemId: string, unitPrice: number) => {
+  const handleUpdatePrice = (practiceSupplierId: string, itemId: string, unitPrice: number) => {
     setSupplierGroups((prev) => {
       const newGroups = new Map(prev);
-      const items = newGroups.get(supplierId);
+      const items = newGroups.get(practiceSupplierId);
       if (items) {
         const updatedItems = items.map((item) =>
           item.itemId === itemId ? { ...item, unitPrice } : item
         );
-        newGroups.set(supplierId, updatedItems);
+        newGroups.set(practiceSupplierId, updatedItems);
       }
       return newGroups;
     });
   };
 
-  const handleRemoveItem = (supplierId: string, itemId: string) => {
+  const handleRemoveItem = (practiceSupplierId: string, itemId: string) => {
     setSupplierGroups((prev) => {
       const newGroups = new Map(prev);
-      const items = newGroups.get(supplierId);
+      const items = newGroups.get(practiceSupplierId);
       if (items) {
         const updatedItems = items.filter((item) => item.itemId !== itemId);
         if (updatedItems.length === 0) {
-          newGroups.delete(supplierId);
+          newGroups.delete(practiceSupplierId);
         } else {
-          newGroups.set(supplierId, updatedItems);
+          newGroups.set(practiceSupplierId, updatedItems);
         }
       }
       return newGroups;
     });
   };
 
-  const handleAddItem = (supplierId: string, itemId: string) => {
+  const handleAddItem = (practiceSupplierId: string, itemId: string) => {
     const item = allItems.find((i) => i.id === itemId);
     if (!item) return;
 
     // Check if item already exists in this supplier group
-    const existingItems = supplierGroups.get(supplierId) || [];
+    const existingItems = supplierGroups.get(practiceSupplierId) || [];
     if (existingItems.some((i) => i.itemId === itemId)) {
       return; // Already added
     }
 
     // Get unit price from supplier items
-    const supplierItem = item.supplierItems.find((si) => si.practiceSupplierId === supplierId);
+    const supplierItem = item.supplierItems.find((si) => si.practiceSupplierId === practiceSupplierId);
     const unitPrice = decimalToNumber(supplierItem?.unitPrice);
 
     setSupplierGroups((prev) => {
       const newGroups = new Map(prev);
-      const items = newGroups.get(supplierId) || [];
-      newGroups.set(supplierId, [
+      const items = newGroups.get(practiceSupplierId) || [];
+      newGroups.set(practiceSupplierId, [
         ...items,
         { itemId, quantity: 1, unitPrice },
       ]);
@@ -275,8 +275,8 @@ export function TemplatePreviewClient({
         </div>
       ) : (
         <>
-          {Array.from(supplierGroups.entries()).map(([supplierId, items]) => {
-            const supplier = allSuppliers.find((s) => s.id === supplierId);
+          {Array.from(supplierGroups.entries()).map(([practiceSupplierId, items]) => {
+            const supplier = allSuppliers.find((s) => s.id === practiceSupplierId);
             if (!supplier) return null;
 
             const total = items.reduce((sum, item) => {
@@ -285,7 +285,7 @@ export function TemplatePreviewClient({
 
             return (
               <div
-                key={supplierId}
+                key={practiceSupplierId}
                 className="rounded-xl border border-slate-200 bg-white overflow-hidden dark:border-slate-800 dark:bg-slate-900/60"
               >
                 <div className="border-b border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
@@ -340,7 +340,7 @@ export function TemplatePreviewClient({
                                 value={orderItem.quantity}
                                 onChange={(e) =>
                                   handleUpdateQuantity(
-                                    supplierId,
+                                    practiceSupplierId,
                                     orderItem.itemId,
                                     parseInt(e.target.value) || 1
                                   )
@@ -361,7 +361,7 @@ export function TemplatePreviewClient({
                                   value={orderItem.unitPrice || 0}
                                   onChange={(e) =>
                                     handleUpdatePrice(
-                                      supplierId,
+                                      practiceSupplierId,
                                       orderItem.itemId,
                                       parseFloat(e.target.value) || 0
                                     )
@@ -376,7 +376,7 @@ export function TemplatePreviewClient({
                             <td className="px-4 py-3 text-right">
                               <button
                                 type="button"
-                                onClick={() => handleRemoveItem(supplierId, orderItem.itemId)}
+                                onClick={() => handleRemoveItem(practiceSupplierId, orderItem.itemId)}
                                 className="text-sm text-rose-600 transition hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
                               >
                                 Remove
@@ -410,7 +410,7 @@ export function TemplatePreviewClient({
                       value=""
                       onChange={(e) => {
                         if (e.target.value) {
-                          handleAddItem(supplierId, e.target.value);
+                          handleAddItem(practiceSupplierId, e.target.value);
                           e.target.value = '';
                         }
                       }}
@@ -421,8 +421,8 @@ export function TemplatePreviewClient({
                         .filter(
                           (item) =>
                             // Match items by supplier items OR default supplier
-                            (item.supplierItems.some((si) => si.practiceSupplierId === supplierId) ||
-                              item.defaultPracticeSupplierId === supplierId) &&
+                            (item.supplierItems.some((si) => si.practiceSupplierId === practiceSupplierId) ||
+                              item.defaultPracticeSupplierId === practiceSupplierId) &&
                             !items.some((oi) => oi.itemId === item.id)
                         )
                         .map((item) => (
@@ -460,4 +460,3 @@ export function TemplatePreviewClient({
     </div>
   );
 }
-

@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 
 export const metadata = {
-  title: 'Receiving - Remcura',
+  title: 'Receiving - Venzory',
 };
 
 export default async function ReceivingPage() {

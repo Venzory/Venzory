@@ -4,10 +4,14 @@ import logger from '@/lib/logger';
 // Dynamic import for ioredis to avoid Edge Runtime issues
 let Redis: typeof import('ioredis').default | null = null;
 
+// Check if we are in the Edge Runtime
+const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
+
 // Only import ioredis in Node.js runtime (not Edge)
-if (typeof process !== 'undefined' && process.versions?.node) {
+if (!isEdgeRuntime && typeof process !== 'undefined' && process.versions?.node) {
   try {
     // Dynamic import to avoid Edge Runtime bundling issues
+    // eslint-disable-next-line
     Redis = require('ioredis');
   } catch (error) {
     logger.warn({
@@ -248,7 +252,7 @@ export function createRateLimiter(config: RateLimitConfig): RateLimiter {
   const isProduction = env.NODE_ENV === 'production';
 
   // In production, enforce Redis availability
-  if (isProduction) {
+  if (isProduction && !isEdgeRuntime) {
     if (!redisUrl || !Redis) {
       throw new Error('Redis is required for rate limiting in production');
     }
@@ -275,7 +279,7 @@ export function createRateLimiter(config: RateLimitConfig): RateLimiter {
   }
 
   // Use Redis if available in non-production environments
-  if (redisUrl && Redis) {
+  if (!isEdgeRuntime && redisUrl && Redis) {
     try {
       logger.info({
         module: 'rate-limit',
@@ -294,6 +298,15 @@ export function createRateLimiter(config: RateLimitConfig): RateLimiter {
       return new InMemoryRateLimiter(config);
     }
   } else {
+    if (isEdgeRuntime && redisUrl) {
+       logger.warn({
+        module: 'rate-limit',
+        operation: 'createRateLimiter',
+        rateLimitId: config.id,
+        type: 'in-memory',
+      }, `Edge Runtime detected: Redis rate limiter disabled, falling back to in-memory. For distributed rate limiting in Edge, use a compatible adapter (e.g., @upstash/redis).`);
+    }
+
     logger.info({
       module: 'rate-limit',
       operation: 'createRateLimiter',

@@ -91,6 +91,37 @@ export function createMockPrismaClient() {
       update: vi.fn(),
       delete: vi.fn(),
     },
+
+    // Added missing supplier mocks
+    practiceSupplier: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      upsert: vi.fn(),
+    },
+
+    globalSupplier: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      upsert: vi.fn(),
+    },
+    
+    supplier: { // Legacy/Alias if needed, but better to remove usage
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      upsert: vi.fn(),
+    },
     
     stockAdjustment: {
       findUnique: vi.fn(),

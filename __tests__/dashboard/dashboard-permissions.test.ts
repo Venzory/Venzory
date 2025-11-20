@@ -18,6 +18,8 @@ describe('Dashboard Permissions', () => {
             id: practiceId,
             name: 'Test Practice',
             slug: 'test-practice',
+            onboardingCompletedAt: null,
+            onboardingSkippedAt: null,
           },
         },
       ];
@@ -42,6 +44,8 @@ describe('Dashboard Permissions', () => {
             id: practiceId,
             name: 'Test Practice',
             slug: 'test-practice',
+            onboardingCompletedAt: null,
+            onboardingSkippedAt: null,
           },
         },
       ];
@@ -66,6 +70,8 @@ describe('Dashboard Permissions', () => {
             id: practiceId,
             name: 'Test Practice',
             slug: 'test-practice',
+            onboardingCompletedAt: null,
+            onboardingSkippedAt: null,
           },
         },
       ];
@@ -90,6 +96,8 @@ describe('Dashboard Permissions', () => {
             id: 'different-practice-456',
             name: 'Other Practice',
             slug: 'other-practice',
+            onboardingCompletedAt: null,
+            onboardingSkippedAt: null,
           },
         },
       ];
@@ -124,7 +132,7 @@ describe('Dashboard Permissions', () => {
           practiceId,
           role: PracticeRole.ADMIN,
           status: MembershipStatus.ACTIVE,
-          practice: { id: practiceId, name: 'Test', slug: 'test' },
+          practice: { id: practiceId, name: 'Test', slug: 'test', onboardingCompletedAt: null, onboardingSkippedAt: null },
         },
       ];
       const staffMemberships: SessionPractice[] = [
@@ -133,7 +141,7 @@ describe('Dashboard Permissions', () => {
           practiceId,
           role: PracticeRole.STAFF,
           status: MembershipStatus.ACTIVE,
-          practice: { id: practiceId, name: 'Test', slug: 'test' },
+          practice: { id: practiceId, name: 'Test', slug: 'test', onboardingCompletedAt: null, onboardingSkippedAt: null },
         },
       ];
 
@@ -152,7 +160,7 @@ describe('Dashboard Permissions', () => {
           practiceId,
           role: PracticeRole.VIEWER,
           status: MembershipStatus.ACTIVE,
-          practice: { id: practiceId, name: 'Test', slug: 'test' },
+          practice: { id: practiceId, name: 'Test', slug: 'test', onboardingCompletedAt: null, onboardingSkippedAt: null },
         },
       ];
 
@@ -168,7 +176,7 @@ describe('Dashboard Permissions', () => {
           practiceId,
           role: PracticeRole.ADMIN,
           status: MembershipStatus.ACTIVE,
-          practice: { id: practiceId, name: 'Test', slug: 'test' },
+          practice: { id: practiceId, name: 'Test', slug: 'test', onboardingCompletedAt: null, onboardingSkippedAt: null },
         },
       ];
       const staffMemberships: SessionPractice[] = [
@@ -177,7 +185,7 @@ describe('Dashboard Permissions', () => {
           practiceId,
           role: PracticeRole.STAFF,
           status: MembershipStatus.ACTIVE,
-          practice: { id: practiceId, name: 'Test', slug: 'test' },
+          practice: { id: practiceId, name: 'Test', slug: 'test', onboardingCompletedAt: null, onboardingSkippedAt: null },
         },
       ];
 
@@ -196,7 +204,7 @@ describe('Dashboard Permissions', () => {
           practiceId,
           role: PracticeRole.VIEWER,
           status: MembershipStatus.ACTIVE,
-          practice: { id: practiceId, name: 'Test', slug: 'test' },
+          practice: { id: practiceId, name: 'Test', slug: 'test', onboardingCompletedAt: null, onboardingSkippedAt: null },
         },
       ];
 

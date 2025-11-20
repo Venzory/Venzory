@@ -1,7 +1,7 @@
 # Documentation Inventory
 
 **Generated:** November 18, 2025  
-**Purpose:** Comprehensive inventory of all Markdown documentation in the RemcuraV2 repository  
+**Purpose:** Comprehensive inventory of all Markdown documentation in the Venzory repository  
 **Total Documents:** 62
 
 ---
@@ -45,27 +45,27 @@
 
 | path | title | topic | seems-current? | comments | suggested action |
 |------|-------|-------|----------------|----------|------------------|
-| `MVP_FLOW_STATUS_REPORT.md` | Remcura V2 MVP Flow Status Report | product | yes | Generated Nov 18, 2025. Describes all 7 core flows (Items/Suppliers, Orders, Receiving, Inventory, Locations, Onboarding, Security). Matches current routes in app/(dashboard). | keep |
+| `MVP_FLOW_STATUS_REPORT.md` | Venzory MVP Flow Status Report | product | yes | Generated Nov 18, 2025. Describes all 7 core flows (Items/Suppliers, Orders, Receiving, Inventory, Locations, Onboarding, Security). Matches current routes in app/(dashboard). | keep |
 | `docs/TYPE_SAFETY_IMPROVEMENTS.md` | Type Safety Improvements - Prisma and Domain Types | architecture | yes | Completed Nov 18, 2025. Documents type safety changes in lib/prisma-transforms.ts and domain models. Code references match current implementation. | keep |
 | `MULTI_SUPPLIER_TEMPLATES_IMPLEMENTATION.md` | Multi-Supplier Order Templates MVP | orders | yes | Completed Nov 17, 2025. Documents multi-supplier template feature with quick-summary page. Routes and components exist in app/(dashboard)/orders/. | keep |
 | `QUICK_REORDER_IMPLEMENTATION_SUMMARY.md` | Quick Reorder Implementation Summary | orders | yes | Documents Quick Reorder feature with template-based ordering. Service methods (createOrdersFromTemplateWithDefaults) and UI components verified in codebase. | keep |
 | `LOCATIONS_HARDENING_SUMMARY.md` | Locations Module Hardening | inventory | yes | Documents location deletion safeguards, hierarchy validation. LocationRepository methods and app/(dashboard)/locations/ exist. | keep |
 | `MY_ITEMS_HARDENING_SUMMARY.md` | My Items / Practice Catalog Hardening | inventory | yes | Documents fixes to supplier filter, low-stock filtering, pagination. app/(dashboard)/my-items/ page exists with described components. | keep |
 | `RECEIVING_HARDENING_SUMMARY.md` | Receiving Module Hardening | inventory | yes | Completed Nov 17, 2025. Documents null-safety and validation improvements in receiving module. Routes and components in app/(dashboard)/receiving/ match. | keep |
-| `docs/mvp-audit-final.md` | Remcura V2 MVP Functional Audit - Final Report | operations | yes | Nov 17, 2025 audit. Documents CSP fix and testing of core modules. References current routes and functionality. | keep |
-| `docs/mvp-audit.md` | Remcura V2 MVP Functional Audit | operations | maybe | Nov 17, 2025 audit identifying CSP blocker. Superseded by mvp-audit-final.md but provides historical context. | merge into new roadmap |
+| `docs/mvp-audit-final.md` | Venzory MVP Functional Audit - Final Report | operations | yes | Nov 17, 2025 audit. Documents CSP fix and testing of core modules. References current routes and functionality. | keep |
+| `docs/mvp-audit.md` | Venzory MVP Functional Audit | operations | maybe | Nov 17, 2025 audit identifying CSP blocker. Superseded by mvp-audit-final.md but provides historical context. | merge into new roadmap |
 | `TESTING.md` | Testing Guide | process | yes | Documents Vitest setup, unit vs integration tests, test structure. References current test directories and commands. | keep |
 | `prisma/migrations/20251116000000_formalize_remaining_drift/README.md` | Migration: Formalize Remaining Drift | infra | yes | Nov 16, 2025 migration. Documents LocationInventory.createdAt and performance indexes. Migration file exists. | keep |
-| `docs/OPS_RUNBOOK.md` | Operations Runbook - Remcura V2 | operations | yes | Updated Nov 16, 2025. Covers DB verification, migrations, drift detection, rollback procedures. Commands and procedures are current. | keep |
+| `docs/OPS_RUNBOOK.md` | Operations Runbook - Venzory | operations | yes | Updated Nov 16, 2025. Covers DB verification, migrations, drift detection, rollback procedures. Commands and procedures are current. | keep |
 | `DOMAIN_RULES.md` | Domain Business Rules & Invariants | architecture | yes | Updated Nov 11, 2025 (v2.0). Comprehensive business rules across 5 domains. References current schema and service layer. 85% enforcement documented. | keep |
 | `docs/MIGRATION_STATUS.md` | Migration Status and Notes | infra | yes | Documents all applied migrations through Nov 16, 2025. Migration list matches prisma/migrations/ directory. All drift resolved. | keep |
 | `docs/migrations/database-constraint-hardening.md` | Database Constraint Hardening Migration Guide | infra | yes | Nov 11, 2025 migration guide. Documents onDelete policies, CHECK constraints, unique constraints. Migrations 7, 9, 10 exist. | keep |
 | `STYLE_GUIDE_IMPLEMENTATION.md` | Style Guide Implementation Summary | architecture | yes | Nov 16, 2025. Documents /style-guide route, design tokens, components. StyleSection, TokenCard components exist in components/style-guide/. | keep |
-| `docs/README.md` | RemcuraV2 Documentation | misc | yes | Updated Nov 11, 2025. Index of all docs with links. References current architecture, migrations, features. Serves as docs homepage. | keep |
-| `docs/STYLE_GUIDE.md` | Remcura Style Guide | architecture | yes | Documents design tokens, typography, components accessible at /style-guide. Matches implementation. | keep |
+| `docs/README.md` | Venzory Documentation | misc | yes | Updated Nov 11, 2025. Index of all docs with links. References current architecture, migrations, features. Serves as docs homepage. | keep |
+| `docs/STYLE_GUIDE.md` | Venzory Style Guide | architecture | yes | Documents design tokens, typography, components accessible at /style-guide. Matches implementation. | keep |
 | `RECEIVING_SMOKE_TEST.md` | Receiving Module - Manual Smoke Test Checklist | operations | yes | Manual test checklist for receiving flow. Steps match current UI in app/(dashboard)/receiving/. | keep |
 | `P1_VERIFICATION_REPORT.md` | P1 Verification Sweep Report | security | yes | Nov 13, 2025. Security audit covering NextAuth, CSRF, RBAC, CSP, tenant isolation, transactions, constraints. All verified as PASS. | keep |
-| `README.md` | Remcura V2 | misc | yes | Main project README. Documents stack, setup, auth, RBAC, security headers, CSP, CSRF, rate limiting, error handling. All features current. | keep |
+| `README.md` | Venzory | misc | yes | Main project README. Documents stack, setup, auth, RBAC, security headers, CSP, CSRF, rate limiting, error handling. All features current. | keep |
 | `UNIQUE_CONSTRAINTS_IMPLEMENTATION_SUMMARY.md` | Unique Constraints Implementation Summary | infra | yes | Nov 13, 2025. Documents unique constraints on Item (name, SKU), Location (code). Migration 20251113180000 exists. | keep |
 | `TENANT_ISOLATION_FIXES_SUMMARY.md` | Tenant Isolation Fixes | security | yes | Documents practiceId validation fixes in 13 repository methods. Repository methods verified in src/repositories/. | keep |
 | `TRANSACTION_BOUNDARIES_SUMMARY.md` | Transaction Boundaries Implementation Summary | architecture | yes | Documents transaction usage in ReceivingService, InventoryService, OrderService. withTransaction helper exists in src/repositories/base/. | keep |
@@ -84,7 +84,7 @@
 | `audit-analysis/03-service-validators-analysis.md` | Service Layer & Validator Analysis | architecture | yes | Nov 11, 2025. Analysis of service layer enforcement and domain validators. References current service methods in src/services/. | keep |
 | `audit-analysis/04-comprehensive-invariants-matrix.md` | Comprehensive Business Invariants & Enforcement Matrix | architecture | yes | Nov 11, 2025. Matrix of all 130 invariants with enforcement levels (DB, Prisma, Validator, Service). Comprehensive reference. | keep |
 | `TECH_HEALTH.md` | Technical Health Report | operations | yes | Nov 11, 2025. Pre-integration health check. Build passing, lint passing, 91 TS errors fixed. All issues resolved. | keep |
-| `docs/ARCHITECTURE.md` | Remcura V2 Architecture Documentation | architecture | yes | Documents Go-Ready layered architecture (API → Service → Repository → DB). Directory structure and patterns match current codebase. | keep |
+| `docs/ARCHITECTURE.md` | Venzory Architecture Documentation | architecture | yes | Documents Go-Ready layered architecture (API → Service → Repository → DB). Directory structure and patterns match current codebase. | keep |
 | `docs/IMPLEMENTATION_SUMMARY.md` | Implementation Summary: Go-Ready Architecture Refactor | architecture | yes | Documents Phase 1-5 of architecture refactor. Services and repositories in src/ match described structure. | keep |
 | `docs/MIGRATION_GUIDE.md` | Migration Guide: From Old to New Architecture | architecture | yes | Guide for migrating from direct Prisma to service/repository layer. Patterns match current codebase. | keep |
 | `docs/PARTIAL_RECEIVING_FEATURE.md` | Partial Receiving Feature | inventory | yes | Documents partial receiving with multiple shipments. GoodsReceipt model and receiving UI support this flow. | keep |
@@ -92,7 +92,7 @@
 | `docs/GLOBAL_SUPPLIER_MIGRATION.md` | Global Supplier Architecture - Phase 1 Migration | suppliers | yes | Nov 11, 2025. Documents GlobalSupplier and PracticeSupplier tables. Migration 20251111112724 exists. Current supplier architecture. | keep |
 | `docs/PHASE_2_SUPPLIER_INTEGRATION.md` | Phase 2: Supplier Integration Migration | suppliers | yes | Nov 11, 2025. Documents practiceSupplierId in Order, SupplierItem, Item tables. Migration 20251111122948 exists. Dual-supplier pattern active. | keep |
 | `docs/PHASE_5_COMPLETION_REPORT.md` | Phase 5 Integration Completion Report | architecture | yes | Nov 9, 2025. Documents completion of API routes and page migrations to service layer. NotificationService, AuthService exist. | keep |
-| `docs/HEALTH_CHECK_REPORT.md` | Health Check Report - Remcura V2 | operations | yes | Nov 9, 2025. Comprehensive health check after Go-ready architecture. 91 TS errors fixed, build passing, Prisma usage compliant. | keep |
+| `docs/HEALTH_CHECK_REPORT.md` | Health Check Report - Venzory | operations | yes | Nov 9, 2025. Comprehensive health check after Go-ready architecture. 91 TS errors fixed, build passing, Prisma usage compliant. | keep |
 | `docs/i18n-reset-summary.md` | i18n Reset Summary | process | yes | Nov 5, 2025. Documents removal of broken i18n setup, restoration to single-language app. Current app has no [locale] routing. | keep |
 | `docs/archive/CORE_FLOWS_IMPROVEMENTS_SUMMARY.md` | Core Flow Usability Improvements | product | no | Nov 11, 2025. Documents order actions, supplier catalog improvements. Archived, likely superseded by newer flow docs. | archive as legacy |
 | `docs/archive/SEED_DATA_ENHANCEMENT.md` | Seed Data Enhancement - Supplier Architecture Demo | infra | maybe | Nov 11, 2025. Documents seed data for GlobalSupplier demo. Seed file may have evolved since. Historical context for supplier architecture. | archive as legacy |

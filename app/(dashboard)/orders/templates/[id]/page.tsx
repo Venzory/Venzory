@@ -185,7 +185,7 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
                         <EditTemplateItemForm
                           templateItemId={templateItem.id}
                           currentQuantity={templateItem.defaultQuantity}
-                          currentSupplierId={templateItem.supplierId}
+                          currentPracticeSupplierId={templateItem.practiceSupplierId}
                           suppliers={suppliers}
                           itemUnit={templateItem.item.unit}
                           mode="quantity"
@@ -204,14 +204,16 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
                         <EditTemplateItemForm
                           templateItemId={templateItem.id}
                           currentQuantity={templateItem.defaultQuantity}
-                          currentSupplierId={templateItem.supplierId}
+                          currentPracticeSupplierId={templateItem.practiceSupplierId}
                           suppliers={suppliers}
                           itemUnit={templateItem.item.unit}
                           mode="supplier"
                         />
                       ) : (
-                        templateItem.supplier ? (
-                          <span className="text-slate-700 dark:text-slate-300">{templateItem.supplier.name}</span>
+                        templateItem.practiceSupplier ? (
+                          <span className="text-slate-700 dark:text-slate-300">
+                            {templateItem.practiceSupplier.customLabel || templateItem.practiceSupplier.globalSupplier?.name || 'Unknown Supplier'}
+                          </span>
                         ) : (
                           <span className="text-slate-500 dark:text-slate-500">No supplier</span>
                         )

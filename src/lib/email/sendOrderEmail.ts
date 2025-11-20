@@ -40,7 +40,7 @@ export async function sendOrderEmail(
     const subject = `New Order from ${practiceName}${orderReference ? ` - ${orderReference}` : ''}`;
 
     await resend.emails.send({
-      from: 'Remcura <noreply@remcura.com>',
+      from: 'Venzory <noreply@venzory.com>',
       to: supplierEmail,
       subject,
       html,

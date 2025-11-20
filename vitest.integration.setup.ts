@@ -30,8 +30,8 @@ if (!process.env.DATABASE_URL) {
   console.error('');
   console.error('Setup instructions:');
   console.error('  1. Start Postgres: docker compose up -d postgres');
-  console.error('  2. Create test DB: docker exec -it remcura-postgres createdb -U remcura remcura_test');
-  console.error('  3. Set DATABASE_URL: export DATABASE_URL="postgresql://remcura:remcura@localhost:5432/remcura_test"');
+  console.error('  2. Create test DB: docker exec -it venzory-postgres createdb -U venzory venzory_test');
+  console.error('  3. Set DATABASE_URL: export DATABASE_URL="postgresql://venzory:venzory@localhost:5432/venzory_test"');
   console.error('  4. Run migrations: npm run db:migrate:deploy');
   console.error('  5. Run tests: npm run test:integration');
   console.error('');
@@ -74,6 +74,6 @@ if (!process.env.NEXT_PUBLIC_APP_URL) {
  */
 console.log('🔧 Integration test environment:');
 console.log(`   NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`   DATABASE_URL: ${dbUrl.split('@')[1] || 'localhost:5432/remcura_test'}`);
+console.log(`   DATABASE_URL: ${dbUrl.split('@')[1] || 'localhost:5432/venzory_test'}`);
 console.log('');
 

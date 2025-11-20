@@ -130,7 +130,7 @@ export function renderOrderEmailHtml(data: OrderEmailData): string {
           
           <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
             <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-              © ${new Date().getFullYear()} Remcura. All rights reserved.
+              © ${new Date().getFullYear()} Venzory. All rights reserved.
             </p>
           </div>
         </div>

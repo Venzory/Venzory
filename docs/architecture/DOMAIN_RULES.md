@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This document defines the business invariants and data integrity rules for the Remcura V2 inventory management system. It identifies which invariants are enforced at the database level, service layer, or not at all — critical for maintaining data consistency before Magento integration.
+This document defines the business invariants and data integrity rules for the Venzory inventory management system. It identifies which invariants are enforced at the database level, service layer, or not at all — critical for maintaining data consistency before Magento integration.
 
 ### Key Findings (Updated Post-Implementation)
 - **130 business invariants** identified across 5 domains

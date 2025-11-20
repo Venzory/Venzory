@@ -1,6 +1,6 @@
 -- Pre-Migration Data Validation Queries
 -- Run these queries to identify existing data that would violate new constraints
--- Database Constraint Hardening - RemcuraV2
+-- Database Constraint Hardening - Venzory
 -- Generated: 2025-11-11
 
 -- =============================================================================
