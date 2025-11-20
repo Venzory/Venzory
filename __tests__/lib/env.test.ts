@@ -61,7 +61,7 @@ async function importEnvWithConfig(config: Record<string, string | undefined>) {
     process.env = { ...config } as any;
     
     // Dynamic import to trigger validation
-    const envModule = await import('../../lib/env.ts');
+    const envModule = await import('../../lib/env');
     return envModule;
   } finally {
     // Restore original env
