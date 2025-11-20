@@ -482,7 +482,7 @@ export async function createOrdersFromLowStockAction(selectedItemIds: string[]) 
       skippedItems: result.skippedItems.length > 0 ? result.skippedItems : undefined,
     } as const;
   } catch (error) {
-    console.error('[createOrdersFromLowStockAction]', error);
+    logger.error({ error }, 'createOrdersFromLowStockAction failed');
     if (isDomainError(error)) {
       return { error: error.message } as const;
     }

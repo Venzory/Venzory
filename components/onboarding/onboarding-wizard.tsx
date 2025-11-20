@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 import { StepPracticeDetails } from './step-practice-details';
 import { StepFirstLocation } from './step-first-location';
@@ -49,6 +49,9 @@ export function OnboardingWizard({ initialPracticeName = '', initialEmail = '' }
     try {
       const result = await completeOnboarding();
       if (result.success) {
+        // Clear local onboarding state to prevent conflicts with dashboard tour
+        localStorage.removeItem('venzory-onboarding-state');
+        
         toast({
           title: "You're all set!",
           description: "Welcome to your dashboard.",
@@ -78,6 +81,9 @@ export function OnboardingWizard({ initialPracticeName = '', initialEmail = '' }
     try {
       const result = await skipOnboarding();
       if (result.success) {
+        // Clear local onboarding state to prevent conflicts with dashboard tour
+        localStorage.removeItem('venzory-onboarding-state');
+
         toast({
             title: "Setup skipped",
             description: "You can finish setting up later.",
@@ -126,7 +132,7 @@ export function OnboardingWizard({ initialPracticeName = '', initialEmail = '' }
       </div>
 
       {/* Global Skip Option */}
-      <div className="text-center">
+      <div className="space-y-4 text-center">
         <button 
           type="button"
           onClick={handleSkip}
@@ -135,6 +141,16 @@ export function OnboardingWizard({ initialPracticeName = '', initialEmail = '' }
         >
           {isCompleting ? 'Skipping...' : 'Skip setup for now'}
         </button>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="text-xs text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+          >
+            Wrong account? Log out
+          </button>
+        </div>
       </div>
     </div>
   );

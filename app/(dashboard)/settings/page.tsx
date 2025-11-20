@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { PracticeRole } from '@prisma/client';
 
 import { auth } from '@/auth';
+import logger from '@/lib/logger';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getSettingsService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
@@ -75,7 +76,7 @@ export default async function SettingsPage() {
     try {
       practice = await getSettingsService().getPracticeSettings(ctx);
     } catch (err) {
-      console.error('[Settings] Failed to fetch practice settings:', err);
+      logger.error({ error: err }, '[Settings] Failed to fetch practice settings');
       fetchError = 'Failed to load practice settings';
     }
 
@@ -83,7 +84,7 @@ export default async function SettingsPage() {
       const rawUsers = await getSettingsService().getPracticeUsers(ctx);
       users = Array.isArray(rawUsers) ? rawUsers : [];
     } catch (err) {
-      console.error('[Settings] Failed to fetch practice users:', err);
+      logger.error({ error: err }, '[Settings] Failed to fetch practice users');
       users = [];
     }
 
@@ -91,11 +92,11 @@ export default async function SettingsPage() {
       const rawInvites = await getSettingsService().getPendingInvites(ctx);
       invites = Array.isArray(rawInvites) ? rawInvites : [];
     } catch (err) {
-      console.error('[Settings] Failed to fetch pending invites:', err);
+      logger.error({ error: err }, '[Settings] Failed to fetch pending invites');
       invites = [];
     }
   } catch (err) {
-    console.error('[Settings] Failed to build request context:', err);
+    logger.error({ error: err }, '[Settings] Failed to build request context');
     fetchError = 'Unable to load settings';
   }
 

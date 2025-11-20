@@ -150,7 +150,7 @@ export async function updateOrderItemAction(formData: FormData) {
     });
 
     if (!parsed.success) {
-      console.error('Validation error:', parsed.error.issues[0]?.message);
+      logger.error({ error: parsed.error }, 'Validation error');
       throw new Error(parsed.error.issues[0]?.message || 'Invalid data');
     }
 
@@ -164,7 +164,7 @@ export async function updateOrderItemAction(formData: FormData) {
     });
 
     if (isDomainError(result)) {
-      console.error('Service error:', result.message);
+      logger.error({ error: result }, 'Service error');
       throw new Error(result.message);
     }
 
@@ -172,7 +172,7 @@ export async function updateOrderItemAction(formData: FormData) {
     revalidatePath('/orders');
     revalidatePath('/dashboard');
   } catch (error: unknown) {
-    console.error('Failed to update order item:', error);
+    logger.error({ error }, 'Failed to update order item');
     throw error;
   }
 }
@@ -215,7 +215,7 @@ export async function addOrderItemAction(_prevState: FormState, formData: FormDa
     revalidatePath('/dashboard');
     return { success: 'Item added to order' };
   } catch (error: unknown) {
-    console.error('Failed to add order item:', error);
+    logger.error({ error }, 'Failed to add order item');
     const message = error instanceof Error ? error.message : 'Failed to add item';
     return { error: message };
   }
@@ -242,7 +242,7 @@ export async function removeOrderItemAction(orderId: string, itemId: string) {
     const result = await orderService.removeOrderItem(ctx, orderId, itemId);
 
     if (isDomainError(result)) {
-      console.error('Service error:', result.message);
+      logger.error({ error: result }, 'Service error');
       throw new Error(result.message);
     }
 
@@ -250,7 +250,7 @@ export async function removeOrderItemAction(orderId: string, itemId: string) {
     revalidatePath('/orders');
     revalidatePath('/dashboard');
   } catch (error: unknown) {
-    console.error('Failed to remove order item:', error);
+    logger.error({ error }, 'Failed to remove order item');
     throw error;
   }
 }
@@ -271,7 +271,7 @@ export async function updateOrderAction(formData: FormData) {
     });
 
     if (!parsed.success) {
-      console.error('Validation error:', parsed.error.issues[0]?.message);
+      logger.error({ error: parsed.error }, 'Validation error');
       throw new Error(parsed.error.issues[0]?.message || 'Invalid data');
     }
 
@@ -284,14 +284,14 @@ export async function updateOrderAction(formData: FormData) {
     });
 
     if (isDomainError(result)) {
-      console.error('Service error:', result.message);
+      logger.error({ error: result }, 'Service error');
       throw new Error(result.message);
     }
 
     revalidatePath(`/orders/${orderId}`);
     revalidatePath('/orders');
   } catch (error: unknown) {
-    console.error('Failed to update order:', error);
+    logger.error({ error }, 'Failed to update order');
     throw error;
   }
 }
@@ -309,7 +309,7 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     const result = await orderService.deleteOrder(ctx, orderId);
 
     if (isDomainError(result)) {
-      console.error('Service error:', result.message);
+      logger.error({ error: result }, 'Service error');
       return { success: false, error: result.message };
     }
 
@@ -317,7 +317,7 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     revalidatePath('/dashboard');
     return { success: true };
   } catch (error: unknown) {
-    console.error('Failed to delete order:', error);
+    logger.error({ error }, 'Failed to delete order');
     const message = error instanceof Error ? error.message : 'Failed to delete order';
     return { success: false, error: message };
   }
@@ -338,7 +338,7 @@ export async function sendOrderAction(orderId: string): Promise<{ success: boole
     const result = await orderService.sendOrder(ctx, orderId);
 
     if (isDomainError(result)) {
-      console.error('Service error:', result.message);
+      logger.error({ error: result }, 'Service error');
       return { success: false, error: result.message };
     }
 
@@ -353,7 +353,7 @@ export async function sendOrderAction(orderId: string): Promise<{ success: boole
         orderId: orderId,
       });
     } catch (notificationError) {
-      console.error('Failed to create notification:', notificationError);
+      logger.error({ error: notificationError }, 'Failed to create notification');
       // Continue even if notification fails
     }
 
@@ -362,7 +362,7 @@ export async function sendOrderAction(orderId: string): Promise<{ success: boole
     revalidatePath('/dashboard');
     return { success: true };
   } catch (error: unknown) {
-    console.error('Failed to send order:', error);
+    logger.error({ error }, 'Failed to send order');
     const message = error instanceof Error ? error.message : 'Failed to send order';
     return { success: false, error: message };
   }

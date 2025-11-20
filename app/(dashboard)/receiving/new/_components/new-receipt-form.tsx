@@ -23,11 +23,15 @@ interface NewReceiptFormProps {
   locations: { id: string; name: string }[];
   suppliers: { id: string; name: string }[];
   order?: OrderContext;
+  isAdmin?: boolean;
 }
 
-export function NewReceiptForm({ locations, suppliers, order }: NewReceiptFormProps) {
+export function NewReceiptForm({ locations, suppliers, order, isAdmin = false }: NewReceiptFormProps) {
   const router = useRouter();
   const [state, formAction] = useActionState(createGoodsReceiptAction, null);
+  
+  // If not linked to an order, we are in ad-hoc mode (admin only)
+  const isAdHoc = !order;
 
   useEffect(() => {
     if (state && 'receiptId' in state && state.receiptId) {
@@ -91,7 +95,7 @@ export function NewReceiptForm({ locations, suppliers, order }: NewReceiptFormPr
       {/* Supplier (Optional or pre-filled from order) */}
       <div className="space-y-2">
         <label htmlFor="supplierId" className="block text-sm font-medium text-slate-900 dark:text-slate-200">
-          Supplier {order ? '' : '(Optional)'}
+          Supplier {isAdHoc ? '*' : (order ? '' : '(Optional)')}
         </label>
         {order && order.supplierId && (
           <input type="hidden" name="supplierId" value={order.supplierId} />
@@ -100,11 +104,12 @@ export function NewReceiptForm({ locations, suppliers, order }: NewReceiptFormPr
           id="supplierId"
           name={order ? undefined : "supplierId"}
           defaultValue={order?.supplierId || ''}
+          required={isAdHoc}
           disabled={!!order}
           className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ minHeight: '48px' }}
         >
-          <option value="">No supplier</option>
+          <option value="">{isAdHoc ? 'Select a supplier' : 'No supplier'}</option>
           {suppliers.map((supplier) => (
             <option key={supplier.id} value={supplier.id}>
               {supplier.name}
@@ -121,15 +126,16 @@ export function NewReceiptForm({ locations, suppliers, order }: NewReceiptFormPr
       {/* Notes */}
       <div className="space-y-2">
         <label htmlFor="notes" className="block text-sm font-medium text-slate-900 dark:text-slate-200">
-          Notes (Optional)
+          {isAdHoc ? 'Reason / Notes *' : 'Notes (Optional)'}
         </label>
         <textarea
           id="notes"
           name="notes"
           rows={3}
           maxLength={512}
+          required={isAdHoc}
           defaultValue={order ? `Receiving order ${order.reference || `#${order.id.slice(0, 8)}`}` : ''}
-          placeholder="Add any notes about this receipt..."
+          placeholder={isAdHoc ? "Please provide a reason for this ad-hoc receiving..." : "Add any notes about this receipt..."}
           className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
         />
       </div>

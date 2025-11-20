@@ -26,16 +26,54 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 // Mock Next.js server module
-vi.mock('next/server', () => ({
-  NextResponse: {
-    json: vi.fn((data) => ({ 
-      json: async () => data,
-      ok: true,
-      status: 200,
-    })),
-    redirect: vi.fn((url) => ({ redirect: true, url })),
-  },
-}));
+vi.mock('next/server', () => {
+  class MockNextResponse {
+    headers: Headers;
+    ok: boolean;
+    status: number;
+    _body: any;
+
+    constructor(body?: any, init?: any) {
+      this._body = body;
+      this.headers = new Headers(init?.headers);
+      this.ok = true;
+      this.status = init?.status || 200;
+    }
+
+    async json() {
+      return this._body;
+    }
+
+    static json(body: any, init?: any) {
+      return new MockNextResponse(body, init);
+    }
+
+    static redirect(url: string) {
+      const res = new MockNextResponse(null, { status: 307 });
+      Object.defineProperty(res, 'url', { value: url });
+      return res;
+    }
+
+    static next(init?: any) {
+      return new MockNextResponse(null, init);
+    }
+  }
+
+  return {
+    NextResponse: MockNextResponse,
+    NextRequest: class {
+      headers: Headers;
+      nextUrl: URL;
+      url: string;
+      
+      constructor(input: string | URL, init?: any) {
+        this.url = input.toString();
+        this.nextUrl = new URL(this.url, 'http://localhost:3000');
+        this.headers = new Headers(init?.headers);
+      }
+    }
+  };
+});
 
 // Mock next-auth
 vi.mock('next-auth', () => ({

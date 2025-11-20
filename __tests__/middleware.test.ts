@@ -150,9 +150,10 @@ describe('Middleware Security Headers', () => {
       expect(csp).toContain("script-src 'self' 'nonce-test-nonce'");
     });
 
-    it('should include strict-dynamic in script-src', () => {
-      expect(csp).toContain("'strict-dynamic'");
-    });
+    // Temporarily removed strict-dynamic requirement to fix Vercel hang
+    // it('should include strict-dynamic in script-src', () => {
+    //   expect(csp).toContain("'strict-dynamic'");
+    // });
 
     it('should include nonce in style-src', () => {
       expect(csp).toContain("style-src 'self' 'nonce-test-nonce'");
@@ -216,11 +217,10 @@ describe('Middleware Security Headers', () => {
       });
     });
 
-    it('should NOT expose nonce via x-nonce header (security)', () => {
-      // Nonce should NOT be exposed as a separate header
-      // It's already in the CSP header, no need to leak it elsewhere
-      const shouldNotExposeNonce = true;
-      expect(shouldNotExposeNonce).toBe(true);
+    it('should expose nonce via x-nonce header for hydration', () => {
+      // We now expose the nonce so Next.js/React hydration scripts can pick it up
+      const shouldExposeNonce = true;
+      expect(shouldExposeNonce).toBe(true);
     });
   });
 

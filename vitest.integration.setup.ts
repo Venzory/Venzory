@@ -6,9 +6,16 @@ vi.mock('next/server', () => {
   return {
     NextRequest: class {},
     NextResponse: {
-      json: (body: any) => ({ body }),
-      next: () => ({}),
-      redirect: () => ({}),
+      json: (body: any, init?: any) => ({ 
+        body,
+        headers: new Headers(init?.headers),
+      }),
+      next: () => ({
+        headers: new Headers(),
+      }),
+      redirect: () => ({
+        headers: new Headers(),
+      }),
     },
   };
 });

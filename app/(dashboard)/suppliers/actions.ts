@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+import logger from '@/lib/logger';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
@@ -70,7 +71,7 @@ export async function updatePracticeSupplierAction(
 
     return { success: 'Supplier settings updated successfully.' };
   } catch (error: unknown) {
-    console.error('Failed to update practice supplier:', error);
+    logger.error({ error }, 'Failed to update practice supplier');
     
     const appError = toAppError(error);
     
@@ -117,7 +118,7 @@ export async function unlinkPracticeSupplierAction(
     revalidatePath('/inventory');
     revalidatePath('/dashboard');
   } catch (error: unknown) {
-    console.error('Failed to unlink practice supplier:', error);
+    logger.error({ error }, 'Failed to unlink practice supplier');
     
     const appError = toAppError(error);
     
@@ -142,7 +143,7 @@ export async function unlinkPracticeSupplierAction(
         // Successfully blocked, so we can proceed to redirect
         return;
       } catch (updateError) {
-        console.error('Failed to soft-delete (block) supplier:', updateError);
+        logger.error({ error: updateError }, 'Failed to soft-delete (block) supplier');
         // Fall through to throw original error if update fails
       }
     }
@@ -219,7 +220,7 @@ export async function linkGlobalSupplierAction(
       throw linkError;
     }
   } catch (error: unknown) {
-    console.error('Failed to link global supplier:', error);
+    logger.error({ error }, 'Failed to link global supplier');
     return { error: 'Failed to link supplier. Please try again.' };
   }
 }

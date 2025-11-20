@@ -81,6 +81,24 @@ export async function createGoodsReceiptAction(_prevState: unknown, formData: Fo
 
     const { locationId, orderId, practiceSupplierId, notes } = parsed.data;
 
+    // Validate ad-hoc receiving requirements
+    if (!orderId) {
+      // Ensure user is ADMIN
+      if (ctx.role !== 'ADMIN') {
+        return { error: 'Receiving must be linked to an existing order.' } as const;
+      }
+
+      // Ensure supplier is present
+      if (!practiceSupplierId) {
+        return { error: 'Supplier is required for ad-hoc receiving.' } as const;
+      }
+
+      // Ensure notes (reason) is present
+      if (!notes) {
+        return { error: 'Reason (Notes) is required for ad-hoc receiving.' } as const;
+      }
+    }
+
     // Create goods receipt using service
     const result = await receivingService.createGoodsReceipt(ctx, {
       locationId,

@@ -34,13 +34,6 @@ describe('CSP Utility', () => {
       });
     });
 
-    it('should include strict-dynamic for modern CSP', () => {
-      const nonce = 'test-nonce-123';
-      const csp = generateCSP({ nonce });
-
-      expect(csp).toContain("'strict-dynamic'");
-    });
-
     it('should include unsafe-inline as fallback for older browsers', () => {
       const nonce = 'test-nonce-123';
       const csp = generateCSP({ nonce });

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
+import logger from '@/lib/logger';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getOrderService } from '@/src/services';
@@ -296,7 +297,7 @@ export async function createOrdersFromTemplateAction(
 
     return result;
   } catch (error: unknown) {
-    console.error('Error creating orders:', error);
+    logger.error({ error }, 'Error creating orders');
     const message = error instanceof Error ? error.message : 'Failed to create orders. Please try again.';
     return { error: message } as const;
   }
@@ -346,7 +347,7 @@ export async function quickCreateOrderFromTemplateAction(templateId: string) {
     if (error && typeof error === 'object' && 'digest' in error && typeof error.digest === 'string' && error.digest.startsWith('NEXT_REDIRECT')) {
       throw error; // Re-throw redirect errors
     }
-    console.error('Error creating orders from template:', error);
+    logger.error({ error }, 'Error creating orders from template');
     const message = error instanceof Error ? error.message : 'Failed to create orders from template. Please try again.';
     throw new Error(message);
   }

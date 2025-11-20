@@ -196,9 +196,9 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto p-3">
           {filteredNavSections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-10' : ''}>
+            <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-6' : ''}>
               {section.title && (!isCollapsed || !mounted) && (
-                <div className="mb-4 px-3 text-xs font-semibold uppercase text-sidebar-text-muted">
+                <div className="mb-2 px-3 text-xs font-semibold uppercase text-sidebar-text-muted">
                   {section.title}
                 </div>
               )}

@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getInventoryService, getOrderService } from '@/src/services';
 import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
@@ -14,6 +15,14 @@ interface NewReceiptPageProps {
 export default async function NewReceiptPage({ searchParams }: NewReceiptPageProps) {
   const ctx = await buildRequestContext();
   const { orderId } = await searchParams;
+
+  // Check role permissions
+  const isAdmin = ctx.role === 'ADMIN';
+  
+  // If not linking to an order, only admins can proceed
+  if (!orderId && !isAdmin) {
+    redirect('/receiving');
+  }
 
   // Fetch locations and suppliers for form dropdowns
   const [locations, practiceSuppliers, order] = await Promise.all([
@@ -53,6 +62,7 @@ export default async function NewReceiptPage({ searchParams }: NewReceiptPagePro
       <NewReceiptForm 
         locations={locations} 
         suppliers={suppliers} 
+        isAdmin={isAdmin}
         order={order ? {
           id: order.id,
           reference: order.reference,

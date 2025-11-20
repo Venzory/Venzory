@@ -51,7 +51,8 @@ const CSP_DIRECTIVES: Record<CspDirectiveKey, readonly string[]> = {
     // Hash for theme script (prevents FOUC) - see app/layout.tsx
     "'sha256-0lScLMzgnTF/4aEL0Kl3JzVxaxwkLikwLeFx2kRmx3U='",
     // 'strict-dynamic' allows scripts loaded by trusted scripts (CSP Level 3)
-    "'strict-dynamic'",
+    // Temporarily removed to fix Vercel hang/loading issue if Next.js internal scripts aren't strictly nonced
+    // "'strict-dynamic'",
     // Fallback for older browsers (ignored by modern browsers when strict-dynamic is present)
     // This is a standard pattern and does NOT weaken security in modern browsers
     "'unsafe-inline'",

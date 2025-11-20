@@ -119,10 +119,10 @@ async function applySecurityHeaders(response: NextResponse, nonce: string, reque
     );
   }
 
-  // Note: We do NOT expose the nonce in a custom header (x-nonce) as:
-  // 1. The app doesn't use it (Next.js handles inline scripts via bundling)
-  // 2. Exposing nonces unnecessarily could be a security risk
-  // 3. CSP nonce is already included in the Content-Security-Policy header
+  // Note: We expose the nonce in a custom header (x-nonce) so the app can use it
+  // for hydration scripts. Next.js automatically picks this up if configured correctly.
+  // 
+  // CSP nonce is included in the Content-Security-Policy header
 
   // Set CSRF cookie for protection against CSRF attacks
   await setCsrfCookie(response, request);
@@ -166,10 +166,10 @@ export default auth(async (request) => {
     const { activePracticeId, memberships } = request.auth.user;
     const activeMembership = memberships.find((m) => m.practiceId === activePracticeId);
     const practice = activeMembership?.practice;
+    const isOnboardingPage = pathname.startsWith('/onboarding');
 
     if (practice) {
       const isOnboardingComplete = !!practice.onboardingCompletedAt || !!practice.onboardingSkippedAt;
-      const isOnboardingPage = pathname.startsWith('/onboarding');
 
       // Redirect to onboarding if not complete and trying to access other protected routes
       if (!isOnboardingComplete && !isOnboardingPage) {
@@ -184,6 +184,20 @@ export default auth(async (request) => {
         const response = NextResponse.redirect(dashboardUrl);
         return await applySecurityHeaders(response, nonce, request);
       }
+    } else {
+      // No active practice context - redirect to onboarding if not already there
+      // This handles users who have no practice yet (newly registered without practice, or invited but invalid state)
+      if (!isOnboardingPage) {
+        const onboardingUrl = new URL('/onboarding', request.nextUrl.origin);
+        const response = NextResponse.redirect(onboardingUrl);
+        return await applySecurityHeaders(response, nonce, request);
+      }
+    }
+
+    // Skip access check for onboarding page to allow users without practice/role to proceed
+    if (isOnboardingPage) {
+      const response = NextResponse.next();
+      return await applySecurityHeaders(response, nonce, request);
     }
 
     const { allowed } = checkRouteAccess({
@@ -201,7 +215,14 @@ export default auth(async (request) => {
   }
 
   // Apply security headers to normal responses
-  const response = NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
   return await applySecurityHeaders(response, nonce, request);
 });
 

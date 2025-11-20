@@ -65,7 +65,7 @@ export async function createStockCountSessionAction(_prevState: unknown, formDat
     revalidatePath('/stock-count');
     return { success: true, sessionId } as const;
   } catch (error) {
-    console.error('[Stock Count Actions] Error creating session:', error);
+    logger.error({ error }, 'Error creating session');
     
     if (isDomainError(error)) {
       return { error: error.message } as const;
@@ -108,7 +108,7 @@ export async function addCountLineAction(_prevState: unknown, formData: FormData
     revalidatePath(`/stock-count/${sessionId}`);
     return { success: true, variance, lineId } as const;
   } catch (error) {
-    console.error('[Stock Count Actions] Error adding line:', error);
+    logger.error({ error }, 'Error adding line');
     
     if (isDomainError(error)) {
       return { error: error.message } as const;
@@ -154,7 +154,7 @@ export async function updateCountLineAction(_prevState: unknown, formData: FormD
     }
     return { success: true, variance } as const;
   } catch (error) {
-    console.error('[Stock Count Actions] Error updating line:', error);
+    logger.error({ error }, 'Error updating line');
     
     if (isDomainError(error)) {
       return { error: error.message } as const;
@@ -177,7 +177,7 @@ export async function removeCountLineAction(lineId: string) {
     revalidatePath('/stock-count');
     // Note: Session-specific revalidation handled by calling component via router.refresh()
   } catch (error) {
-    console.error('[Stock Count Actions] Error removing line:', error);
+    logger.error({ error }, 'Error removing line');
     
     if (isDomainError(error)) {
       throw new Error(error.message);
@@ -262,7 +262,7 @@ export async function cancelStockCountAction(sessionId: string) {
     revalidatePath('/stock-count');
     revalidatePath(`/stock-count/${sessionId}`);
   } catch (error) {
-    console.error('[Stock Count Actions] Error cancelling session:', error);
+    logger.error({ error }, 'Error cancelling session');
     
     if (isDomainError(error)) {
       throw new Error(error.message);
@@ -285,7 +285,7 @@ export async function deleteStockCountSessionAction(sessionId: string) {
     revalidatePath('/stock-count');
     redirect('/stock-count');
   } catch (error: unknown) {
-    console.error('[Stock Count Actions] Error deleting session:', error);
+    logger.error({ error }, 'Error deleting session');
     
     if (isDomainError(error)) {
       throw new Error(error.message);

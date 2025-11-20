@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import { isDomainError } from '@/src/domain/errors';
+import logger from '@/lib/logger';
 
 /**
  * Create orders from catalog items (selected items)
@@ -34,7 +35,7 @@ export async function createOrdersFromCatalogAction(selectedItemIds: string[]) {
       skippedItems: result.skippedItems.length > 0 ? result.skippedItems : undefined,
     } as const;
   } catch (error) {
-    console.error('[createOrdersFromCatalogAction]', error);
+    logger.error({ error }, 'createOrdersFromCatalogAction failed');
     if (isDomainError(error)) {
       return { error: error.message } as const;
     }

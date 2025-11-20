@@ -149,18 +149,6 @@ function parseEnv() {
       })),
     }, 'Invalid environment variables - see errors for details');
     
-    // Also output to stderr for visibility during startup
-    console.error('❌ Invalid environment variables:');
-    console.error('');
-    parsed.error.issues.forEach((issue) => {
-      const path = issue.path.join('.');
-      console.error(`  ${path}: ${issue.message}`);
-    });
-    console.error('');
-    console.error('💡 Fix these issues in your .env.local file or environment configuration.');
-    console.error('   See .env.example for a complete list of required variables.');
-    console.error('');
-    
     const errorMessages = parsed.error.issues.map((issue) => {
       const path = issue.path.join('.');
       return `${path}: ${issue.message}`;
