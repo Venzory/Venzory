@@ -50,6 +50,7 @@ const coreSchema = z.object({
   DATABASE_URL: postgresUrlSchema,
   NEXTAUTH_SECRET: secretSchema('NEXTAUTH_SECRET'),
   CSRF_SECRET: secretSchema('CSRF_SECRET'),
+  EMAIL_FROM: z.string().email().default('noreply@venzory.com'),
 });
 
 /**
@@ -160,7 +161,12 @@ function parseEnv() {
     console.error('   See .env.example for a complete list of required variables.');
     console.error('');
     
-    throw new Error('Environment validation failed - see errors above');
+    const errorMessages = parsed.error.issues.map((issue) => {
+      const path = issue.path.join('.');
+      return `${path}: ${issue.message}`;
+    }).join(', ');
+
+    throw new Error(`Environment validation failed: ${errorMessages}`);
   }
 
   return parsed.data;

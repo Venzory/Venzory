@@ -9,7 +9,13 @@ import { ValidationError, RateLimitError } from '@/src/domain/errors';
 const registerSchema = z.object({
   practiceName: z.string().min(2, 'Practice name is required').max(120),
   email: z.string().email('Invalid email format'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    ),
   name: z.string().min(1, 'Name is required').max(120),
 });
 

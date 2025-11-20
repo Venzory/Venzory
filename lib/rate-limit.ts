@@ -321,10 +321,10 @@ export function createRateLimiter(config: RateLimitConfig): RateLimiter {
  * Pre-configured rate limiters for common use cases
  */
 
-// Login attempts: 5 per 15 minutes
+// Login attempts: 10 per 15 minutes
 export const loginRateLimiter = createRateLimiter({
   id: 'login',
-  limit: 5,
+  limit: 10,
   windowMs: 15 * 60 * 1000, // 15 minutes
   failClosed: true,
 });

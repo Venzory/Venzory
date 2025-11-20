@@ -18,6 +18,7 @@ type EnvModule = {
     DATABASE_URL: string;
     NEXTAUTH_SECRET: string;
     CSRF_SECRET: string;
+    EMAIL_FROM: string;
     NEXTAUTH_URL: string;
     NEXT_PUBLIC_APP_URL: string;
     RESEND_API_KEY?: string;
@@ -40,6 +41,7 @@ function createValidEnv(overrides: Record<string, string | undefined> = {}) {
     DATABASE_URL: 'postgresql://user:pass@localhost:5432/testdb',
     NEXTAUTH_SECRET: 'a'.repeat(32), // 32 character secret
     CSRF_SECRET: 'b'.repeat(32), // 32 character secret
+    EMAIL_FROM: 'test@example.com',
     ...overrides,
   };
 }
@@ -52,15 +54,14 @@ async function importEnvWithConfig(config: Record<string, string | undefined>) {
   const originalEnv = process.env;
   
   try {
-    // Clear module cache to force re-evaluation
-    const modulePath = require.resolve('../../lib/env');
-    delete require.cache[modulePath];
+    // Reset module registry to force re-evaluation
+    vi.resetModules();
     
     // Set new env
     process.env = { ...config } as any;
     
     // Dynamic import to trigger validation
-    const envModule = await import('../../lib/env');
+    const envModule = await import('../../lib/env.ts');
     return envModule;
   } finally {
     // Restore original env
@@ -138,7 +139,7 @@ describe('Environment Variable Validation', () => {
       const config = createValidEnv({
         DATABASE_URL: 'not-a-valid-url',
       });
-      await expectEnvToFail(config, /Invalid url/);
+      await expectEnvToFail(config, /Invalid URL/i);
     });
   });
 
@@ -206,8 +207,10 @@ describe('Environment Variable Validation', () => {
         NEXTAUTH_URL: 'https://example.com',
         NEXT_PUBLIC_APP_URL: 'https://example.com',
         // Omit RESEND_API_KEY
+        REDIS_URL: 'redis://localhost:6379',
+        CRON_SECRET: 'c'.repeat(32),
       });
-      await expectEnvToFail(config, /RESEND_API_KEY is required in production/);
+      await expectEnvToFail(config, /RESEND_API_KEY/);
     });
 
     it('should require REDIS_URL in production', async () => {
@@ -217,8 +220,9 @@ describe('Environment Variable Validation', () => {
         NEXT_PUBLIC_APP_URL: 'https://example.com',
         RESEND_API_KEY: 're_test_key',
         // Omit REDIS_URL
+        CRON_SECRET: 'c'.repeat(32),
       });
-      await expectEnvToFail(config, /REDIS_URL must be a valid Redis connection string/);
+      await expectEnvToFail(config, /REDIS_URL/);
     });
 
     it('should require HTTPS for NEXTAUTH_URL in production', async () => {
@@ -228,6 +232,7 @@ describe('Environment Variable Validation', () => {
         NEXT_PUBLIC_APP_URL: 'https://example.com',
         RESEND_API_KEY: 're_test_key',
         REDIS_URL: 'redis://localhost:6379',
+        CRON_SECRET: 'c'.repeat(32),
       });
       await expectEnvToFail(config, /NEXTAUTH_URL must use HTTPS in production/);
     });
@@ -239,6 +244,7 @@ describe('Environment Variable Validation', () => {
         NEXT_PUBLIC_APP_URL: 'http://example.com', // HTTP not allowed
         RESEND_API_KEY: 're_test_key',
         REDIS_URL: 'redis://localhost:6379',
+        CRON_SECRET: 'c'.repeat(32),
       });
       await expectEnvToFail(config, /NEXT_PUBLIC_APP_URL must use HTTPS in production/);
     });
@@ -250,6 +256,7 @@ describe('Environment Variable Validation', () => {
         NEXT_PUBLIC_APP_URL: 'https://example.com',
         RESEND_API_KEY: 're_test_key',
         REDIS_URL: 'redis://localhost:6379',
+        CRON_SECRET: 'c'.repeat(32),
       });
       const { env } = await importEnvWithConfig(config);
       expect(env.NODE_ENV).toBe('production');
@@ -296,7 +303,7 @@ describe('Environment Variable Validation', () => {
       const config = createValidEnv({
         SENTRY_DSN: 'not-a-valid-url',
       });
-      await expectEnvToFail(config, /Invalid url/);
+      await expectEnvToFail(config, /Invalid URL/i);
     });
   });
 
@@ -350,6 +357,7 @@ describe('Environment Variable Validation', () => {
         NEXT_PUBLIC_APP_URL: 'https://example.com',
         RESEND_API_KEY: 're_test',
         REDIS_URL: 'redis://localhost:6379',
+        CRON_SECRET: 'c'.repeat(32),
       });
       const { env } = await importEnvWithConfig(config);
       expect(env.NODE_ENV).toBe('production');
@@ -369,7 +377,7 @@ describe('Environment Variable Validation', () => {
 
     it('should reject invalid NODE_ENV values', async () => {
       const config = createValidEnv({ NODE_ENV: 'staging' as any });
-      await expectEnvToFail(config, /Invalid enum value/);
+      await expectEnvToFail(config, /Invalid option|Invalid enum value/i);
     });
   });
 

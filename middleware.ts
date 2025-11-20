@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { auth } from '@/auth';
+import { auth } from '@/auth.edge';
 import { checkRouteAccess } from '@/lib/route-guards';
 import { generateCSP } from '@/lib/csp';
 import { createSignedCsrfToken, getCsrfTokenFromCookie, parseAndVerifySignedToken } from '@/lib/csrf';
