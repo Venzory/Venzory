@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { cn } from '@/lib/utils';
+import { Eye, EyeOff } from 'lucide-react';
 
 type RegisterFormState = {
   practiceName: string;
@@ -24,6 +25,7 @@ export function RegisterForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -163,23 +165,33 @@ export function RegisterForm() {
         <label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Password
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={state.password}
-          onChange={handleChange}
-          className={cn(
-            "w-full rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2",
-            "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
-            "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
-            fieldErrors.password
-              ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
-              : "focus:border-sky-500 focus:ring-sky-500/30"
-          )}
-        />
+        <div className="relative">
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            required
+            value={state.password}
+            onChange={handleChange}
+            className={cn(
+              "w-full rounded-lg border px-3 py-2 pr-10 transition-colors focus:outline-none focus:ring-2",
+              "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
+              "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
+              fieldErrors.password
+                ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
+                : "focus:border-sky-500 focus:ring-sky-500/30"
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
         {fieldErrors.password?.[0] && (
           <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.password[0]}</p>
         )}

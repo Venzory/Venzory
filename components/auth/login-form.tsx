@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 
 type FormState = {
   email: string;
@@ -16,6 +17,7 @@ export function LoginForm() {
   const [state, setState] = useState<FormState>({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const callbackUrl = useMemo(() => searchParams.get('callbackUrl') ?? '/dashboard', [searchParams]);
   const resetSuccess = useMemo(() => searchParams.get('reset') === 'success', [searchParams]);
@@ -91,17 +93,27 @@ export function LoginForm() {
             Forgot password?
           </Link>
         </div>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={state.password}
-          onChange={handleChange}
-        disabled={disableForm}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
-        />
+        <div className="relative">
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            required
+            value={state.password}
+            onChange={handleChange}
+            disabled={disableForm}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       {error ? <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p> : null}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PracticeRole } from '@prisma/client';
 import { cn } from '@/lib/utils';
+import { Eye, EyeOff } from 'lucide-react';
 
 type FormState = {
   name: string;
@@ -34,6 +35,8 @@ export function AcceptInviteForm({
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -132,48 +135,68 @@ export function AcceptInviteForm({
         <label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Password
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          value={state.password}
-          onChange={handleChange}
-          disabled={disableForm}
-          placeholder="At least 8 characters"
-          className={cn(
-            "w-full rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70",
-            "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
-            "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
-            "focus:border-sky-500 focus:ring-sky-500/30"
-          )}
-        />
+        <div className="relative">
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={state.password}
+            onChange={handleChange}
+            disabled={disableForm}
+            placeholder="At least 8 characters"
+            className={cn(
+              "w-full rounded-lg border px-3 py-2 pr-10 transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70",
+              "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
+              "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
+              "focus:border-sky-500 focus:ring-sky-500/30"
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-2">
         <label htmlFor="confirmPassword" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Confirm password
         </label>
-        <input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          value={state.confirmPassword}
-          onChange={handleChange}
-          disabled={disableForm}
-          placeholder="Re-enter your password"
-          className={cn(
-            "w-full rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70",
-            "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
-            "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
-            "focus:border-sky-500 focus:ring-sky-500/30"
-          )}
-        />
+        <div className="relative">
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            type={showConfirmPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={state.confirmPassword}
+            onChange={handleChange}
+            disabled={disableForm}
+            placeholder="Re-enter your password"
+            className={cn(
+              "w-full rounded-lg border px-3 py-2 pr-10 transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70",
+              "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
+              "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
+              "focus:border-sky-500 focus:ring-sky-500/30"
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+            tabIndex={-1}
+          >
+            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       {error ? <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p> : null}

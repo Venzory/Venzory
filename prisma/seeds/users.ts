@@ -23,11 +23,11 @@ export async function seedUsers(prisma: PrismaClient) {
   console.log(`   - Practice created: ${practice.name}`);
 
   // Create Users
-  const passwordHash = await hash('password123', 10);
+  const passwordHash = await hash('admin123', 10);
 
   const adminUser = await prisma.user.create({
     data: {
-      email: 'admin@demovet.nl',
+      email: 'admin@admin.com',
       name: 'Admin User',
       passwordHash,
       emailVerified: new Date(),
@@ -36,7 +36,7 @@ export async function seedUsers(prisma: PrismaClient) {
 
   const staffUser = await prisma.user.create({
     data: {
-      email: 'staff@demovet.nl',
+      email: 'staff@admin.com',
       name: 'Staff User',
       passwordHash,
       emailVerified: new Date(),
@@ -45,7 +45,7 @@ export async function seedUsers(prisma: PrismaClient) {
 
   const viewerUser = await prisma.user.create({
     data: {
-      email: 'viewer@demovet.nl',
+      email: 'viewer@admin.com',
       name: 'Viewer User',
       passwordHash,
       emailVerified: new Date(),

@@ -9,7 +9,7 @@ export async function seedCatalogs(prisma: PrismaClient, practice: Practice) {
   const globalSuppliers = await Promise.all([
     prisma.globalSupplier.create({
       data: {
-        name: 'Remka Medical',
+        name: 'Remka',
         website: 'https://remka.nl',
         email: 'orders@remka.nl',
         phone: '+31 20 123 4567',
