@@ -6,8 +6,8 @@
 import { OrderRepository } from '@/src/repositories/orders';
 import { InventoryRepository } from '@/src/repositories/inventory';
 import { UserRepository } from '@/src/repositories/users';
-import { PracticeSupplierRepository } from '@/src/repositories/suppliers';
-import { AuditService } from '../audit/audit-service';
+import { PracticeSupplierRepository, getPracticeSupplierRepository } from '@/src/repositories/suppliers';
+import { AuditService, getAuditService } from '../audit/audit-service';
 import { DeliveryStrategyResolver } from './delivery';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
@@ -1165,10 +1165,6 @@ let orderServiceInstance: OrderService | null = null;
 
 export function getOrderService(): OrderService {
   if (!orderServiceInstance) {
-    const { getAuditService } = require('../audit/audit-service');
-    const { getPracticeSupplierRepository } = require('@/src/repositories/suppliers');
-    const { DeliveryStrategyResolver } = require('./delivery');
-    
     orderServiceInstance = new OrderService(
       new OrderRepository(),
       new InventoryRepository(),

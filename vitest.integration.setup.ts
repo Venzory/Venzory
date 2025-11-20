@@ -1,3 +1,21 @@
+import dotenv from 'dotenv';
+import { vi } from 'vitest';
+
+// Mock next/server to fix import issues in dependencies (like next-auth)
+vi.mock('next/server', () => {
+  return {
+    NextRequest: class {},
+    NextResponse: {
+      json: (body: any) => ({ body }),
+      next: () => ({}),
+      redirect: () => ({}),
+    },
+  };
+});
+
+// Load environment variables from .env file
+dotenv.config();
+
 /**
  * Integration Test Setup
  * 

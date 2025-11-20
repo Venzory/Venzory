@@ -252,9 +252,6 @@ describe('StockCountRepository', () => {
       expect(sessions[0].lines![0].variance).toBe(-2);
       expect(sessions[0].lines![0]).toHaveProperty('countedQuantity');
       expect(sessions[0].lines![0]).toHaveProperty('systemQuantity');
-
-      // Clean up
-      await prisma.item.deleteMany({ where: { practiceId: testPracticeId } });
     });
 
     it('should always return an array even when no sessions exist', async () => {

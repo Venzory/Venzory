@@ -8,7 +8,7 @@ import { ProductRepository } from '@/src/repositories/products';
 import { LocationRepository } from '@/src/repositories/locations';
 import { StockCountRepository } from '@/src/repositories/stock-count';
 import { UserRepository } from '@/src/repositories/users';
-import { AuditService } from '../audit/audit-service';
+import { AuditService, getAuditService } from '../audit/audit-service';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
 import { withTransaction, type TransactionClient } from '@/src/repositories/base';
@@ -1013,7 +1013,6 @@ let inventoryServiceInstance: InventoryService | null = null;
 
 export function getInventoryService(): InventoryService {
   if (!inventoryServiceInstance) {
-    const { getAuditService } = require('../audit/audit-service');
     inventoryServiceInstance = new InventoryService(
       new InventoryRepository(),
       new ProductRepository(),

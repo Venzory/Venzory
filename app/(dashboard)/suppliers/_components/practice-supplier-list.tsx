@@ -48,7 +48,7 @@ export function PracticeSupplierList({ suppliers, globalSuppliers, canManage }: 
           }
         />
         
-        {canManage && (
+        {canManage && isAddModalOpen && (
           <AddSupplierModal
             isOpen={isAddModalOpen}
             onClose={() => setIsAddModalOpen(false)}
@@ -204,7 +204,7 @@ export function PracticeSupplierList({ suppliers, globalSuppliers, canManage }: 
     </div>
 
       {/* Add Supplier Modal */}
-      {canManage && (
+      {canManage && isAddModalOpen && (
         <AddSupplierModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}

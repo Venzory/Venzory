@@ -345,6 +345,14 @@ export const inviteAcceptRateLimiter = createRateLimiter({
   failClosed: true,
 });
 
+// Registration: 5 per hour (prevents spam signups)
+export const registerRateLimiter = createRateLimiter({
+  id: 'register',
+  limit: 5,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  failClosed: true,
+});
+
 /**
  * Helper to get client IP from request
  */

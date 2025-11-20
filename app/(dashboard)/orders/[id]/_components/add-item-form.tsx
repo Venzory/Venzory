@@ -11,7 +11,7 @@ const initialState: FormState = {};
 
 interface AddItemFormProps {
   orderId: string;
-  practiceSupplierId: string;
+  practiceSupplierId: string | null;
   items: ItemForSelection[];
 }
 

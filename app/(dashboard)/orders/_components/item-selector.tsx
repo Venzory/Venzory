@@ -18,7 +18,7 @@ export interface ItemForSelection {
 
 interface ItemSelectorProps {
   items: ItemForSelection[];
-  practiceSupplierId: string;
+  practiceSupplierId: string | null;
   onSelect: (itemId: string, defaultPrice: number) => void;
   excludeItemIds?: string[];
   placeholder?: string;
@@ -43,8 +43,8 @@ export function ItemSelector({
   // Filter items by supplier and search term
   const availableItems = items
     .filter((item) => {
-      // Filter by supplier
-      const matchesSupplier =
+      // Filter by supplier if one is specified
+      const matchesSupplier = !practiceSupplierId ||
         item.supplierItems.some((si) => si.practiceSupplierId === practiceSupplierId) ||
         item.defaultPracticeSupplierId === practiceSupplierId;
       

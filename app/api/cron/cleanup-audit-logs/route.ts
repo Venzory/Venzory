@@ -14,8 +14,8 @@ export async function GET(request: NextRequest) {
   // Auth check
   const authHeader = request.headers.get('authorization');
   
-  // If CRON_SECRET is set, require it. Otherwise allow it (e.g. dev mode)
-  if (env.CRON_SECRET && authHeader !== `Bearer ${env.CRON_SECRET}`) {
+  // Require CRON_SECRET to be set and match the header
+  if (!env.CRON_SECRET || authHeader !== `Bearer ${env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

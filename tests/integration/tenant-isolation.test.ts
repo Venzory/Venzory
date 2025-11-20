@@ -208,45 +208,74 @@ describe('Cross-Tenant Access Prevention - Integration Tests', () => {
 
   afterAll(async () => {
     // Clean up (in reverse order of dependencies)
-    await prisma.goodsReceiptLine.deleteMany({
-      where: { receiptId: receipt1Id },
-    });
-    await prisma.goodsReceipt.deleteMany({
-      where: { id: receipt1Id },
-    });
-    await prisma.orderItem.deleteMany({
-      where: { orderId: order1Id },
-    });
-    await prisma.order.deleteMany({
-      where: { id: order1Id },
-    });
-    await prisma.locationInventory.deleteMany({
-      where: { locationId: { in: [location1Id, location2Id] } },
-    });
-    await prisma.item.deleteMany({
-      where: { id: { in: [item1Id, item2Id] } },
-    });
-    await prisma.location.deleteMany({
-      where: { id: { in: [location1Id, location2Id] } },
-    });
-    await prisma.product.deleteMany({
-      where: { id: product1Id },
-    });
-    await prisma.practiceSupplier.deleteMany({
-      where: { practiceId: { in: [practice1Id, practice2Id] } },
-    });
-    await prisma.globalSupplier.deleteMany({
-      where: { id: globalSupplier1Id },
-    });
-    await prisma.practiceUser.deleteMany({
-      where: { practiceId: { in: [practice1Id, practice2Id] } },
-    });
-    await prisma.practice.deleteMany({
-      where: { id: { in: [practice1Id, practice2Id] } },
-    });
-    await prisma.user.deleteMany({
-      where: { id: { in: [user1Id, user2Id] } },
-    });
+    if (receipt1Id) {
+      await prisma.goodsReceiptLine.deleteMany({
+        where: { receiptId: receipt1Id },
+      });
+      await prisma.goodsReceipt.deleteMany({
+        where: { id: receipt1Id },
+      });
+    }
+    
+    if (order1Id) {
+      await prisma.orderItem.deleteMany({
+        where: { orderId: order1Id },
+      });
+      await prisma.order.deleteMany({
+        where: { id: order1Id },
+      });
+    }
+
+    if (location1Id && location2Id) {
+      await prisma.locationInventory.deleteMany({
+        where: { locationId: { in: [location1Id, location2Id] } },
+      });
+    }
+    
+    if (item1Id && item2Id) {
+      await prisma.item.deleteMany({
+        where: { id: { in: [item1Id, item2Id] } },
+      });
+    }
+    
+    if (location1Id && location2Id) {
+      await prisma.location.deleteMany({
+        where: { id: { in: [location1Id, location2Id] } },
+      });
+    }
+
+    if (product1Id) {
+      await prisma.product.deleteMany({
+        where: { id: product1Id },
+      });
+    }
+
+    if (practice1Id && practice2Id) {
+      await prisma.practiceSupplier.deleteMany({
+        where: { practiceId: { in: [practice1Id, practice2Id] } },
+      });
+    }
+
+    if (globalSupplier1Id) {
+      await prisma.globalSupplier.deleteMany({
+        where: { id: globalSupplier1Id },
+      });
+    }
+
+    if (practice1Id && practice2Id) {
+      await prisma.practiceUser.deleteMany({
+        where: { practiceId: { in: [practice1Id, practice2Id] } },
+      });
+      await prisma.practice.deleteMany({
+        where: { id: { in: [practice1Id, practice2Id] } },
+      });
+    }
+
+    if (user1Id && user2Id) {
+      await prisma.user.deleteMany({
+        where: { id: { in: [user1Id, user2Id] } },
+      });
+    }
   });
 
   describe('OrderService - Cross-Tenant Prevention', () => {

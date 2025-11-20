@@ -8,7 +8,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
-import { buildRequestContext } from '@/src/lib/context/context-builder';
+import { buildRequestContext, requireRole } from '@/src/lib/context/context-builder';
 import { getInventoryService, getItemService } from '@/src/services/inventory';
 import { getOrCreateProductForItem } from '@/lib/integrations';
 import { isDomainError } from '@/src/domain/errors';
@@ -265,6 +265,9 @@ export async function upsertLocationAction(_prevState: unknown, formData: FormDa
   
   try {
     const ctx = await buildRequestContext();
+    
+    // Check permissions
+    requireRole(ctx, 'STAFF');
 
     if (payload.locationId) {
       const parsed = updateLocationSchema.safeParse(payload);
@@ -313,6 +316,9 @@ export async function deleteLocationAction(locationId: string) {
   
   try {
     const ctx = await buildRequestContext();
+    // Check permissions
+    requireRole(ctx, 'STAFF');
+    
     await locationRepository.deleteLocation(locationId, ctx.practiceId);
     revalidatePath('/locations');
     revalidatePath('/inventory');

@@ -33,7 +33,7 @@ export function DeleteSupplierButton({ supplierId }: DeleteSupplierButtonProps) 
     try {
       await unlinkPracticeSupplierAction(supplierId);
       toast.success('Supplier removed from practice');
-      // Action handles redirect, but we can ensure client state is clean
+      router.push('/suppliers');
     } catch (error) {
       console.error('Failed to remove supplier:', error);
       const message = error instanceof Error ? error.message : 'Failed to remove supplier';

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { PracticeRole } from '@prisma/client';
 
 import { auth } from '@/auth';
+import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getSettingsService } from '@/src/services';
 import { apiHandler } from '@/lib/api-handler';
@@ -16,11 +17,7 @@ const createInviteSchema = z.object({
 });
 
 export const POST = apiHandler(async (request: Request) => {
-  const session = await auth();
-
-  if (!session?.user) {
-    throw new UnauthorizedError('You must be signed in to invite users');
-  }
+  const { session } = await requireActivePractice();
 
   const body = await request.json();
   const parsed = createInviteSchema.safeParse(body);

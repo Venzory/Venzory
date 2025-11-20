@@ -153,8 +153,6 @@ export async function unlinkPracticeSupplierAction(
     
     throw error;
   }
-
-  redirect('/suppliers');
 }
 
 /**

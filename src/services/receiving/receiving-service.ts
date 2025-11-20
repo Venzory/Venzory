@@ -7,7 +7,8 @@ import { ReceivingRepository } from '@/src/repositories/receiving';
 import { InventoryRepository } from '@/src/repositories/inventory';
 import { UserRepository } from '@/src/repositories/users';
 import { OrderRepository } from '@/src/repositories/orders';
-import { AuditService } from '../audit/audit-service';
+import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
+import { AuditService, getAuditService } from '../audit/audit-service';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
 import { withTransaction } from '@/src/repositories/base';
@@ -86,7 +87,7 @@ export class ReceivingService {
 
     // Verify practice supplier exists if provided
     if (input.practiceSupplierId) {
-      const practiceSupplierRepo = require('@/src/repositories/suppliers').getPracticeSupplierRepository();
+      const practiceSupplierRepo = getPracticeSupplierRepository();
       await practiceSupplierRepo.findPracticeSupplierById(input.practiceSupplierId, ctx.practiceId);
     }
 
@@ -639,7 +640,6 @@ let receivingServiceInstance: ReceivingService | null = null;
 
 export function getReceivingService(): ReceivingService {
   if (!receivingServiceInstance) {
-    const { getAuditService } = require('../audit/audit-service');
     receivingServiceInstance = new ReceivingService(
       new ReceivingRepository(),
       new InventoryRepository(),

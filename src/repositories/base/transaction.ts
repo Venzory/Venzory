@@ -25,9 +25,13 @@ export type TransactionClient = Parameters<
  * });
  */
 export async function withTransaction<T>(
-  fn: (tx: TransactionClient) => Promise<T>
+  fn: (tx: TransactionClient) => Promise<T>,
+  options?: { timeout?: number; maxWait?: number; isolationLevel?: any }
 ): Promise<T> {
-  return prisma.$transaction(fn);
+  return prisma.$transaction(fn, {
+    timeout: 20000, // Default 20s timeout for serverless/tests
+    ...options
+  });
 }
 
 /**

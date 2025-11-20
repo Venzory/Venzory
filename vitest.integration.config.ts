@@ -13,6 +13,13 @@ export default defineConfig({
     hookTimeout: 10000, // 10s for setup/teardown hooks
     // Isolate tests for better reliability
     isolate: true,
+    // Run tests sequentially to avoid database interference
+    fileParallelism: false,
+    server: {
+      deps: {
+        inline: ['next-auth'],
+      },
+    },
   },
   resolve: {
     alias: {

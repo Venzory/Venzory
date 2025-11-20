@@ -10,6 +10,7 @@ import logger from '@/lib/logger';
 
 const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog', '/onboarding'];
 const authRoutes = ['/login', '/register'];
+const publicApiRoutes = ['/api/auth', '/api/health', '/api/invites/accept', '/api/cron'];
 
 /**
  * Generates a cryptographically secure nonce for CSP
@@ -134,9 +135,16 @@ export default auth(async (request) => {
 
   const isProtected = protectedMatchers.some((path) => pathname.startsWith(path));
   const isAuthRoute = authRoutes.some((path) => pathname === path);
+  const isApiRoute = pathname.startsWith('/api');
+  const isPublicApiRoute = publicApiRoutes.some((path) => pathname.startsWith(path));
 
   // Generate nonce for this request
   const nonce = generateNonce();
+
+  // API Security: Block unauthenticated access to API routes (except public ones)
+  if (isApiRoute && !isPublicApiRoute && !request.auth) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   // If user is authenticated and trying to access auth routes, redirect to dashboard
   if (request.auth && isAuthRoute) {

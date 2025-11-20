@@ -201,8 +201,8 @@ describe('Order Templates - Supplier Integration Tests', () => {
     const order = await service.getOrderById(ctx, orderId);
     expect(order.practiceSupplierId).toBe(testPracticeSupplierId);
     expect(order.items).toHaveLength(1);
-    expect(order.items[0].itemId).toBe(testItemId);
-    expect(order.items[0].quantity).toBe(10);
+    expect(order.items![0].itemId).toBe(testItemId);
+    expect(order.items![0].quantity).toBe(10);
     
     // Check that no legacy supplierId field exists (type check is implicit in TS, but runtime check)
     // @ts-ignore - checking for legacy field existence
@@ -223,13 +223,11 @@ describe('Order Templates - Supplier Integration Tests', () => {
       ],
     });
 
-    const templateItemId = template.items[0].id; // Assuming create returns items with IDs
-
-    // If not, fetch it
+    // 2. Update Item
+    // We need to fetch the template to get the item ID
     const savedTemplate = await service.getTemplateById(ctx, template.id);
     const savedItemId = savedTemplate.items[0].id;
 
-    // 2. Update Item
     await service.updateTemplateItem(ctx, savedItemId, {
       defaultQuantity: 2,
       practiceSupplierId: testPracticeSupplierId,
