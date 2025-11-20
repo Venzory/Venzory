@@ -60,8 +60,8 @@ const productionSchema = z.object({
   RESEND_API_KEY: z.string().min(1, {
     message: 'RESEND_API_KEY is required in production for email functionality',
   }),
-  REDIS_URL: z.string().url().startsWith('redis://', {
-    message: 'REDIS_URL must be a valid Redis connection string (redis://)',
+  REDIS_URL: z.string().url().refine((url) => url.startsWith('redis://') || url.startsWith('rediss://'), {
+    message: 'REDIS_URL must be a valid Redis connection string (redis:// or rediss://)',
   }),
   NEXTAUTH_URL: z
     .string()
