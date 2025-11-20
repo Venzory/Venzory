@@ -9,6 +9,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
+import { toast } from '@/lib/toast';
+import { createOrdersFromCatalogAction } from '../actions';
+import { DeleteItemButton } from './delete-item-button';
 
 interface ItemWithStockInfo {
   id: string;
@@ -57,6 +60,13 @@ export function CatalogItemList({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [highlightedId, setHighlightedId] = useState(highlightItemId);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset selection when items change (e.g. pagination/filter)
+  useEffect(() => {
+    setSelectedItemIds(new Set());
+  }, [items]);
 
   // Remove highlight after 3 seconds
   useEffect(() => {
@@ -65,6 +75,45 @@ export function CatalogItemList({
       return () => clearTimeout(timer);
     }
   }, [highlightedId]);
+
+  const toggleSelectAll = () => {
+    if (selectedItemIds.size === items.length) {
+      setSelectedItemIds(new Set());
+    } else {
+      setSelectedItemIds(new Set(items.map(i => i.id)));
+    }
+  };
+
+  const toggleItem = (itemId: string) => {
+    const newSet = new Set(selectedItemIds);
+    if (newSet.has(itemId)) {
+      newSet.delete(itemId);
+    } else {
+      newSet.add(itemId);
+    }
+    setSelectedItemIds(newSet);
+  };
+
+  const handleCreateOrders = async () => {
+    if (selectedItemIds.size === 0) return;
+
+    setIsSubmitting(true);
+    try {
+      const result = await createOrdersFromCatalogAction(Array.from(selectedItemIds));
+      
+      if (result.success) {
+        toast.success(result.message);
+        setSelectedItemIds(new Set());
+        router.push('/orders');
+      } else {
+        toast.error(result.error || 'Failed to create orders');
+      }
+    } catch (error) {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSort = (column: string) => {
     const params = new URLSearchParams(searchParams);
@@ -147,15 +196,29 @@ export function CatalogItemList({
 
   return (
     <div className="space-y-4">
-      {/* Results count */}
+      {/* Results count and actions */}
       <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-        <span>
-          {totalItems} {totalItems === 1 ? 'item' : 'items'} in your catalog
-        </span>
-        {totalItems > itemsPerPage && (
+        <div>
           <span>
-            Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalItems)}
+            {totalItems} {totalItems === 1 ? 'item' : 'items'} in your catalog
           </span>
+          {totalItems > itemsPerPage && (
+            <span className="ml-2">
+              (Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalItems)})
+            </span>
+          )}
+        </div>
+        
+        {canManage && selectedItemIds.size > 0 && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleCreateOrders}
+            disabled={isSubmitting}
+            loading={isSubmitting}
+          >
+            Create Draft Orders ({selectedItemIds.size})
+          </Button>
         )}
       </div>
 
@@ -165,6 +228,17 @@ export function CatalogItemList({
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
               <tr>
+                {canManage && (
+                  <th className="px-4 py-3 w-8">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600 dark:border-slate-700 dark:bg-slate-800"
+                      checked={selectedItemIds.size === items.length && items.length > 0}
+                      onChange={toggleSelectAll}
+                      disabled={isSubmitting}
+                    />
+                  </th>
+                )}
                 <SortableHeader column="name" label="Item Name" />
                 <SortableHeader column="sku" label="SKU" />
                 <SortableHeader column="brand" label="Brand" />
@@ -179,6 +253,7 @@ export function CatalogItemList({
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {items.map((item) => {
                 const isHighlighted = item.id === highlightedId;
+                const isSelected = selectedItemIds.has(item.id);
 
                 return (
                   <tr
@@ -186,9 +261,23 @@ export function CatalogItemList({
                     className={`transition ${
                       isHighlighted 
                         ? 'bg-brand/10 dark:bg-brand/20' 
+                        : isSelected
+                        ? 'bg-sky-50 dark:bg-sky-900/20'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
                     }`}
                   >
+                    {canManage && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600 dark:border-slate-700 dark:bg-slate-800"
+                          checked={isSelected}
+                          onChange={() => toggleItem(item.id)}
+                          disabled={isSubmitting}
+                        />
+                      </td>
+                    )}
+
                     {/* Item Name */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -269,11 +358,14 @@ export function CatalogItemList({
                         </Link>
                         
                         {canManage && (
-                          <Link href={`/orders/new?item=${item.id}`}>
-                            <Button variant="secondary" size="sm" className="text-xs">
-                              Order
-                            </Button>
-                          </Link>
+                          <>
+                            <Link href={`/orders/new?item=${item.id}`}>
+                              <Button variant="secondary" size="sm" className="text-xs">
+                                Order
+                              </Button>
+                            </Link>
+                            <DeleteItemButton itemId={item.id} itemName={item.name} />
+                          </>
                         )}
                       </div>
                     </td>

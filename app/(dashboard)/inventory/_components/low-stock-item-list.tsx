@@ -10,11 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
 
+import { StockLevelDialog } from './stock-level-dialog';
+
 interface InventoryLocation {
   locationId: string;
   quantity: number;
   reorderPoint: number | null;
   reorderQuantity: number | null;
+  maxStock: number | null;
   location: { id: string; name: string; code: string | null };
 }
 
@@ -57,6 +60,16 @@ export function LowStockItemList({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [editingStock, setEditingStock] = useState<{
+    item: { id: string; name: string };
+    location: { 
+      id: string; 
+      name: string; 
+      reorderPoint: number | null; 
+      reorderQuantity: number | null;
+      maxStock: number | null;
+    };
+  } | null>(null);
 
   const handleSort = (column: string) => {
     const params = new URLSearchParams(searchParams);
@@ -125,8 +138,11 @@ export function LowStockItemList({
           description={hasActiveFilters ? "Try adjusting your search or filters" : "Add items to your catalog to start tracking inventory levels across your locations."}
           action={
             !hasActiveFilters ? (
-              <Link href="/supplier-catalog">
-                <Button variant="primary">Browse Supplier Catalog</Button>
+              <Link 
+                href="/supplier-catalog"
+                className="inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none dark:focus:ring-offset-slate-900 bg-sky-600 text-white hover:bg-sky-700 hover:shadow-md active:scale-[0.98] focus:ring-sky-500 dark:bg-sky-600 dark:hover:bg-sky-700 px-4 py-2 text-sm min-h-[44px]"
+              >
+                Browse Supplier Catalog
               </Link>
             ) : undefined
           }
@@ -174,6 +190,7 @@ export function LowStockItemList({
                   <React.Fragment key={item.id}>
                     {/* Parent Row */}
                     <tr
+                      id={item.id}
                       className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
                     >
                       {/* Expand/Collapse Button */}
@@ -251,10 +268,11 @@ export function LowStockItemList({
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           {canManage && (
-                            <Link href={`/orders/new?item=${item.id}`}>
-                              <Button variant="secondary" size="sm" className="text-xs">
-                                Order
-                              </Button>
+                            <Link 
+                              href={`/orders/new?item=${item.id}`}
+                              className="inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none dark:focus:ring-offset-slate-900 border-2 border-slate-300 bg-transparent text-slate-700 hover:bg-slate-50 hover:border-slate-400 hover:shadow-sm active:scale-[0.98] focus:ring-slate-500 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800/50 dark:hover:border-slate-500 px-3 py-1.5 text-xs min-h-[36px]"
+                            >
+                              Order
                             </Link>
                           )}
                         </div>
@@ -302,6 +320,9 @@ export function LowStockItemList({
                                           {inv.reorderPoint !== null && (
                                             <span>Reorder at: <span className="font-semibold">{inv.reorderPoint}</span></span>
                                           )}
+                                          {inv.maxStock !== null && (
+                                            <span>Max: <span className="font-semibold">{inv.maxStock}</span></span>
+                                          )}
                                           {inv.reorderQuantity !== null && (
                                             <span>Reorder qty: <span className="font-semibold">{inv.reorderQuantity}</span></span>
                                           )}
@@ -310,11 +331,23 @@ export function LowStockItemList({
                                       
                                       {canManage && (
                                         <div className="flex gap-2">
-                                          <Link href={`/inventory?q=${encodeURIComponent(item.name)}&location=${inv.locationId}`}>
-                                            <Button variant="ghost" size="sm" className="text-xs">
-                                              View
-                                            </Button>
-                                          </Link>
+                                          <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            className="text-xs"
+                                            onClick={() => setEditingStock({
+                                              item: { id: item.id, name: item.name },
+                                              location: {
+                                                id: inv.locationId,
+                                                name: inv.location.name,
+                                                reorderPoint: inv.reorderPoint,
+                                                reorderQuantity: inv.reorderQuantity,
+                                                maxStock: inv.maxStock,
+                                              }
+                                            })}
+                                          >
+                                            Edit Limits
+                                          </Button>
                                         </div>
                                       )}
                                     </div>
@@ -344,6 +377,15 @@ export function LowStockItemList({
         totalPages={totalPages}
         onPageChange={handlePageChange}
       />
+      {/* Edit Dialog */}
+      {editingStock && (
+        <StockLevelDialog
+          isOpen={true}
+          onClose={() => setEditingStock(null)}
+          item={editingStock.item}
+          location={editingStock.location}
+        />
+      )}
     </div>
   );
 }

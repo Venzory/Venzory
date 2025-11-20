@@ -13,7 +13,13 @@ interface NewTemplateFormClientProps {
     unit: string | null;
     defaultPracticeSupplierId: string | null;
   }[];
-  suppliers: { id: string; name: string }[];
+  suppliers: {
+    id: string;
+    name: string;
+    isPreferred: boolean;
+    isBlocked: boolean;
+    accountNumber: string | null;
+  }[];
 }
 
 export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClientProps) {
@@ -224,11 +230,17 @@ export function NewTemplateFormClient({ items, suppliers }: NewTemplateFormClien
                             className="w-full max-w-xs rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                           >
                             <option value="">No supplier</option>
-                            {suppliers.map((supplier) => (
-                              <option key={supplier.id} value={supplier.id}>
-                                {supplier.name}
-                              </option>
-                            ))}
+                            {suppliers.map((supplier) => {
+                              const preferredMark = supplier.isPreferred ? '⭐ ' : '';
+                              const blockedMark = supplier.isBlocked ? '🚫 ' : '';
+                              const accountInfo = supplier.accountNumber ? ` (${supplier.accountNumber})` : '';
+                              
+                              return (
+                                <option key={supplier.id} value={supplier.id}>
+                                  {blockedMark}{preferredMark}{supplier.name}{accountInfo}
+                                </option>
+                              );
+                            })}
                           </select>
                         </td>
                         <td className="px-4 py-3 text-right">

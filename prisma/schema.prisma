@@ -293,6 +293,7 @@ model LocationInventory {
   quantity        Int      @default(0)
   reorderPoint    Int?
   reorderQuantity Int?
+  maxStock        Int?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -539,6 +540,7 @@ model AuditLog {
 
   @@index([practiceId])
   @@index([entityType, entityId])
+  @@index([createdAt])
 }
 
 model Notification {
@@ -644,4 +646,27 @@ model UserInvite {
 
   @@index([token])
   @@index([practiceId])
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model EmailJob {
+  id          String    @id @default(cuid())
+  type        String    // e.g., "ORDER_CONFIRMATION"
+  recipient   String
+  payload     Json      // Stores all data needed to send the email
+  status      JobStatus @default(PENDING)
+  attempts    Int       @default(0)
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  processedAt DateTime?
+
+  @@index([status])
+  @@index([createdAt])
 }

@@ -12,6 +12,8 @@ export type SessionPractice = {
     id: string;
     name: string;
     slug: string;
+    onboardingCompletedAt: Date | null;
+    onboardingSkippedAt: Date | null;
   };
 };
 
@@ -38,6 +40,6 @@ declare module 'next-auth/jwt' {
   interface JWT {
     userId: string;
     activePracticeId?: string | null;
+    memberships?: SessionPractice[];
   }
 }
-

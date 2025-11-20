@@ -8,6 +8,7 @@ import { InventoryRepository } from '@/src/repositories/inventory';
 import { UserRepository } from '@/src/repositories/users';
 import { PracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { AuditService } from '../audit/audit-service';
+import { DeliveryStrategyResolver } from './delivery';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
 import { withTransaction } from '@/src/repositories/base';
@@ -42,7 +43,8 @@ export class OrderService {
     private inventoryRepository: InventoryRepository,
     private userRepository: UserRepository,
     private practiceSupplierRepository: PracticeSupplierRepository,
-    private auditService: AuditService
+    private auditService: AuditService,
+    private deliveryStrategyResolver: DeliveryStrategyResolver
   ) {}
 
   /**
@@ -159,7 +161,7 @@ export class OrderService {
           supplierId: input.practiceSupplierId,
           supplierName,
           itemCount: input.items.length,
-          totalAmount,
+          totalAmount: typeof totalAmount === 'number' ? totalAmount : decimalToNumber(totalAmount) ?? 0,
         },
         tx
       );
@@ -331,7 +333,7 @@ export class OrderService {
     // Check permissions
     requireRole(ctx, 'STAFF');
 
-    return withTransaction(async (tx) => {
+    const updatedOrder = await withTransaction(async (tx) => {
       // Get full order with items and supplier
       const order = await this.orderRepository.findOrderById(
         orderId,
@@ -343,11 +345,11 @@ export class OrderService {
       validateOrderCanBeSent({
         status: order.status,
         items: order.items ?? [],
-        supplierId: order.practiceSupplierId,
+        practiceSupplierId: order.practiceSupplierId,
       });
 
       // Update status to SENT
-      const updatedOrder = await this.orderRepository.updateOrderStatus(
+      await this.orderRepository.updateOrderStatus(
         orderId,
         ctx.practiceId,
         'SENT',
@@ -373,6 +375,31 @@ export class OrderService {
       // Return updated order
       return this.orderRepository.findOrderById(orderId, ctx.practiceId, { tx });
     });
+
+    // Attempt to deliver order via strategy (e.g. Email, API)
+    // This is done after the transaction commits so that if delivery fails,
+    // the order remains in SENT status (best effort delivery).
+    try {
+      const strategy = this.deliveryStrategyResolver.resolve(updatedOrder);
+      const success = await strategy.send(ctx, updatedOrder);
+      
+      if (!success) {
+        logger.warn({
+          action: 'sendOrder',
+          orderId,
+          strategy: strategy.constructor.name
+        }, 'Order delivery strategy returned false');
+      }
+    } catch (error) {
+      // Log error but don't fail the operation
+      logger.error({
+        action: 'sendOrder',
+        orderId,
+        error: error instanceof Error ? error.message : String(error),
+      }, 'Failed to execute delivery strategy');
+    }
+
+    return updatedOrder;
   }
 
   /**
@@ -459,7 +486,14 @@ export class OrderService {
         }
 
         const totalQuantity = lowStockLocations.reduce((sum, inv) => {
-          return sum + (inv.reorderQuantity || inv.reorderPoint || 1);
+          // Use maxStock logic if set, otherwise reorderQuantity or reorderPoint
+          let suggested = 0;
+          if (inv.maxStock) {
+            suggested = Math.max(0, inv.maxStock - inv.quantity);
+          } else {
+            suggested = inv.reorderQuantity || inv.reorderPoint || 1;
+          }
+          return sum + suggested;
         }, 0);
 
         if (totalQuantity <= 0) {
@@ -503,6 +537,108 @@ export class OrderService {
             practiceId: ctx.practiceId,
             practiceSupplierId,
             notes: 'Created from low-stock items',
+            items: group.items,
+          },
+          { tx }
+        );
+
+        createdOrders.push({
+          id: order.id,
+          supplierName: group.supplierName,
+        });
+      }
+
+      return { orders: createdOrders, skippedItems };
+    });
+  }
+
+  /**
+   * Create orders from catalog items
+   * Creates draft orders for selected items with quantity 1, grouped by supplier
+   */
+  async createOrdersFromCatalogItems(
+    ctx: RequestContext,
+    selectedItemIds: string[]
+  ): Promise<{
+    orders: Array<{ id: string; supplierName: string }>;
+    skippedItems: string[];
+  }> {
+    // Check permissions
+    requireRole(ctx, 'STAFF');
+
+    if (selectedItemIds.length === 0) {
+      throw new ValidationError('No items selected');
+    }
+
+    return withTransaction(async (tx) => {
+      // Fetch selected items with inventory and supplier info
+      // Using findItems to get all related data including suppliers
+      const items = await this.inventoryRepository.findItems(
+        ctx.practiceId,
+        undefined,
+        { tx }
+      );
+
+      const selectedItems = items.filter((item) =>
+        selectedItemIds.includes(item.id)
+      );
+
+      // Group by practice supplier
+      const supplierGroups = new Map<
+        string,
+        {
+          supplierName: string;
+          items: Array<{ itemId: string; quantity: number; unitPrice: number | null }>;
+        }
+      >();
+
+      const skippedItems: string[] = [];
+
+      for (const item of selectedItems) {
+        // Skip items without default practice supplier
+        if (!item.defaultPracticeSupplier) {
+          skippedItems.push(item.name);
+          continue;
+        }
+
+        // Get unit price from SupplierItem if available (using practiceSupplierId)
+        const practiceSupplierId = item.defaultPracticeSupplier.id;
+        const matchingSupplierItem = (item as any).supplierItems?.find(
+          (si: any) => si.practiceSupplierId === practiceSupplierId
+        );
+        const unitPrice = decimalToNumber(matchingSupplierItem?.unitPrice);
+
+        // Get supplier name (prefer custom label, fallback to global supplier name)
+        const supplierName = item.defaultPracticeSupplier.customLabel 
+          || item.defaultPracticeSupplier.globalSupplier?.name 
+          || 'Unknown';
+
+        // Add to supplier group
+        if (!supplierGroups.has(practiceSupplierId)) {
+          supplierGroups.set(practiceSupplierId, {
+            supplierName,
+            items: [],
+          });
+        }
+
+        // Default quantity to 1 for catalog items
+        supplierGroups.get(practiceSupplierId)!.items.push({
+          itemId: item.id,
+          quantity: 1,
+          unitPrice,
+        });
+      }
+
+      // Create one draft order per practice supplier
+      const createdOrders: Array<{ id: string; supplierName: string }> = [];
+
+      for (const [practiceSupplierId, group] of supplierGroups.entries()) {
+        const order = await this.orderRepository.createOrder(
+          ctx.userId,
+          {
+            practiceId: ctx.practiceId,
+            practiceSupplierId,
+            notes: 'Created from catalog selection',
             items: group.items,
           },
           { tx }
@@ -1031,14 +1167,16 @@ export function getOrderService(): OrderService {
   if (!orderServiceInstance) {
     const { getAuditService } = require('../audit/audit-service');
     const { getPracticeSupplierRepository } = require('@/src/repositories/suppliers');
+    const { DeliveryStrategyResolver } = require('./delivery');
+    
     orderServiceInstance = new OrderService(
       new OrderRepository(),
       new InventoryRepository(),
       new UserRepository(),
       getPracticeSupplierRepository(),
-      getAuditService()
+      getAuditService(),
+      new DeliveryStrategyResolver()
     );
   }
   return orderServiceInstance;
 }
-

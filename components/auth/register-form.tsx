@@ -84,7 +84,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <label htmlFor="practiceName" className="text-sm font-medium text-slate-200">
+        <label htmlFor="practiceName" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Practice name
         </label>
         <input
@@ -95,19 +95,21 @@ export function RegisterForm() {
           value={state.practiceName}
           onChange={handleChange}
           className={cn(
-            "w-full rounded-lg border bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 transition-colors focus:outline-none focus:ring-2",
+            "w-full rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2",
+            "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
+            "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
             fieldErrors.practiceName
               ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
-              : "border-slate-800 focus:border-sky-500 focus:ring-sky-500/30"
+              : "focus:border-sky-500 focus:ring-sky-500/30"
           )}
         />
         {fieldErrors.practiceName?.[0] && (
-          <p className="text-xs text-rose-400">{fieldErrors.practiceName[0]}</p>
+          <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.practiceName[0]}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="name" className="text-sm font-medium text-slate-200">
+        <label htmlFor="name" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Your name
         </label>
         <input
@@ -118,19 +120,21 @@ export function RegisterForm() {
           value={state.name}
           onChange={handleChange}
           className={cn(
-            "w-full rounded-lg border bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 transition-colors focus:outline-none focus:ring-2",
+            "w-full rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2",
+            "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
+            "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
             fieldErrors.name
               ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
-              : "border-slate-800 focus:border-sky-500 focus:ring-sky-500/30"
+              : "focus:border-sky-500 focus:ring-sky-500/30"
           )}
         />
         {fieldErrors.name?.[0] && (
-          <p className="text-xs text-rose-400">{fieldErrors.name[0]}</p>
+          <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.name[0]}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium text-slate-200">
+        <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Work email
         </label>
         <input
@@ -142,19 +146,21 @@ export function RegisterForm() {
           value={state.email}
           onChange={handleChange}
           className={cn(
-            "w-full rounded-lg border bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 transition-colors focus:outline-none focus:ring-2",
+            "w-full rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2",
+            "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
+            "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
             fieldErrors.email
               ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
-              : "border-slate-800 focus:border-sky-500 focus:ring-sky-500/30"
+              : "focus:border-sky-500 focus:ring-sky-500/30"
           )}
         />
         {fieldErrors.email?.[0] && (
-          <p className="text-xs text-rose-400">{fieldErrors.email[0]}</p>
+          <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.email[0]}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium text-slate-200">
+        <label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Password
         </label>
         <input
@@ -166,19 +172,21 @@ export function RegisterForm() {
           value={state.password}
           onChange={handleChange}
           className={cn(
-            "w-full rounded-lg border bg-slate-900 px-3 py-2 text-slate-100 placeholder:text-slate-500 transition-colors focus:outline-none focus:ring-2",
+            "w-full rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2",
+            "bg-white text-slate-900 placeholder:text-slate-400 border-slate-300",
+            "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:border-slate-800",
             fieldErrors.password
               ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30"
-              : "border-slate-800 focus:border-sky-500 focus:ring-sky-500/30"
+              : "focus:border-sky-500 focus:ring-sky-500/30"
           )}
         />
         {fieldErrors.password?.[0] && (
-          <p className="text-xs text-rose-400">{fieldErrors.password[0]}</p>
+          <p className="text-xs text-rose-600 dark:text-rose-400">{fieldErrors.password[0]}</p>
         )}
       </div>
 
-      {error ? <p className="text-sm text-rose-400">{error}</p> : null}
-      {success ? <p className="text-sm text-emerald-400">{success}</p> : null}
+      {error ? <p className="text-sm text-rose-600 dark:text-rose-400">{error}</p> : null}
+      {success ? <p className="text-sm text-emerald-600 dark:text-emerald-400">{success}</p> : null}
 
       <button
         type="submit"
@@ -190,4 +198,3 @@ export function RegisterForm() {
     </form>
   );
 }
-

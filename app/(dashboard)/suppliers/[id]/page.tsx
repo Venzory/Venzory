@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { PracticeRole } from '@prisma/client';
-import { ArrowLeft, ExternalLink, ShoppingCart, Trash2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, ShoppingCart } from 'lucide-react';
 
 import { requireActivePractice } from '@/lib/auth';
 import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
@@ -9,7 +9,7 @@ import { hasRole } from '@/lib/rbac';
 
 import { PracticeSupplierForm } from '../_components/practice-supplier-form';
 import { SupplierStatusBadges } from '../_components/supplier-status-badges';
-import { unlinkPracticeSupplierAction } from '../actions';
+import { DeleteSupplierButton } from './_components/delete-supplier-button';
 import { getPracticeSupplierDisplay } from '../_utils/supplier-display';
 
 interface SupplierDetailPageProps {
@@ -191,15 +191,7 @@ export default async function SupplierDetailPage({ params }: SupplierDetailPageP
                 <p className="mb-4 text-sm text-rose-700 dark:text-rose-300">
                   This will remove the supplier from your practice. Your existing orders and item records will be preserved, but you won&apos;t be able to create new orders with this supplier unless you add them back.
                 </p>
-                <form action={unlinkPracticeSupplierAction.bind(null, practiceSupplier.id)}>
-                  <button
-                    type="submit"
-                    className="inline-flex items-center gap-2 rounded-lg border border-rose-300 bg-white px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50 dark:border-rose-800 dark:bg-rose-900/40 dark:text-rose-400 dark:hover:bg-rose-900/60"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Remove from Practice
-                  </button>
-                </form>
+                <DeleteSupplierButton supplierId={practiceSupplier.id} />
               </div>
             </>
           ) : (

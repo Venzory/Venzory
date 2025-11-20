@@ -26,6 +26,7 @@ import {
 import { searchItemByGtinAction } from '../../../receiving/actions';
 import { AddCountLineForm } from './add-count-line-form';
 import { ExpectedCountItemsForm } from './expected-count-items-form';
+import { StockCountConflictModal, InventoryChange } from './stock-count-conflict-modal';
 
 interface ExpectedCountItem {
   itemId: string;
@@ -78,6 +79,8 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [conflictChanges, setConflictChanges] = useState<InventoryChange[]>([]);
   const confirm = useConfirm();
 
   const handleScanResult = async (code: string) => {
@@ -118,6 +121,15 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
     try {
       const result = await completeStockCountAction(session.id, applyAdjustments, adminOverride);
       
+      if (!result.success) {
+        if (result.error === 'CONCURRENCY_CONFLICT' && 'changes' in result) {
+          setConflictChanges(result.changes || []);
+          setShowConflictModal(true);
+          return;
+        }
+        throw new Error(result.error || 'Failed to complete count');
+      }
+
       if (result.warnings && result.warnings.length > 0) {
         // Show warnings if admin overrode
         toast.success('Count completed with warnings');
@@ -132,27 +144,7 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
     } catch (error) {
       console.error('Complete error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to complete count';
-      
-      // Check if it's a concurrency error
-      if (errorMessage.includes('Inventory changed during count') && isAdmin && applyAdjustments) {
-        // Show concurrency error dialog with override option
-        const overrideConfirmed = await confirm({
-          title: 'Inventory Changed During Count',
-          message: errorMessage + '\n\nAs an administrator, you can override this check and force apply the adjustments.',
-          confirmLabel: 'Override and Apply',
-          cancelLabel: 'Cancel',
-          variant: 'danger',
-        });
-        
-        if (overrideConfirmed) {
-          // Retry with admin override
-          setIsCompleting(false);
-          await handleComplete(applyAdjustments, true);
-          return;
-        }
-      } else {
-        toast.error(errorMessage);
-      }
+      toast.error(errorMessage);
     } finally {
       setIsCompleting(false);
     }
@@ -199,6 +191,10 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
   const totalVariance = session.lines.reduce((sum, line) => sum + Math.abs(line.variance), 0);
   const positiveVariance = session.lines.filter((line) => line.variance > 0).length;
   const negativeVariance = session.lines.filter((line) => line.variance < 0).length;
+
+  // Derive initial count from existing lines if item is selected
+  const selectedLine = session.lines.find(line => line.item.id === selectedItemId);
+  const initialCount = selectedLine ? selectedLine.countedQuantity : undefined;
 
   return (
     <>
@@ -359,6 +355,7 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
               locationId={session.location.id}
               items={items}
               selectedItemId={selectedItemId}
+              initialCount={initialCount}
               onSuccess={() => {
                 setShowAddForm(false);
                 setSelectedItemId(null);
@@ -484,6 +481,17 @@ export function CountSessionDetail({ session, items, expectedItems, canEdit, isA
         onClose={closeScanner}
         onScan={handleScanResult}
         title="Scan Item Barcode"
+      />
+
+      <StockCountConflictModal
+        isOpen={showConflictModal}
+        changes={conflictChanges}
+        isAdmin={isAdmin}
+        onClose={() => setShowConflictModal(false)}
+        onConfirm={() => {
+          setShowConflictModal(false);
+          handleComplete(true, true);
+        }}
       />
     </>
   );

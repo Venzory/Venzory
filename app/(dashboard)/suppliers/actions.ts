@@ -95,9 +95,9 @@ export async function unlinkPracticeSupplierAction(
 ): Promise<void> {
   await verifyCsrfFromHeaders();
   
+  const { session, practiceId } = await requireActivePractice();
+  
   try {
-    const { session, practiceId } = await requireActivePractice();
-
     // Check RBAC - minimum STAFF role required
     const canManage = hasRole({
       memberships: session.user.memberships,
@@ -126,6 +126,27 @@ export async function unlinkPracticeSupplierAction(
       throw new Error('Supplier not found. It may have already been removed.');
     }
     
+    // If foreign key constraint fails (P2003), soft delete by blocking instead
+    if (appError.code === 'P2003') {
+      try {
+        const repository = getPracticeSupplierRepository();
+        await repository.updatePracticeSupplier(practiceSupplierId, practiceId, {
+          isBlocked: true,
+          isPreferred: false, // Also remove preferred status
+        });
+        
+        revalidatePath('/suppliers');
+        revalidatePath('/inventory');
+        revalidatePath('/dashboard');
+        
+        // Successfully blocked, so we can proceed to redirect
+        return;
+      } catch (updateError) {
+        console.error('Failed to soft-delete (block) supplier:', updateError);
+        // Fall through to throw original error if update fails
+      }
+    }
+
     if (appError.message.includes('not found') || appError.code === 'NOT_FOUND') {
       throw new Error('Supplier not found in your practice.');
     }

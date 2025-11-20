@@ -1,8 +1,19 @@
 'use client';
 
 import { useActionState } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { addReceiptLineAction } from '../../actions';
+import { Info } from 'lucide-react';
+
+interface ExpectedItem {
+  itemId: string;
+  itemName: string;
+  itemSku: string | null;
+  orderedQuantity: number;
+  alreadyReceived: number;
+  remainingQuantity: number;
+  unit: string | null;
+}
 
 interface AddLineFormProps {
   receiptId: string;
@@ -13,6 +24,7 @@ interface AddLineFormProps {
     unit: string | null;
   }>;
   selectedItemId: string | null;
+  expectedItems?: ExpectedItem[] | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -21,10 +33,14 @@ export function AddLineForm({
   receiptId,
   items,
   selectedItemId,
+  expectedItems,
   onSuccess,
   onCancel,
 }: AddLineFormProps) {
   const [state, formAction] = useActionState(addReceiptLineAction, null);
+  const [currentSelection, setCurrentSelection] = useState(selectedItemId || '');
+
+  const matchedOrder = expectedItems?.find((i) => i.itemId === currentSelection);
 
   useEffect(() => {
     if (state?.success) {
@@ -54,6 +70,7 @@ export function AddLineForm({
           name="itemId"
           required
           defaultValue={selectedItemId || ''}
+          onChange={(e) => setCurrentSelection(e.target.value)}
           className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           style={{ minHeight: '48px' }}
         >
@@ -64,6 +81,22 @@ export function AddLineForm({
             </option>
           ))}
         </select>
+        
+        {matchedOrder && (
+          <div className="mt-2 flex items-start gap-3 rounded-md bg-sky-50 p-3 text-sm text-sky-900 dark:bg-sky-900/20 dark:text-sky-200 border border-sky-100 dark:border-sky-800">
+            <Info className="h-5 w-5 text-sky-600 dark:text-sky-400 shrink-0" />
+            <div>
+              <p className="font-medium">Item is part of linked order</p>
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sky-800 dark:text-sky-300">
+                <span>Ordered: {matchedOrder.orderedQuantity}</span>
+                <span>Received: {matchedOrder.alreadyReceived}</span>
+                <span className="font-semibold text-sky-700 dark:text-sky-200">
+                  Remaining: {matchedOrder.remainingQuantity}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Quantity */}
@@ -77,7 +110,7 @@ export function AddLineForm({
           name="quantity"
           required
           min="1"
-          defaultValue="1"
+          defaultValue={matchedOrder ? matchedOrder.remainingQuantity : 1}
           className="w-32 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           style={{ minHeight: '48px' }}
         />

@@ -280,6 +280,7 @@ export class StockCountRepository extends BaseRepository {
     variance: number,
     practiceId: string,
     notes?: string | null,
+    systemQuantity?: number,
     options?: RepositoryOptions
   ): Promise<StockCountLine> {
     const client = this.getClient(options?.tx);
@@ -293,6 +294,7 @@ export class StockCountRepository extends BaseRepository {
         countedQuantity,
         variance,
         ...(notes !== undefined && { notes }),
+        ...(systemQuantity !== undefined && { systemQuantity }),
       },
     });
 

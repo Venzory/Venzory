@@ -179,8 +179,8 @@ export function TemplatePreviewClient({
     setIsSubmitting(true);
 
     // Convert Map to array format for the action
-    const orderData = Array.from(supplierGroups.entries()).map(([supplierId, items]) => ({
-      supplierId,
+    const orderData = Array.from(supplierGroups.entries()).map(([practiceSupplierId, items]) => ({
+      practiceSupplierId,
       items,
     }));
 

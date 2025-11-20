@@ -40,6 +40,9 @@ export default async function NewTemplatePage() {
   const suppliers = practiceSuppliers.map(ps => ({
     id: ps.id,
     name: ps.customLabel || ps.globalSupplier?.name || 'Unknown Supplier',
+    isPreferred: ps.isPreferred,
+    isBlocked: ps.isBlocked,
+    accountNumber: ps.accountNumber,
   }));
 
   // Transform items to match expected format

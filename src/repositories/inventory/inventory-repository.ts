@@ -350,6 +350,7 @@ export class InventoryRepository extends BaseRepository {
     reorderPoint: number | null | undefined,
     reorderQuantity: number | null | undefined,
     practiceId: string,
+    maxStock?: number | null,
     options?: RepositoryOptions
   ): Promise<LocationInventory> {
     const client = this.getClient(options?.tx);
@@ -380,11 +381,13 @@ export class InventoryRepository extends BaseRepository {
         quantity,
         reorderPoint: reorderPoint ?? null,
         reorderQuantity: reorderQuantity ?? null,
+        maxStock: maxStock ?? null,
       },
       update: {
         quantity,
         ...(reorderPoint !== undefined && { reorderPoint }),
         ...(reorderQuantity !== undefined && { reorderQuantity }),
+        ...(maxStock !== undefined && { maxStock }),
       },
     });
 
@@ -619,16 +622,38 @@ export class InventoryRepository extends BaseRepository {
       },
     });
 
-    return lowStockInventory.map((inv) => ({
-      itemId: inv.itemId,
-      itemName: inv.item.name,
-      locationId: inv.locationId,
-      locationName: inv.location.name,
-      currentQuantity: inv.quantity,
-      reorderPoint: inv.reorderPoint!,
-      reorderQuantity: inv.reorderQuantity,
-      suggestedOrderQuantity: inv.reorderQuantity ?? inv.reorderPoint!,
-    }));
+    return lowStockInventory.map((inv) => {
+      // Suggested order calculation:
+      // 1. If maxStock is set, order enough to reach maxStock
+      // 2. If maxStock is not set, use reorderQuantity if set
+      // 3. If neither set, default to fill up to reorderPoint (or min 1)
+      let suggestedOrderQuantity = 0;
+      
+      if (inv.maxStock) {
+        suggestedOrderQuantity = Math.max(0, inv.maxStock - inv.quantity);
+      } else if (inv.reorderQuantity) {
+        suggestedOrderQuantity = inv.reorderQuantity;
+      } else {
+        // Default: order enough to reach reorderPoint if no other instruction
+        // Or typically companies might want a Fixed Order Quantity (FOQ)
+        // Here we'll assume simple replenishment to safety stock if no other info
+        suggestedOrderQuantity = Math.max(0, inv.reorderPoint! - inv.quantity); 
+        // But usually reorderQuantity defaults to reorderPoint in previous logic
+        suggestedOrderQuantity = inv.reorderQuantity ?? inv.reorderPoint!; 
+      }
+
+      return {
+        itemId: inv.itemId,
+        itemName: inv.item.name,
+        locationId: inv.locationId,
+        locationName: inv.location.name,
+        currentQuantity: inv.quantity,
+        reorderPoint: inv.reorderPoint!,
+        reorderQuantity: inv.reorderQuantity,
+        maxStock: inv.maxStock,
+        suggestedOrderQuantity,
+      };
+    });
   }
 
   /**

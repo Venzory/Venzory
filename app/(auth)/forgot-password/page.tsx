@@ -8,11 +8,11 @@ export const metadata = {
 
 export default function ForgotPasswordPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-6 py-12">
-      <div className="w-full max-w-md space-y-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-8 shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-6 py-12 dark:bg-slate-950">
+      <div className="w-full max-w-md space-y-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900/60">
         <header className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold text-white">Reset your password</h1>
-          <p className="text-sm text-slate-300">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Reset your password</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Enter your email address and we&apos;ll send you a link to reset your password.
           </p>
         </header>
@@ -22,7 +22,7 @@ export default function ForgotPasswordPage() {
         <div className="text-center">
           <Link
             href="/login"
-            className="text-sm text-sky-400 hover:text-sky-300"
+            className="text-sm text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
           >
             Back to sign in
           </Link>
@@ -35,4 +35,3 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
-

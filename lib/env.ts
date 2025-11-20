@@ -74,6 +74,7 @@ const productionSchema = z.object({
     .refine((url) => url.startsWith('https://'), {
       message: 'NEXT_PUBLIC_APP_URL must use HTTPS in production',
     }),
+  CRON_SECRET: secretSchema('CRON_SECRET'),
 });
 
 /**
@@ -84,6 +85,7 @@ const developmentSchema = z.object({
   REDIS_URL: z.string().url().optional().or(z.literal('')),
   NEXTAUTH_URL: z.string().url().default('http://localhost:3000'),
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
+  CRON_SECRET: z.string().optional(),
 });
 
 /**
@@ -182,4 +184,3 @@ export const env = parseEnv();
  * Type of the validated environment object
  */
 export type Env = typeof env;
-

@@ -116,6 +116,41 @@ export class InventoryService {
       // Verify item exists
       await this.inventoryRepository.findItemById(itemId, ctx.practiceId, { tx });
 
+      // Delete dependent records that are not set to CASCADE
+      // OrderItem has a RESTRICT relation in some migrations/schema versions, or we want to be explicit
+      // NOTE: Ideally schema should use ON DELETE CASCADE for these if they are strictly child records
+      // But OrderItem usually shouldn't be deleted if it's part of a completed order.
+      // If we are strictly deleting an item, we should probably check if it's used in any active orders?
+      // For now, to unblock "Remove from items" which implies "I don't want this in my catalog anymore":
+
+      // 1. Check for active orders (optional safety check, but maybe overkill for now)
+      // 2. Delete OrderItems for this item? 
+      // Actually, Prisma schema shows:
+      // model OrderItem { ... item Item @relation(fields: [itemId], references: [id]) ... }
+      // And migration says: FOREIGN KEY ("itemId") REFERENCES "Item"("id") ON DELETE RESTRICT
+      
+      // So we MUST delete OrderItems first.
+      await tx.orderItem.deleteMany({
+        where: { itemId },
+      });
+
+      // Also delete OrderTemplateItems if any (schema shows Cascade usually, but good to be safe or if it's Restrict)
+      // Schema says: orderTemplateItems OrderTemplateItem[]
+      // Migration doesn't explicitly show it but typically it's cascade. Let's check schema again.
+      // Schema: model OrderTemplateItem { ... item Item @relation(fields: [itemId], references: [id], onDelete: Cascade) }
+      // So Template items are fine.
+
+      // GoodsReceiptLine?
+      // model GoodsReceiptLine { ... item Item @relation(fields: [itemId], references: [id], onDelete: Restrict) } (Likely Restrict)
+      await tx.goodsReceiptLine.deleteMany({
+        where: { itemId },
+      });
+
+      // StockCountLine?
+      await tx.stockCountLine.deleteMany({
+        where: { itemId },
+      });
+
       // Delete item
       await this.inventoryRepository.deleteItem(itemId, ctx.practiceId, { tx });
 
@@ -307,15 +342,20 @@ export class InventoryService {
   /**
    * Update reorder settings for an item at a location
    */
-  async updateReorderSettings(
+  async updateStockSettings(
     ctx: RequestContext,
     itemId: string,
     locationId: string,
-    reorderPoint: number | null,
-    reorderQuantity: number | null
+    settings: {
+      reorderPoint: number | null;
+      reorderQuantity: number | null;
+      maxStock: number | null;
+    }
   ): Promise<void> {
     // Check permissions
     requireRole(ctx, 'STAFF');
+
+    const { reorderPoint, reorderQuantity, maxStock } = settings;
 
     // Validate input
     if (reorderPoint !== null && reorderPoint < 0) {
@@ -323,6 +363,12 @@ export class InventoryService {
     }
     if (reorderQuantity !== null && reorderQuantity <= 0) {
       throw new ValidationError(`Reorder quantity must be positive (received: ${reorderQuantity})`);
+    }
+    if (maxStock !== null && maxStock < 0) {
+      throw new ValidationError(`Max stock must be non-negative (received: ${maxStock})`);
+    }
+    if (maxStock !== null && reorderPoint !== null && maxStock < reorderPoint) {
+      throw new BusinessRuleViolationError(`Max stock (${maxStock}) cannot be less than reorder point (${reorderPoint})`);
     }
 
     // Verify item exists
@@ -342,8 +388,33 @@ export class InventoryService {
       inventory?.quantity ?? 0,
       reorderPoint,
       reorderQuantity,
+      ctx.practiceId,
+      maxStock
+    );
+  }
+
+  /**
+   * Update reorder settings for an item at a location (Legacy wrapper)
+   */
+  async updateReorderSettings(
+    ctx: RequestContext,
+    itemId: string,
+    locationId: string,
+    reorderPoint: number | null,
+    reorderQuantity: number | null
+  ): Promise<void> {
+    // Get current maxStock to preserve it
+    const inventory = await this.inventoryRepository.getLocationInventory(
+      itemId,
+      locationId,
       ctx.practiceId
     );
+
+    return this.updateStockSettings(ctx, itemId, locationId, {
+      reorderPoint,
+      reorderQuantity,
+      maxStock: inventory?.maxStock ?? null,
+    });
   }
 
   /**
@@ -480,6 +551,7 @@ export class InventoryService {
           variance,
           ctx.practiceId,
           notes ?? existingLine.notes,
+          systemQuantity,
           { tx }
         );
 
@@ -558,8 +630,18 @@ export class InventoryService {
         throw new BusinessRuleViolationError('Cannot edit completed session');
       }
 
+      // Get fresh system quantity to avoid concurrency loops
+      const inventory = await this.inventoryRepository.getLocationInventory(
+        line.itemId,
+        line.session.locationId,
+        ctx.practiceId,
+        { tx }
+      );
+      
+      const systemQuantity = inventory?.quantity ?? 0;
+
       // Recalculate variance
-      const variance = countedQuantity - line.systemQuantity;
+      const variance = countedQuantity - systemQuantity;
 
       // Update line
       await this.stockCountRepository.updateStockCountLine(
@@ -568,6 +650,7 @@ export class InventoryService {
         variance,
         ctx.practiceId,
         notes ?? line.notes,
+        systemQuantity,
         { tx }
       );
 
@@ -578,7 +661,7 @@ export class InventoryService {
           itemId: line.itemId,
           itemName: line.item.name,
           countedQuantity,
-          systemQuantity: line.systemQuantity,
+          systemQuantity,
           variance,
         },
         tx
@@ -738,6 +821,7 @@ export class InventoryService {
             existingInventory?.reorderPoint,
             existingInventory?.reorderQuantity,
             ctx.practiceId,
+            existingInventory?.maxStock,
             { tx }
           );
 

@@ -200,7 +200,7 @@ function ProductList({
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        href={`/products/${product.id}`}
+                        href={`/settings/products/${product.id}`}
                         className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                       >
                         View →

@@ -11,7 +11,7 @@ import { decimalToNumber } from '@/lib/prisma-transforms';
 
 import { Gs1StatusBadge } from '../_components/gs1-status-badge';
 import { IntegrationTypeBadge } from '../_components/integration-type-badge';
-import { deleteProductAction, triggerGs1LookupAction } from '../actions';
+import { ProductDeleteButton, Gs1RefreshButton } from './_components/product-actions';
 
 interface ProductDetailPageProps {
   params: Promise<{ productId: string }>;
@@ -78,24 +78,10 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         </div>
         <div className="flex gap-3">
           {canManage && product.gtin ? (
-            <form action={triggerGs1LookupAction.bind(null, product.id)}>
-              <button
-                type="submit"
-                className="rounded-lg border border-sky-600 px-4 py-2 text-sm font-semibold text-sky-600 transition hover:bg-sky-50 dark:border-sky-500 dark:text-sky-400 dark:hover:bg-sky-900/20"
-              >
-                Refresh GS1 Data
-              </button>
-            </form>
+            <Gs1RefreshButton productId={product.id} />
           ) : null}
           {canManage && (product.items?.length || 0) === 0 ? (
-            <form action={deleteProductAction.bind(null, product.id)}>
-              <button
-                type="submit"
-                className="rounded-lg border border-rose-600 px-4 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50 dark:border-rose-500 dark:text-rose-400 dark:hover:bg-rose-900/20"
-              >
-                Delete Product
-              </button>
-            </form>
+            <ProductDeleteButton productId={product.id} />
           ) : null}
         </div>
       </div>

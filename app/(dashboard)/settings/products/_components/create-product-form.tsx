@@ -3,6 +3,8 @@
 import { useActionState } from 'react';
 
 import { createProductAction } from '../actions';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 type FormState = {
@@ -24,59 +26,41 @@ export function CreateProductForm() {
       </div>
 
       <div className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="product-name" className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            Product Name <span className="text-rose-500">*</span>
-          </label>
-          <input
-            id="product-name"
-            name="name"
-            required
-            placeholder="e.g. Sterile Gauze Bandage"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
-          />
-        </div>
+        <Input
+          label="Product Name"
+          id="product-name"
+          name="name"
+          required
+          placeholder="e.g. Sterile Gauze Bandage"
+        />
 
-        <div className="space-y-2">
-          <label htmlFor="product-gtin" className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            GTIN / Barcode
-          </label>
-          <input
+        <div>
+          <Input
+            label="GTIN / Barcode"
             id="product-gtin"
             name="gtin"
             placeholder="e.g. 08712345678906"
             maxLength={14}
-            className="max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Optional. Must be 8, 12, 13, or 14 digits. GS1 lookup will be attempted automatically.
           </p>
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="product-brand" className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            Brand / Manufacturer
-          </label>
-          <input
-            id="product-brand"
-            name="brand"
-            placeholder="e.g. 3M, Johnson & Johnson"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
-          />
-        </div>
+        <Input
+          label="Brand / Manufacturer"
+          id="product-brand"
+          name="brand"
+          placeholder="e.g. 3M, Johnson & Johnson"
+        />
 
-        <div className="space-y-2">
-          <label htmlFor="product-description" className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            Description
-          </label>
-          <textarea
-            id="product-description"
-            name="description"
-            rows={4}
-            placeholder="Detailed product description..."
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
-          />
-        </div>
+        <Textarea
+          label="Description"
+          id="product-description"
+          name="description"
+          rows={4}
+          placeholder="Detailed product description..."
+        />
       </div>
 
       {state.error ? (

@@ -29,15 +29,14 @@ export function NewCountForm({ locations }: NewCountFormProps) {
 
       {/* Location */}
       <div className="space-y-2">
-        <label htmlFor="locationId" className="block text-sm font-medium text-slate-900 dark:text-slate-200">
+        <label htmlFor="locationId" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Count Location *
         </label>
         <select
           id="locationId"
           name="locationId"
           required
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-          style={{ minHeight: '48px' }}
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
         >
           <option value="">Select a location</option>
           {locations.map((location) => (
@@ -55,7 +54,7 @@ export function NewCountForm({ locations }: NewCountFormProps) {
 
       {/* Notes */}
       <div className="space-y-2">
-        <label htmlFor="notes" className="block text-sm font-medium text-slate-900 dark:text-slate-200">
+        <label htmlFor="notes" className="text-sm font-medium text-slate-700 dark:text-slate-200">
           Notes (Optional)
         </label>
         <textarea
@@ -64,7 +63,7 @@ export function NewCountForm({ locations }: NewCountFormProps) {
           rows={3}
           maxLength={512}
           placeholder="E.g., Monthly count for shelf A..."
-          className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
       </div>
 

@@ -8,6 +8,9 @@ import { hasRole } from '@/lib/rbac';
 
 import { CreateLocationForm } from './_components/create-location-form';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { deleteLocationAction, upsertLocationInlineAction } from '../inventory/actions';
 
 // Type for location with inventory and hierarchy relations
@@ -214,41 +217,30 @@ function LocationList({
               {canManage ? (
                 <details className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200">
                   <summary className="cursor-pointer text-sm font-medium text-slate-900 dark:text-slate-200">Edit location</summary>
-                  <form action={upsertLocationInlineAction} className="mt-3 space-y-3">
+                  <form action={upsertLocationInlineAction} className="mt-3 space-y-4">
                     <input type="hidden" name="locationId" value={location.id} />
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`location-name-${location.id}`}>
-                        Name
-                      </label>
-                      <input
-                        id={`location-name-${location.id}`}
-                        name="name"
-                        defaultValue={location.name}
-                        required
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                      />
-                    </div>
+                    <Input
+                      label="Name"
+                      id={`location-name-${location.id}`}
+                      name="name"
+                      defaultValue={location.name}
+                      required
+                    />
                     <div className="flex gap-3">
-                      <div className="flex-1 space-y-1">
-                        <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`location-code-${location.id}`}>
-                          Code
-                        </label>
-                        <input
+                      <div className="flex-1">
+                        <Input
+                          label="Code"
                           id={`location-code-${location.id}`}
                           name="code"
                           defaultValue={location.code ?? ''}
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                         />
                       </div>
-                      <div className="flex-1 space-y-1">
-                        <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`location-parent-${location.id}`}>
-                          Parent
-                        </label>
-                        <select
+                      <div className="flex-1">
+                        <Select
+                          label="Parent"
                           id={`location-parent-${location.id}`}
                           name="parentId"
                           defaultValue={location.parent?.id ?? 'none'}
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
                         >
                           <option value="none">Top level</option>
                           {locations
@@ -258,21 +250,16 @@ function LocationList({
                                 {candidate.name}
                               </option>
                             ))}
-                        </select>
+                        </Select>
                       </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-600 dark:text-slate-400" htmlFor={`location-description-${location.id}`}>
-                        Description
-                      </label>
-                      <textarea
-                        id={`location-description-${location.id}`}
-                        name="description"
-                        rows={2}
-                        defaultValue={location.description ?? ''}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-                      />
-                    </div>
+                    <Textarea
+                      label="Description"
+                      id={`location-description-${location.id}`}
+                      name="description"
+                      rows={2}
+                      defaultValue={location.description ?? ''}
+                    />
                     <button
                       type="submit"
                       className="rounded-lg bg-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"

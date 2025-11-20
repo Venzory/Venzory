@@ -46,12 +46,38 @@ async function runValidationQueries() {
         const results = await prisma.$queryRawUnsafe(query);
         
         if (Array.isArray(results) && results.length > 0) {
-          queriesWithResults++;
-          totalViolations += results.length;
+          // Check if this is a summary query with counts
+          const isSummary = results.some(r => 'violation_count' in r);
           
-          console.log(`⚠️  Query ${i + 1} found ${results.length} issue(s):`);
-          console.log(JSON.stringify(results, null, 2));
-          console.log('\n---\n');
+          if (isSummary) {
+            // Filter out 0 counts
+            const actualViolations = results.filter(r => {
+              const count = typeof r.violation_count === 'bigint' 
+                ? Number(r.violation_count) 
+                : Number(r.violation_count);
+              return count > 0;
+            });
+
+            if (actualViolations.length > 0) {
+              queriesWithResults++;
+              totalViolations += actualViolations.length;
+              console.log(`⚠️  Query ${i + 1} found ${actualViolations.length} issue(s):`);
+              console.log(JSON.stringify(actualViolations, (key, value) => 
+                typeof value === 'bigint' ? value.toString() : value
+              , 2));
+              console.log('\n---\n');
+            }
+          } else {
+            // Standard query returning rows
+            queriesWithResults++;
+            totalViolations += results.length;
+            
+            console.log(`⚠️  Query ${i + 1} found ${results.length} issue(s):`);
+            console.log(JSON.stringify(results, (key, value) => 
+              typeof value === 'bigint' ? value.toString() : value
+            , 2));
+            console.log('\n---\n');
+          }
         }
       } catch (error: unknown) {
         // Some queries might fail if tables are empty or syntax issues

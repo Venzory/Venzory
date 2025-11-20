@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useActionState } from 'react';
-import { ChevronRight, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { addReceiptLineAction } from '../../actions';
 
 interface ExpectedItem {
@@ -31,6 +31,7 @@ export function ExpectedItemsForm({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [state, formAction] = useActionState(addReceiptLineAction, null);
   const [formKey, setFormKey] = useState(0);
+  const [expiryWarning, setExpiryWarning] = useState(false);
 
   // Ensure currentIndex is within bounds
   const safeIndex = Math.min(currentIndex, expectedItems.length - 1);
@@ -48,6 +49,7 @@ export function ExpectedItemsForm({
         } else {
           setCurrentIndex((prev) => prev + 1);
           setFormKey((prev) => prev + 1); // Force form reset
+          setExpiryWarning(false);
         }
       }, 500);
       return () => clearTimeout(timer);
@@ -68,8 +70,36 @@ export function ExpectedItemsForm({
     if (!isLastItem) {
       setCurrentIndex((prev) => prev + 1);
       setFormKey((prev) => prev + 1);
+      setExpiryWarning(false);
     }
   };
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+      setFormKey((prev) => prev + 1);
+      setExpiryWarning(false);
+    }
+  };
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = e.target.value;
+    if (date) {
+      const selectedDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      // Warning if date is in the past
+      if (selectedDate < today) {
+        setExpiryWarning(true);
+      } else {
+        setExpiryWarning(false);
+      }
+    } else {
+      setExpiryWarning(false);
+    }
+  };
+
+  const progressPercentage = currentItem ? Math.min(100, Math.max(0, Math.round((currentItem.alreadyReceived / currentItem.orderedQuantity) * 100))) : 0;
 
   return (
     <div className="space-y-3">
@@ -104,6 +134,23 @@ export function ExpectedItemsForm({
             {currentItem.itemSku && (
               <p className="text-xs text-slate-600 dark:text-slate-400">{currentItem.itemSku}</p>
             )}
+            
+            {/* Visual Progress Bar */}
+            <div className="mt-3 mb-2 w-full max-w-md">
+              <div className="flex justify-between text-[10px] font-medium text-slate-500 mb-1">
+                <span>Received: {currentItem.alreadyReceived}</span>
+                <span>Ordered: {currentItem.orderedQuantity}</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    currentItem.alreadyReceived >= currentItem.orderedQuantity ? 'bg-green-500' : 'bg-sky-500'
+                  }`}
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
+
             <div className="mt-1 space-y-0.5">
               <p className="text-xs font-medium text-sky-700 dark:text-sky-400">
                 Ordered: {currentItem.orderedQuantity} {currentItem.unit || 'units'}
@@ -129,7 +176,17 @@ export function ExpectedItemsForm({
         </div>
 
         {isFullyReceived ? (
-          <div className="flex justify-end">
+          <div className="flex justify-between">
+            <button
+              type="button"
+              onClick={handlePrevious}
+              disabled={currentIndex === 0}
+              className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-30 dark:text-slate-400 dark:hover:bg-slate-800"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </button>
+
             <button
               type="button"
               onClick={handleSkip}
@@ -203,29 +260,50 @@ export function ExpectedItemsForm({
                   type="date"
                   id="expiryDate"
                   name="expiryDate"
-                  className="w-40 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  onChange={handleExpiryChange}
+                  className={`w-40 rounded-lg border bg-white px-3 py-2.5 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                    expiryWarning ? 'border-amber-500 ring-1 ring-amber-500/30' : 'border-slate-300 dark:border-slate-700'
+                  }`}
                 />
+                {expiryWarning && (
+                  <div className="absolute mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>Warning: Past date</span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:justify-end mt-2">
-              {!isLastItem && (
-                <button
-                  type="button"
-                  onClick={handleSkip}
-                  className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
-                  Skip for Now
-                </button>
-              )}
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:justify-between mt-2">
               <button
-                type="submit"
-                className="flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700"
+                type="button"
+                onClick={handlePrevious}
+                disabled={currentIndex === 0}
+                className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-30 dark:text-slate-400 dark:hover:bg-slate-800"
               >
-                {isLastItem ? 'Receive Last Item' : 'Receive & Next'}
-                {!isLastItem && <ChevronRight className="h-4 w-4" />}
+                <ChevronLeft className="h-4 w-4" />
+                Previous
               </button>
+              
+              <div className="flex gap-2">
+                {!isLastItem && (
+                  <button
+                    type="button"
+                    onClick={handleSkip}
+                    className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    Skip Item
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700"
+                >
+                  {isLastItem ? 'Receive Last Item' : 'Receive & Next'}
+                  {!isLastItem && <ChevronRight className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </form>
         )}

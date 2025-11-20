@@ -77,6 +77,15 @@ export function toAppError(error: unknown): AppError {
 
   // Generic Error instances
   if (error instanceof Error) {
+    // Check if it wraps a Prisma error or has a code property (common in some libs)
+    const code = (error as any).code;
+    if (code && typeof code === 'string') {
+      return {
+        message: error.message,
+        code: code,
+      };
+    }
+    
     return {
       message: error.message,
       code: 'INTERNAL_ERROR',

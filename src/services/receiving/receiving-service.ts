@@ -29,6 +29,8 @@ import {
   validateReceiptCanBeConfirmed,
   validateExpiryDate,
 } from '@/src/domain/validators';
+import { prisma } from '@/lib/prisma';
+import { checkAndCreateLowStockNotification } from '@/lib/notifications';
 
 export class ReceivingService {
   constructor(
@@ -293,6 +295,7 @@ export class ReceivingService {
           currentInventory?.reorderPoint,
           currentInventory?.reorderQuantity,
           ctx.practiceId,
+          currentInventory?.maxStock,
           { tx }
         );
 
@@ -317,6 +320,18 @@ export class ReceivingService {
           newQuantity < currentInventory.reorderPoint
         ) {
           lowStockNotifications.push(line.item?.name ?? 'Unknown item');
+
+          // Persist notification
+          await checkAndCreateLowStockNotification(
+            {
+              practiceId: ctx.practiceId,
+              itemId: line.itemId,
+              locationId: receipt.locationId,
+              newQuantity,
+              reorderPoint: currentInventory.reorderPoint,
+            },
+            tx
+          );
         }
       }
 
@@ -356,7 +371,7 @@ export class ReceivingService {
         {
           locationId: receipt.locationId,
           orderId: receipt.orderId,
-          supplierId: receipt.practiceSupplierId ?? null,
+          practiceSupplierId: receipt.practiceSupplierId ?? null,
         },
         tx
       );
@@ -531,6 +546,91 @@ export class ReceivingService {
       sku: matchingItem.sku,
       unit: matchingItem.unit,
     };
+  }
+
+  /**
+   * Get receiving mismatches (orders with quantity discrepancies)
+   */
+  async getReceivingMismatches(ctx: RequestContext) {
+    // Fetch potential mismatch orders (PARTIALLY_RECEIVED or RECEIVED)
+    const candidates = await prisma.order.findMany({
+      where: {
+        practiceId: ctx.practiceId,
+        status: { in: ['PARTIALLY_RECEIVED', 'RECEIVED'] },
+      },
+      include: {
+        items: {
+          include: { item: { select: { name: true, unit: true } } },
+        },
+        goodsReceipts: {
+          where: { status: 'CONFIRMED' },
+          include: { lines: true },
+        },
+        practiceSupplier: {
+          include: { globalSupplier: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 50, // Limit to recent 50 active/recent orders
+    });
+
+    const mismatches = [];
+
+    for (const order of candidates) {
+      const itemStats = new Map<
+        string,
+        { name: string; ordered: number; received: number; unit: string | null }
+      >();
+
+      // Initialize with ordered items
+      for (const orderItem of order.items) {
+        itemStats.set(orderItem.itemId, {
+          name: orderItem.item.name,
+          ordered: orderItem.quantity,
+          received: 0,
+          unit: orderItem.item.unit,
+        });
+      }
+
+      // Aggregate received quantities
+      for (const receipt of order.goodsReceipts) {
+        for (const line of receipt.lines) {
+          const stats = itemStats.get(line.itemId);
+          if (stats) {
+            stats.received += line.quantity;
+          }
+        }
+      }
+
+      // Identify mismatched items
+      const mismatchedItems = [];
+      let isOrderMismatched = false;
+
+      for (const stats of itemStats.values()) {
+        if (stats.ordered !== stats.received) {
+          mismatchedItems.push(stats);
+          isOrderMismatched = true;
+        }
+      }
+
+      // Include if status is PARTIALLY_RECEIVED (always interesting)
+      // OR if status is RECEIVED but counts don't match
+      if (order.status === 'PARTIALLY_RECEIVED' || (order.status === 'RECEIVED' && isOrderMismatched)) {
+        mismatches.push({
+          id: order.id,
+          reference: order.reference,
+          supplierName:
+            order.practiceSupplier?.customLabel ||
+            order.practiceSupplier?.globalSupplier?.name ||
+            'Unknown Supplier',
+          status: order.status,
+          updatedAt: order.updatedAt,
+          items: mismatchedItems,
+        });
+      }
+    }
+
+    return mismatches;
   }
 }
 

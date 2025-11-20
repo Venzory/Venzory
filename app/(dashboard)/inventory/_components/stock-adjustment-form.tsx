@@ -4,6 +4,8 @@ import { useActionState, useEffect, useRef } from 'react';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import type { FormState } from '@/lib/form-types';
 
 import { createStockAdjustmentAction } from '../actions';
@@ -63,20 +65,13 @@ export function StockAdjustmentForm({
 
       <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label htmlFor="adjust-item" className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              Item <span className="text-rose-600 dark:text-rose-400">*</span>
-            </label>
-            <select
+          <div>
+            <Select
+              label="Item"
               id="adjust-item"
               name="itemId"
               required
-              className={cn(
-                "w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-900 dark:text-slate-100",
-                state.errors?.itemId
-                  ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30 dark:border-rose-500"
-                  : "border-slate-300 focus:border-sky-500 focus:ring-sky-500/30 dark:border-slate-800"
-              )}
+              error={state.errors?.itemId?.[0]}
             >
               <option value="">Select item…</option>
               {items.map((item) => (
@@ -85,25 +80,15 @@ export function StockAdjustmentForm({
                   {item.sku ? ` (${item.sku})` : ''}
                 </option>
               ))}
-            </select>
-            {state.errors?.itemId?.[0] && (
-              <p className="text-xs text-rose-600 dark:text-rose-400">{state.errors.itemId[0]}</p>
-            )}
+            </Select>
           </div>
-          <div className="space-y-2">
-            <label htmlFor="adjust-location" className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              Location <span className="text-rose-600 dark:text-rose-400">*</span>
-            </label>
-            <select
+          <div>
+            <Select
+              label="Location"
               id="adjust-location"
               name="locationId"
               required
-              className={cn(
-                "w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-900 dark:text-slate-100",
-                state.errors?.locationId
-                  ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/30 dark:border-rose-500"
-                  : "border-slate-300 focus:border-sky-500 focus:ring-sky-500/30 dark:border-slate-800"
-              )}
+              error={state.errors?.locationId?.[0]}
             >
               <option value="">Select location…</option>
               {locations.map((location) => (
@@ -112,46 +97,38 @@ export function StockAdjustmentForm({
                   {location.code ? ` (${location.code})` : ''}
                 </option>
               ))}
-            </select>
-            {state.errors?.locationId?.[0] && (
-              <p className="text-xs text-rose-600 dark:text-rose-400">{state.errors.locationId[0]}</p>
-            )}
+            </Select>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Quantity change"
-            name="quantity"
-            type="number"
-            required
-            placeholder="Use negative numbers to decrease stock"
-            className="w-32"
-            error={state.errors?.quantity?.[0]}
-          />
-          <div className="space-y-2">
-            <label htmlFor="adjust-reason" className="text-sm font-medium text-slate-700 dark:text-slate-200">
-              Reason
-            </label>
-            <input
+          <div>
+            <Input
+              label="Quantity change"
+              name="quantity"
+              type="number"
+              required
+              placeholder="e.g. 5 or -5"
+              error={state.errors?.quantity?.[0]}
+            />
+          </div>
+          <div>
+            <Input
+              label="Reason"
               id="adjust-reason"
               name="reason"
               placeholder="e.g. intake, waste"
-              className="max-w-xs rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
             />
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="adjust-note" className="text-sm font-medium text-slate-700 dark:text-slate-200">
-            Note
-          </label>
-          <textarea
+        <div>
+          <Textarea
+            label="Note"
             id="adjust-note"
             name="note"
             rows={3}
             placeholder="Optional context"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
         </div>
       </div>

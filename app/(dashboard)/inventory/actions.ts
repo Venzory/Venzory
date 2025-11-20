@@ -387,6 +387,67 @@ export async function createStockAdjustmentAction(_prevState: unknown, formData:
 }
 
 /**
+ * Update inventory settings (min/max/reorder)
+ */
+export async function updateStockSettingsAction(_prevState: unknown, formData: FormData) {
+  await verifyCsrfFromHeaders();
+  
+  const schema = z.object({
+    itemId: z.string().cuid(),
+    locationId: z.string().cuid(),
+    reorderPoint: z.coerce.number().int().nonnegative().nullable().optional(),
+    reorderQuantity: z.coerce.number().int().positive().nullable().optional(),
+    maxStock: z.coerce.number().int().nonnegative().nullable().optional(),
+  });
+
+  try {
+    const ctx = await buildRequestContext();
+
+    // Handle empty strings as null
+    const rawData = {
+      itemId: formData.get('itemId'),
+      locationId: formData.get('locationId'),
+      reorderPoint: formData.get('reorderPoint') === '' ? null : formData.get('reorderPoint'),
+      reorderQuantity: formData.get('reorderQuantity') === '' ? null : formData.get('reorderQuantity'),
+      maxStock: formData.get('maxStock') === '' ? null : formData.get('maxStock'),
+    };
+
+    const parsed = schema.safeParse(rawData);
+
+    if (!parsed.success) {
+      return { errors: parsed.error.flatten().fieldErrors };
+    }
+
+    const { itemId, locationId, reorderPoint, reorderQuantity, maxStock } = parsed.data;
+
+    await inventoryService.updateStockSettings(ctx, itemId, locationId, {
+      reorderPoint: reorderPoint ?? null,
+      reorderQuantity: reorderQuantity ?? null,
+      maxStock: maxStock ?? null,
+    });
+
+    revalidatePath('/inventory');
+    revalidatePath('/inventory/reorder');
+    return { success: 'Inventory settings updated' };
+  } catch (error) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'updateStockSettingsAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      itemId: formData.get('itemId'),
+      locationId: formData.get('locationId'),
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Failed to update stock settings');
+    
+    if (isDomainError(error)) {
+      return { error: error.message };
+    }
+    return { error: 'An unexpected error occurred' };
+  }
+}
+
+/**
  * Create orders from low stock items
  */
 export async function createOrdersFromLowStockAction(selectedItemIds: string[]) {

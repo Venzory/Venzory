@@ -243,7 +243,7 @@ export class AuditService {
     metadata?: {
       locationId: string;
       orderId?: string | null;
-      supplierId?: string | null;
+      practiceSupplierId?: string | null;
     },
     tx?: TransactionClient
   ): Promise<void> {
@@ -388,7 +388,7 @@ export class AuditService {
    */
   async logSupplierCatalogUpdated(
     ctx: RequestContext,
-    supplierId: string,
+    practiceSupplierId: string,
     productId: string,
     data: {
       supplierSku?: string | null;
@@ -401,7 +401,7 @@ export class AuditService {
       ctx,
       {
         entityType: 'SupplierCatalog',
-        entityId: `${supplierId}_${productId}`,
+        entityId: `${practiceSupplierId}_${productId}`,
         action: 'UPSERTED',
         changes: {
           supplierSku: data.supplierSku,
@@ -409,7 +409,7 @@ export class AuditService {
           isActive: data.isActive,
         },
         metadata: {
-          supplierId,
+          practiceSupplierId,
           productId,
         },
       },

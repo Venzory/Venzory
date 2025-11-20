@@ -18,6 +18,8 @@ import {
   ClipboardCheck,
   BookOpen,
   FolderOpen,
+  ListPlus,
+  AlertTriangle,
 } from 'lucide-react';
 
 type NavItem = {
@@ -27,18 +29,49 @@ type NavItem = {
   minRole?: PracticeRole; // Minimum role required to see this item
 };
 
-const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/my-items', label: 'My Items', icon: FolderOpen },
-  { href: '/supplier-catalog', label: 'Supplier Catalog', icon: BookOpen },
-  { href: '/inventory', label: 'Inventory', icon: Package },
-  { href: '/locations', label: 'Locations', icon: MapPin },
-  { href: '/suppliers', label: 'Suppliers', icon: Building2 },
-  { href: '/orders', label: 'Orders', icon: ShoppingCart },
-  { href: '/receiving', label: 'Receiving', icon: PackageCheck, minRole: 'STAFF' },
-  { href: '/stock-count', label: 'Stock Count', icon: ClipboardCheck, minRole: 'STAFF' },
-  { href: '/settings', label: 'Settings', icon: Settings, minRole: 'STAFF' },
-  { href: '/settings/products', label: 'Product Master Data', icon: Package2, minRole: 'ADMIN' },
+type NavSection = {
+  title?: string;
+  items: NavItem[];
+};
+
+const navSections: NavSection[] = [
+  {
+    items: [
+      { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/needs-attention', label: 'Needs Attention', icon: AlertTriangle },
+    ],
+  },
+  {
+    title: 'Inventory Management',
+    items: [
+      { href: '/my-items', label: 'My Items', icon: FolderOpen },
+      { href: '/inventory', label: 'Inventory', icon: Package },
+      { href: '/receiving', label: 'Receiving', icon: PackageCheck, minRole: 'STAFF' },
+      { href: '/stock-count', label: 'Stock Count', icon: ClipboardCheck, minRole: 'STAFF' },
+      { href: '/locations', label: 'Locations', icon: MapPin },
+    ],
+  },
+  {
+    title: 'Ordering',
+    items: [
+      { href: '/orders', label: 'Orders', icon: ShoppingCart },
+      { href: '/inventory/reorder', label: 'Reorder Suggestions', icon: ListPlus, minRole: 'STAFF' },
+    ],
+  },
+  {
+    title: 'Suppliers',
+    items: [
+      { href: '/suppliers', label: 'Suppliers', icon: Building2 },
+      { href: '/supplier-catalog', label: 'Supplier Catalog', icon: BookOpen },
+    ],
+  },
+  {
+    title: 'Settings',
+    items: [
+      { href: '/settings', label: 'Settings', icon: Settings, minRole: 'STAFF' },
+      { href: '/settings/products', label: 'Product Master Data', icon: Package2, minRole: 'ADMIN' },
+    ],
+  },
 ];
 
 type SidebarProps = {
@@ -61,10 +94,15 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
   };
 
   // Filter navigation items based on user role
-  const filteredNavItems = navItems.filter((item) => {
-    if (!item.minRole || !userRole) return true;
-    return rolePriority[userRole] >= rolePriority[item.minRole];
-  });
+  const filteredNavSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (!item.minRole || !userRole) return true;
+        return rolePriority[userRole] >= rolePriority[item.minRole];
+      }),
+    }))
+    .filter((section) => section.items.length > 0);
 
   // Load collapsed state from localStorage
   useEffect(() => {
@@ -157,28 +195,40 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
 
         {/* Navigation Items */}
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {filteredNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          {filteredNavSections.map((section, sectionIndex) => (
+            <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-4' : ''}>
+              {section.title && (!isCollapsed || !mounted) && (
+                <div className="mb-2 px-3 text-xs font-semibold uppercase text-sidebar-text-muted">
+                  {section.title}
+                </div>
+              )}
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={handleLinkClick}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                  isActive
-                    ? 'bg-sidebar-active-bg text-sidebar-active-text border-l-2 border-sidebar-active-border'
-                    : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text'
-                } ${isCollapsed && mounted ? 'justify-center' : ''}`}
-                aria-current={isActive ? 'page' : undefined}
-                title={isCollapsed && mounted ? item.label : undefined}
-              >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                {(!isCollapsed || !mounted) && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={handleLinkClick}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                        isActive
+                          ? 'border-l-2 border-sidebar-active-border bg-sidebar-active-bg text-sidebar-active-text'
+                          : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text'
+                      } ${isCollapsed && mounted ? 'justify-center' : ''}`}
+                      aria-current={isActive ? 'page' : undefined}
+                      title={isCollapsed && mounted ? item.label : undefined}
+                    >
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      {(!isCollapsed || !mounted) && <span>{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
       </aside>
     </>

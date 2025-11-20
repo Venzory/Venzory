@@ -99,11 +99,39 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
   };
 
   const handleConfirm = async () => {
+    const lines = receipt.lines || [];
+    
+    if (lines.length === 0) {
+      toast.error('Cannot confirm an empty receipt');
+      return;
+    }
+
+    const totalItems = lines.length;
+    const totalQty = lines.reduce((sum, line) => sum + (line.quantity || 0), 0);
+    
+    // Check for expired items
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const expiredItems = lines.filter((line) => {
+      if (!line.expiryDate) return false;
+      const expiry = new Date(line.expiryDate);
+      return expiry < today;
+    });
+
+    let message = `Ready to receive ${totalItems} item${totalItems !== 1 ? 's' : ''} (${totalQty} units).`;
+    
+    if (expiredItems.length > 0) {
+      message += `\n\n⚠️ WARNING: ${expiredItems.length} item${expiredItems.length !== 1 ? 's have' : ' has'} a past expiry date.`;
+    }
+    
+    message += '\n\nConfirming will update inventory levels immediately. This action cannot be undone.';
+
     const confirmed = await confirm({
-      title: 'Confirm Receipt',
-      message: 'Confirm this receipt? This will update inventory and cannot be undone.',
-      confirmLabel: 'Confirm',
-      variant: 'neutral',
+      title: expiredItems.length > 0 ? 'Confirm Receipt with Warnings' : 'Confirm Receipt',
+      message,
+      confirmLabel: 'Confirm Receipt',
+      variant: expiredItems.length > 0 ? 'danger' : 'neutral',
     });
 
     if (!confirmed) {
@@ -352,6 +380,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
                   receiptId={receipt.id}
                   items={items}
                   selectedItemId={selectedItemId}
+                  expectedItems={expectedItems}
                   onSuccess={() => {
                     setShowAddForm(false);
                     setSelectedItemId(null);

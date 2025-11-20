@@ -70,6 +70,8 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
 
       // Calculate what's already been received from confirmed receipts
       const receivedByItem = new Map<string, number>();
+      const receivedInDraft = new Set<string>();
+
       for (const prevReceipt of confirmedReceipts) {
         if (Array.isArray(prevReceipt.lines)) {
           for (const line of prevReceipt.lines) {
@@ -87,6 +89,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
           if (line && line.itemId && typeof line.quantity === 'number') {
             const current = receivedByItem.get(line.itemId) || 0;
             receivedByItem.set(line.itemId, current + line.quantity);
+            receivedInDraft.add(line.itemId);
           }
         }
       }
@@ -107,8 +110,8 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
             unit: oi.item?.unit || null,
           };
         })
-        // Filter out items that are fully received to avoid showing ghost forms
-        .filter(item => item.remainingQuantity > 0);
+        // Filter out items that are fully received, unless they are part of the current draft (so they can be reviewed/edited)
+        .filter(item => item.remainingQuantity > 0 || receivedInDraft.has(item.itemId));
     }
   }
 

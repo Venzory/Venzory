@@ -39,6 +39,7 @@ export interface LocationInventory {
   quantity: number;
   reorderPoint: number | null;
   reorderQuantity: number | null;
+  maxStock: number | null;
   createdAt: Date;
   updatedAt: Date;
   location?: Location;
@@ -166,6 +167,7 @@ export interface LowStockInfo {
   currentQuantity: number;
   reorderPoint: number;
   reorderQuantity: number | null;
+  maxStock: number | null;
   suggestedOrderQuantity: number;
 }
 

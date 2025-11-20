@@ -427,43 +427,6 @@ export class OrderRepository extends BaseRepository {
     return this.ensureExists(Promise.resolve(template), 'OrderTemplate', templateId);
   }
 
-  /**
-   * Create order template
-   */
-  async createOrderTemplate(
-    practiceId: string,
-    createdById: string,
-    data: {
-      name: string;
-      description?: string | null;
-      items: Array<{
-        itemId: string;
-        defaultQuantity: number;
-        supplierId?: string | null;
-      }>;
-    },
-    options?: RepositoryOptions
-  ): Promise<OrderTemplate> {
-    const client = this.getClient(options?.tx);
-
-    const template = await client.orderTemplate.create({
-      data: {
-        practiceId,
-        createdById,
-        name: data.name,
-        description: data.description ?? null,
-        items: {
-          create: data.items.map((item) => ({
-            itemId: item.itemId,
-            defaultQuantity: item.defaultQuantity,
-            supplierId: item.supplierId ?? null,
-          })),
-        },
-      },
-    });
-
-    return template as OrderTemplate;
-  }
 
   /**
    * Delete order template

@@ -8,7 +8,7 @@ import { createSignedCsrfToken, getCsrfTokenFromCookie, parseAndVerifySignedToke
 import { env } from '@/lib/env';
 import logger from '@/lib/logger';
 
-const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog'];
+const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog', '/onboarding'];
 const authRoutes = ['/login', '/register'];
 
 /**
@@ -154,6 +154,30 @@ export default auth(async (request) => {
 
   // For authenticated users on protected routes, check role-based access
   if (request.auth && isProtected) {
+    // Onboarding Enforcement
+    const { activePracticeId, memberships } = request.auth.user;
+    const activeMembership = memberships.find((m) => m.practiceId === activePracticeId);
+    const practice = activeMembership?.practice;
+
+    if (practice) {
+      const isOnboardingComplete = !!practice.onboardingCompletedAt || !!practice.onboardingSkippedAt;
+      const isOnboardingPage = pathname.startsWith('/onboarding');
+
+      // Redirect to onboarding if not complete and trying to access other protected routes
+      if (!isOnboardingComplete && !isOnboardingPage) {
+        const onboardingUrl = new URL('/onboarding', request.nextUrl.origin);
+        const response = NextResponse.redirect(onboardingUrl);
+        return await applySecurityHeaders(response, nonce, request);
+      }
+
+      // Redirect to dashboard if complete and trying to access onboarding
+      if (isOnboardingComplete && isOnboardingPage) {
+        const dashboardUrl = new URL('/dashboard', request.nextUrl.origin);
+        const response = NextResponse.redirect(dashboardUrl);
+        return await applySecurityHeaders(response, nonce, request);
+      }
+    }
+
     const { allowed } = checkRouteAccess({
       pathname,
       session: request.auth,

@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getInventoryService } from '@/src/services/inventory';
-import { isDomainError } from '@/src/domain/errors';
+import { isDomainError, ConcurrencyError } from '@/src/domain/errors';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import logger from '@/lib/logger';
 
@@ -223,10 +223,29 @@ export async function completeStockCountAction(sessionId: string, applyAdjustmen
     }, 'Failed to complete stock count session');
     
     if (isDomainError(error)) {
-      throw new Error(error.message);
+      if (error.code === 'CONCURRENCY_CONFLICT') {
+        return {
+          success: false,
+          error: 'CONCURRENCY_CONFLICT',
+          changes: (error.details?.changes || []) as Array<{
+            itemId: string;
+            itemName: string;
+            systemAtCount: number;
+            systemNow: number;
+            difference: number;
+          }>,
+        } as const;
+      }
+      return {
+        success: false,
+        error: error.message,
+      } as const;
     }
     
-    throw new Error('Failed to complete stock count');
+    return {
+      success: false,
+      error: 'Failed to complete stock count',
+    } as const;
   }
 }
 

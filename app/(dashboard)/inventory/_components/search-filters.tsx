@@ -35,8 +35,15 @@ export function SearchFilters({
 
   // Update URL when debounced search value changes
   useEffect(() => {
-    // Skip the initial render to avoid unnecessary navigation
-    if (debouncedSearch === initialSearch) {
+    // Skip if we're waiting for the debounce timer (value is unstable)
+    if (search !== debouncedSearch) {
+      return;
+    }
+
+    const currentQ = searchParams.get('q') || '';
+    
+    // Skip if the value matches the current URL (prevents loops and overwrite on navigation)
+    if (debouncedSearch === currentQ) {
       return;
     }
 
@@ -48,11 +55,12 @@ export function SearchFilters({
       params.delete('q');
     }
     
-    // Reset to page 1 when search changes to avoid empty results
+    // Reset to page 1 when search changes
     params.delete('page');
     
     router.push(`/inventory?${params.toString()}`);
-  }, [debouncedSearch, router, searchParams, initialSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, search]);
 
   const updateSearchParams = useCallback(
     (key: string, value: string) => {
@@ -88,6 +96,13 @@ export function SearchFilters({
   const handleLowStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateSearchParams('lowStock', e.target.checked ? 'true' : '');
   };
+
+  const handleClearFilters = () => {
+    setSearch('');
+    router.push('/inventory');
+  };
+
+  const hasActiveFilters = !!(search || initialLocation || initialSupplier || initialLowStock);
 
   return (
     <div className="flex flex-col gap-4">
@@ -132,18 +147,27 @@ export function SearchFilters({
         </div>
       </div>
 
-      <div className="flex items-center">
+      <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
             checked={initialLowStock}
             onChange={handleLowStockChange}
-            className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand dark:border-slate-600"
+            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600 dark:border-slate-600"
           />
           <span className="text-sm text-slate-700 dark:text-slate-300">
             Show only low stock items
           </span>
         </label>
+
+        {hasActiveFilters && (
+          <button
+            onClick={handleClearFilters}
+            className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
     </div>
   );

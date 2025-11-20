@@ -79,19 +79,20 @@ export async function createTemplateAction(_prevState: unknown, formData: FormDa
 
   const { name, description, items: templateItems } = parsed.data;
 
+  let template;
   try {
-    const template = await getOrderService().createTemplate(ctx, {
+    template = await getOrderService().createTemplate(ctx, {
       name,
       description,
       items: templateItems,
     });
-
-    revalidatePath('/orders/templates');
-    redirect(`/orders/templates/${template.id}`);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create template';
     return { error: message } as const;
   }
+
+  revalidatePath('/orders/templates');
+  redirect(`/orders/templates/${template.id}`);
 }
 
 export async function updateTemplateAction(formData: FormData) {
@@ -257,7 +258,7 @@ export async function removeTemplateItemAction(templateItemId: string) {
 export async function createOrdersFromTemplateAction(
   templateId: string,
   orderData: {
-    supplierId: string; // This is actually a practiceSupplierId (naming kept for backward compat with client)
+    practiceSupplierId: string;
     items: { itemId: string; quantity: number; unitPrice: number | null }[];
   }[]
 ) {
@@ -282,9 +283,8 @@ export async function createOrdersFromTemplateAction(
 
   try {
     // Map to the format expected by the service
-    // Note: supplierId is actually a practiceSupplierId from the client
     const mappedOrderData = orderData.map(group => ({
-      practiceSupplierId: group.supplierId,
+      practiceSupplierId: group.practiceSupplierId,
       items: group.items,
     }));
     

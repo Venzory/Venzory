@@ -31,6 +31,11 @@ export type RateLimitConfig = {
    * Time window in milliseconds
    */
   windowMs: number;
+  /**
+   * Whether to fail closed (deny access) when Redis is unavailable.
+   * Defaults to false (fail open).
+   */
+  failClosed?: boolean;
 };
 
 export type RateLimitResult = {
@@ -108,13 +113,33 @@ class RedisRateLimiter implements RateLimiter {
         reset,
       };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (this.config.failClosed) {
+        logger.error({
+          module: 'rate-limit',
+          operation: 'check',
+          rateLimitId: this.config.id,
+          error: errorMessage,
+        }, 'Redis rate limiter error - failing closed');
+        
+        // Fail closed: deny request
+        return {
+          success: false,
+          limit: this.config.limit,
+          remaining: 0,
+          reset: now + this.config.windowMs,
+        };
+      }
+
       logger.error({
         module: 'rate-limit',
         operation: 'check',
         rateLimitId: this.config.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
       }, 'Redis rate limiter error - failing open');
-      // On error, allow the request (fail open)
+      
+      // Fail open: allow request
       return {
         success: true,
         limit: this.config.limit,
@@ -157,7 +182,7 @@ class InMemoryRateLimiter implements RateLimiter {
     }, 60000);
 
     // Ensure cleanup happens on process exit
-    if (typeof process !== 'undefined') {
+    if (typeof process !== 'undefined' && typeof process.once === 'function') {
       process.once('beforeExit', () => {
         clearInterval(this.cleanupInterval);
       });
@@ -220,8 +245,36 @@ class InMemoryRateLimiter implements RateLimiter {
  */
 export function createRateLimiter(config: RateLimitConfig): RateLimiter {
   const redisUrl = env.REDIS_URL;
+  const isProduction = env.NODE_ENV === 'production';
 
-  // Use Redis only if URL is configured AND Redis client is available
+  // In production, enforce Redis availability
+  if (isProduction) {
+    if (!redisUrl || !Redis) {
+      throw new Error('Redis is required for rate limiting in production');
+    }
+    
+    try {
+      logger.info({
+        module: 'rate-limit',
+        operation: 'createRateLimiter',
+        rateLimitId: config.id,
+        type: 'redis',
+      }, `Using Redis for rate limiter: ${config.id}`);
+      return new RedisRateLimiter(redisUrl, config);
+    } catch (error) {
+      // This catch block handles immediate instantiation errors
+      const message = `Failed to create Redis rate limiter in production: ${error instanceof Error ? error.message : String(error)}`;
+      logger.error({
+        module: 'rate-limit',
+        operation: 'createRateLimiter',
+        rateLimitId: config.id,
+        error: error instanceof Error ? error.message : String(error),
+      }, message);
+      throw new Error(message);
+    }
+  }
+
+  // Use Redis if available in non-production environments
   if (redisUrl && Redis) {
     try {
       logger.info({
@@ -260,6 +313,7 @@ export const loginRateLimiter = createRateLimiter({
   id: 'login',
   limit: 5,
   windowMs: 15 * 60 * 1000, // 15 minutes
+  failClosed: true,
 });
 
 // Password reset: 3 per hour
@@ -267,6 +321,7 @@ export const passwordResetRateLimiter = createRateLimiter({
   id: 'password-reset',
   limit: 3,
   windowMs: 60 * 60 * 1000, // 1 hour
+  failClosed: true,
 });
 
 // Invite acceptance: 10 per hour
@@ -274,6 +329,7 @@ export const inviteAcceptRateLimiter = createRateLimiter({
   id: 'invite-accept',
   limit: 10,
   windowMs: 60 * 60 * 1000, // 1 hour
+  failClosed: true,
 });
 
 /**

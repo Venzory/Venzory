@@ -1,8 +1,9 @@
 'use client';
 
 import { useActionState } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { addCountLineAction } from '../../actions';
+import { Info } from 'lucide-react';
 
 interface AddCountLineFormProps {
   sessionId: string;
@@ -14,6 +15,7 @@ interface AddCountLineFormProps {
     unit: string | null;
   }>;
   selectedItemId: string | null;
+  initialCount?: number | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -23,17 +25,29 @@ export function AddCountLineForm({
   locationId,
   items,
   selectedItemId,
+  initialCount,
   onSuccess,
   onCancel,
 }: AddCountLineFormProps) {
   const [state, formAction] = useActionState(addCountLineAction, null);
   const [systemQty, setSystemQty] = useState<number | null>(null);
+  const quantityInputRef = useRef<HTMLInputElement>(null);
+
+  const isEditMode = initialCount !== undefined && initialCount !== null;
 
   useEffect(() => {
     if (state?.success) {
       onSuccess();
     }
   }, [state, onSuccess]);
+
+  // Auto-focus quantity input when item is selected or in edit mode
+  useEffect(() => {
+    if (selectedItemId && quantityInputRef.current) {
+      quantityInputRef.current.focus();
+      quantityInputRef.current.select();
+    }
+  }, [selectedItemId]);
 
   // Show system quantity when item is selected
   const handleItemChange = async (itemId: string) => {
@@ -54,6 +68,14 @@ export function AddCountLineForm({
     }
   };
 
+  // Trigger system qty fetch on mount if item selected
+  useEffect(() => {
+    if (selectedItemId) {
+      handleItemChange(selectedItemId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItemId, locationId]);
+
   return (
     <form action={formAction} className="space-y-6">
       <input type="hidden" name="sessionId" value={sessionId} />
@@ -73,7 +95,17 @@ export function AddCountLineForm({
         </div>
       )}
 
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Count Item</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          {isEditMode ? 'Update Count' : 'Count Item'}
+        </h3>
+        {isEditMode && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800 dark:bg-sky-900/30 dark:text-sky-300">
+            <Info className="h-3.5 w-3.5" />
+            Updating existing line
+          </span>
+        )}
+      </div>
 
       {/* Item Selection */}
       <div className="space-y-2">
@@ -115,12 +147,13 @@ export function AddCountLineForm({
           Counted Quantity *
         </label>
         <input
+          ref={quantityInputRef}
           type="number"
           id="countedQuantity"
           name="countedQuantity"
           required
           min="0"
-          defaultValue="0"
+          defaultValue={initialCount ?? 0}
           className="w-32 rounded-lg border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           style={{ minHeight: '48px' }}
         />
@@ -156,10 +189,9 @@ export function AddCountLineForm({
           className="w-full sm:w-auto rounded-lg bg-sky-600 px-6 py-3 text-base font-semibold text-white transition hover:bg-sky-700"
           style={{ minHeight: '48px' }}
         >
-          Add Count
+          {isEditMode ? 'Update Count' : 'Add Count'}
         </button>
       </div>
     </form>
   );
 }
-

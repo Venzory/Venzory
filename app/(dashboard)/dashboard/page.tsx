@@ -1,16 +1,17 @@
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isBefore } from 'date-fns';
 import Link from 'next/link';
 import { PracticeRole, OrderStatus } from '@prisma/client';
 import { Package, TrendingDown, ShoppingCart, Inbox } from 'lucide-react';
 
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
-import { getInventoryService, getOrderService, getSettingsService } from '@/src/services';
+import { getInventoryService, getOrderService, getSettingsService, getReceivingService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
-import { OnboardingReminderCard } from './_components/onboarding-reminder-card';
+import { SetupChecklist } from '@/components/dashboard/setup-checklist';
+import { NeedsAttentionWidget } from '@/components/dashboard/needs-attention-widget';
 import { calculateItemStockInfo } from '@/lib/inventory-utils';
 import { calculateOrderTotal } from '@/lib/prisma-transforms';
 import { getOrderSupplierDisplay } from './_utils/order-display';
@@ -23,7 +24,7 @@ export default async function DashboardPage() {
   const ctx = buildRequestContextFromSession(session);
 
   // Fetch data in parallel with safe limits to prevent performance issues
-  const [itemsResult, orders, adjustments, onboardingStatus, setupProgress] = await Promise.all([
+  const [itemsResult, orders, adjustments, onboardingStatus, setupProgress, receivingMismatches] = await Promise.all([
     // Limit items to 100 for dashboard calculations
     getInventoryService().findItems(ctx, {}, { page: 1, limit: 100 }),
     // Limit orders to recent 50 for stats
@@ -34,6 +35,8 @@ export default async function DashboardPage() {
     getSettingsService().getPracticeOnboardingStatus(ctx),
     // Fetch setup progress
     getSettingsService().getSetupProgress(ctx),
+    // Fetch receiving mismatches
+    getReceivingService().getReceivingMismatches(ctx),
   ]);
 
   // Extract items from the result
@@ -67,26 +70,17 @@ export default async function DashboardPage() {
   const awaitingReceiptCount = calculateAwaitingReceiptCount(orders);
   const receivedOrdersCount = orders.filter((o) => o.status === OrderStatus.RECEIVED).length;
 
-  // Calculate total stock value (disabled - type mismatch)
-  let totalStockValue = 0;
-  let hasStockValue = false;
+  // Calculate overdue orders (from the recent orders fetched)
+  const today = new Date();
+  const overdueOrdersCount = orders.filter(
+    (o) => o.status === OrderStatus.SENT && o.expectedAt && isBefore(new Date(o.expectedAt), today)
+  ).length;
+
   const canManage = hasRole({
     memberships: session.user.memberships,
     practiceId,
     minimumRole: PracticeRole.STAFF,
   });
-
-  // Onboarding status checks
-  const hasLocations = setupProgress.hasLocations ?? false;
-  const hasSuppliers = setupProgress.hasSuppliers ?? false;
-  const hasItems = setupProgress.hasItems ?? false;
-  const hasReceivedOrders = setupProgress.hasReceivedOrders ?? false;
-  const isOnboardingComplete = onboardingStatus.onboardingCompletedAt != null;
-  const isOnboardingSkipped = onboardingStatus.onboardingSkippedAt != null;
-  const allSetupComplete = hasLocations && hasSuppliers && hasItems && hasReceivedOrders;
-  
-  // Show reminder if: onboarding not complete AND not skipped AND setup not complete AND staff+
-  const shouldShowReminder = !isOnboardingComplete && !isOnboardingSkipped && !allSetupComplete && canManage;
 
   return (
     <section className="space-y-8">
@@ -107,13 +101,20 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      {/* Onboarding Reminder Card */}
-      {shouldShowReminder && (
-        <OnboardingReminderCard
-          hasLocations={hasLocations}
-          hasSuppliers={hasSuppliers}
-          hasItems={hasItems}
-          hasReceivedOrders={hasReceivedOrders}
+      {/* Needs Attention Widget */}
+      {canManage && (
+        <NeedsAttentionWidget
+          lowStockCount={lowStockCount}
+          overdueOrderCount={overdueOrdersCount}
+          mismatchCount={receivingMismatches.length}
+        />
+      )}
+
+      {/* Setup Checklist / Onboarding Reminder */}
+      {canManage && (
+        <SetupChecklist 
+          onboardingStatus={onboardingStatus}
+          progress={setupProgress}
         />
       )}
 

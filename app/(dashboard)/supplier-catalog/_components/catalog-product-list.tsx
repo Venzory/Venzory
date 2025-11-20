@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
 import { formatCurrency } from '@/lib/utils';
+import { AddToCatalogDialog } from './add-to-catalog-dialog';
 
 interface ProductWithInfo {
   id: string;
@@ -228,7 +229,7 @@ export function CatalogProductList({
                       </Link>
                       
                       {product.inCatalog ? (
-                        <Link href={`/my-items?item=${product.itemId}`}>
+                        <Link href={`/my-items?highlight=${product.itemId}`}>
                           <Button variant="secondary" size="sm" className="text-xs">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             In Items
@@ -236,12 +237,17 @@ export function CatalogProductList({
                         </Link>
                       ) : (
                         canManage && (
-                          <Link href={`/supplier-catalog/product/${product.id}?action=add`}>
-                            <Button variant="primary" size="sm" className="text-xs">
-                              <ShoppingCart className="h-3 w-3 mr-1" />
-                              Add
-                            </Button>
-                          </Link>
+                          <AddToCatalogDialog
+                            productId={product.id}
+                            productName={product.name}
+                            offers={product.offers}
+                            trigger={
+                              <Button variant="primary" size="sm" className="text-xs">
+                                <ShoppingCart className="h-3 w-3 mr-1" />
+                                Add
+                              </Button>
+                            }
+                          />
                         )
                       )}
                     </div>

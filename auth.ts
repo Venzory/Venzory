@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
 import { env } from '@/lib/env';
+import { loginRateLimiter, getClientIp } from '@/lib/rate-limit';
 
 const credentialsSchema = z.object({
   email: z.string().email().min(1),
@@ -62,8 +63,23 @@ export const {
         const email = parsed.data.email.toLowerCase();
         const password = parsed.data.password;
 
-        // Note: Rate limiting for login is handled at the API route level
-        // See app/api/auth/[...nextauth]/route.ts
+        // Enforce rate limiting
+        // Use the request object if available to get client IP
+        let ip = 'unknown';
+        if (request instanceof Request) {
+          ip = getClientIp(request);
+        }
+        
+        const rateLimitKey = `${ip}:${email}`;
+        const rateLimitResult = await loginRateLimiter.check(rateLimitKey);
+
+        if (!rateLimitResult.success) {
+          // Note: NextAuth handles errors thrown here.
+          // Depending on version/config, this might show as a generic error or a specific one.
+          // For security, we should probably just fail without detailed limit info leaks if possible,
+          // but internally we want to track it.
+          throw new Error('Too many login attempts. Please try again later.');
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -71,7 +87,7 @@ export const {
             memberships: {
               include: {
                 practice: {
-                  select: { id: true, name: true, slug: true },
+                  select: { id: true, name: true, slug: true, onboardingCompletedAt: true, onboardingSkippedAt: true },
                 },
               },
             },
@@ -93,14 +109,6 @@ export const {
   ],
   callbacks: {
     async jwt({ token, user, trigger }) {
-      // TODO: On role/practice changes, validate and possibly invalidate old token
-      // This would be triggered via trigger === 'update' when calling update() on the session
-      // Example implementation:
-      // if (trigger === 'update' && token.activePracticeId !== updatedPracticeId) {
-      //   // Could force re-authentication or generate new token with updated claims
-      //   // For now, we update the token directly, but consider security implications
-      // }
-      
       if (user) {
         // Store user data in token on initial sign in
         token.userId = user.id;
@@ -116,6 +124,33 @@ export const {
           practice: m.practice,
         })) ?? [];
       }
+
+      // Refetch user data on update to get fresh onboarding status
+      if (trigger === 'update' && token.userId) {
+        const freshUser = await prisma.user.findUnique({
+          where: { id: token.userId as string },
+          include: {
+            memberships: {
+              include: {
+                practice: {
+                  select: { id: true, name: true, slug: true, onboardingCompletedAt: true, onboardingSkippedAt: true },
+                },
+              },
+            },
+          },
+        });
+
+        if (freshUser) {
+          token.memberships = freshUser.memberships.map((m: any) => ({
+            id: m.id,
+            practiceId: m.practiceId,
+            role: m.role,
+            status: m.status,
+            practice: m.practice,
+          }));
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {

@@ -39,6 +39,18 @@ export function CardTitle({ children, className = '', ...props }: CardTitleProps
   );
 }
 
+type CardDescriptionProps = HTMLAttributes<HTMLParagraphElement> & {
+  children: ReactNode;
+};
+
+export function CardDescription({ children, className = '', ...props }: CardDescriptionProps) {
+  return (
+    <p className={`text-sm text-muted-foreground ${className}`} {...props}>
+      {children}
+    </p>
+  );
+}
+
 type CardContentProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
 };
@@ -50,4 +62,3 @@ export function CardContent({ children, className = '', ...props }: CardContentP
     </div>
   );
 }
-

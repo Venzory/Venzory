@@ -44,6 +44,9 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
   const suppliers = practiceSuppliers.map(ps => ({
     id: ps.id,
     name: ps.customLabel || ps.globalSupplier?.name || 'Unknown Supplier',
+    isPreferred: ps.isPreferred,
+    isBlocked: ps.isBlocked,
+    accountNumber: ps.accountNumber,
   }));
 
   const canManage = hasRole({
@@ -185,6 +188,7 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
                           currentSupplierId={templateItem.supplierId}
                           suppliers={suppliers}
                           itemUnit={templateItem.item.unit}
+                          mode="quantity"
                         />
                       ) : (
                         <span className="text-slate-900 dark:text-slate-200">
@@ -196,10 +200,21 @@ export default async function TemplateDetailPage({ params }: TemplateDetailPageP
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {templateItem.supplier ? (
-                        <span className="text-slate-700 dark:text-slate-300">{templateItem.supplier.name}</span>
+                      {canManage ? (
+                        <EditTemplateItemForm
+                          templateItemId={templateItem.id}
+                          currentQuantity={templateItem.defaultQuantity}
+                          currentSupplierId={templateItem.supplierId}
+                          suppliers={suppliers}
+                          itemUnit={templateItem.item.unit}
+                          mode="supplier"
+                        />
                       ) : (
-                        <span className="text-slate-500 dark:text-slate-500">No supplier</span>
+                        templateItem.supplier ? (
+                          <span className="text-slate-700 dark:text-slate-300">{templateItem.supplier.name}</span>
+                        ) : (
+                          <span className="text-slate-500 dark:text-slate-500">No supplier</span>
+                        )
                       )}
                     </td>
                     {canManage ? (

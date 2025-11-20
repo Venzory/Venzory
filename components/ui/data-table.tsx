@@ -27,37 +27,52 @@ export function DataTable<T extends Record<string, any>>({
   return (
     <div className={cn('overflow-x-auto rounded-lg border border-border', className)}>
       <table className="w-full border-collapse">
-        <thead className="bg-[rgb(var(--color-table-header))]">
-          <tr>
+        <TableHeader>
+          <TableRow>
             {columns.map((column) => (
-              <th
-                key={column.key}
-                className="border-b border-border px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-300"
-              >
+              <TableHead key={column.key}>
                 {column.label}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border bg-card">
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map((row, rowIndex) => (
-            <tr
-              key={rowIndex}
-              className="transition hover:bg-[rgb(var(--color-table-hover))]"
-            >
+            <TableRow key={rowIndex}>
               {columns.map((column) => (
-                <td
-                  key={column.key}
-                  className="px-4 py-3 text-sm text-slate-900 dark:text-slate-100"
-                >
+                <TableCell key={column.key}>
                   {column.render ? column.render(row) : row[column.key]}
-                </td>
+                </TableCell>
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
+        </TableBody>
       </table>
     </div>
   );
 }
 
+// Export primitive table components for custom layouts
+export function Table({ children, className }: { children: ReactNode, className?: string }) {
+    return <table className={cn("w-full border-collapse", className)}>{children}</table>
+}
+
+export function TableHeader({ children, className }: { children: ReactNode, className?: string }) {
+    return <thead className={cn("bg-slate-50 dark:bg-slate-900/50", className)}>{children}</thead>
+}
+
+export function TableRow({ children, className }: { children: ReactNode, className?: string }) {
+    return <tr className={cn("border-b border-slate-200 transition-colors hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/50", className)}>{children}</tr>
+}
+
+export function TableHead({ children, className }: { children: ReactNode, className?: string }) {
+    return <th className={cn("h-12 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400", className)}>{children}</th>
+}
+
+export function TableBody({ children, className }: { children: ReactNode, className?: string }) {
+    return <tbody className={cn("divide-y divide-slate-200 dark:divide-slate-800", className)}>{children}</tbody>
+}
+
+export function TableCell({ children, className }: { children: ReactNode, className?: string }) {
+    return <td className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}>{children}</td>
+}

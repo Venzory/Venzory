@@ -6,7 +6,13 @@ import { addTemplateItemAction } from '../../actions';
 interface AddTemplateItemFormProps {
   templateId: string;
   items: { id: string; name: string; sku: string | null; unit: string | null }[];
-  suppliers: { id: string; name: string }[];
+  suppliers: {
+    id: string;
+    name: string;
+    isPreferred: boolean;
+    isBlocked: boolean;
+    accountNumber: string | null;
+  }[];
 }
 
 export function AddTemplateItemForm({ templateId, items, suppliers }: AddTemplateItemFormProps) {
@@ -111,11 +117,17 @@ export function AddTemplateItemForm({ templateId, items, suppliers }: AddTemplat
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             <option value="">No supplier</option>
-            {suppliers.map((supplier) => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </option>
-            ))}
+            {suppliers.map((supplier) => {
+              const preferredMark = supplier.isPreferred ? '⭐ ' : '';
+              const blockedMark = supplier.isBlocked ? '🚫 ' : '';
+              const accountInfo = supplier.accountNumber ? ` (${supplier.accountNumber})` : '';
+              
+              return (
+                <option key={supplier.id} value={supplier.id}>
+                  {blockedMark}{preferredMark}{supplier.name}{accountInfo}
+                </option>
+              );
+            })}
           </select>
         </div>
 

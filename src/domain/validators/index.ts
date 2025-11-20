@@ -145,13 +145,13 @@ export function validateExpiryDate(expiryDate: Date): void {
 export function validateOrderCanBeSent(order: {
   status: string;
   items: any[];
-  supplierId: string | null;
+  practiceSupplierId: string | null;
 }): void {
   if (order.status !== 'DRAFT') {
     throw new ValidationError('Only draft orders can be sent');
   }
   
-  if (!order.supplierId) {
+  if (!order.practiceSupplierId) {
     throw new ValidationError('Order must have a supplier');
   }
   

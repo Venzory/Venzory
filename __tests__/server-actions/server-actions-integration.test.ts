@@ -91,6 +91,11 @@ vi.mock('@/src/services/inventory', () => ({
     cancelStockCount: vi.fn(),
     deleteStockCountSession: vi.fn(),
   })),
+  getItemService: vi.fn(() => ({
+    createItem: vi.fn(() => ({ id: 'test-item-id', name: 'Test Item' })),
+    updateItem: vi.fn(() => ({ id: 'test-item-id', name: 'Updated Item' })),
+    deleteItem: vi.fn(),
+  })),
 }));
 
 vi.mock('@/src/services/orders', () => ({
@@ -98,7 +103,30 @@ vi.mock('@/src/services/orders', () => ({
     createOrder: vi.fn(() => ({ id: 'test-order-id' })),
     updateOrder: vi.fn(() => ({ id: 'test-order-id' })),
     deleteOrder: vi.fn(() => ({ success: true })),
-    sendOrder: vi.fn(() => ({ id: 'test-order-id', status: 'SENT' })),
+    sendOrder: vi.fn(() => ({ 
+      id: 'test-order-id', 
+      status: 'SENT',
+      reference: 'REF-123',
+      notes: 'Test notes',
+      practiceSupplier: {
+        customLabel: 'Test Supplier',
+        globalSupplier: {
+          name: 'Global Supplier',
+          email: 'supplier@example.com'
+        }
+      },
+      items: [
+        {
+          quantity: 10,
+          unitPrice: 10.00,
+          total: 100.00,
+          item: {
+            name: 'Test Item',
+            sku: 'SKU-123'
+          }
+        }
+      ]
+    })),
     addOrderItem: vi.fn(() => ({ success: true })),
     updateOrderItem: vi.fn(() => ({ success: true })),
     removeOrderItem: vi.fn(() => ({ success: true })),

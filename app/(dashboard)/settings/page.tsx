@@ -9,6 +9,7 @@ import { InviteUserForm } from './_components/invite-user-form';
 import { PracticeSettingsForm } from './_components/practice-settings-form';
 import { RemoveUserButton } from './_components/remove-user-button';
 import { UserRoleSelector } from './_components/user-role-selector';
+import { CancelInviteButton } from './_components/cancel-invite-button';
 import {
   updatePracticeSettingsInlineAction,
   updateUserRoleInlineAction,
@@ -305,14 +306,7 @@ export default async function SettingsPage() {
                           {inviteId && inviteId.startsWith('unknown-') ? (
                             <span className="text-xs text-slate-400">-</span>
                           ) : (
-                            <form action={cancelInviteAction.bind(null, inviteId)} className="inline">
-                              <button
-                                type="submit"
-                                className="text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 text-xs font-medium"
-                              >
-                                Cancel
-                              </button>
-                            </form>
+                            <CancelInviteButton inviteId={inviteId} email={inviteEmail} />
                           )}
                         </td>
                       </tr>
