@@ -13,7 +13,7 @@ export function OnboardingHeader() {
     <header className="mb-12 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white font-bold">
-          R
+          V
         </div>
         <span className="text-xl font-bold text-slate-900 dark:text-white">Venzory</span>
       </div>

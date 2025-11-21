@@ -430,6 +430,42 @@ export class OrderService {
   }
 
   /**
+   * Close order manually
+   */
+  async closeOrder(ctx: RequestContext, orderId: string): Promise<OrderWithRelations> {
+    // Check permissions
+    requireRole(ctx, 'STAFF');
+
+    return withTransaction(async (tx) => {
+      // Verify order exists
+      const order = await this.orderRepository.findOrderById(
+        orderId,
+        ctx.practiceId,
+        { tx }
+      );
+
+      // Only allow closing if SENT or PARTIALLY_RECEIVED
+      if (!['SENT', 'PARTIALLY_RECEIVED'].includes(order.status)) {
+        throw new BusinessRuleViolationError('Can only close orders that are Sent or Partially Received');
+      }
+
+      // Update status to RECEIVED
+      await this.orderRepository.updateOrderStatus(
+        orderId,
+        ctx.practiceId,
+        'RECEIVED',
+        { receivedAt: new Date() },
+        { tx }
+      );
+
+      // Log audit event
+      await this.auditService.logOrderClosed(ctx, orderId, tx);
+
+      return this.orderRepository.findOrderById(orderId, ctx.practiceId, { tx });
+    });
+  }
+
+  /**
    * Create orders from low stock items
    */
   async createOrdersFromLowStock(

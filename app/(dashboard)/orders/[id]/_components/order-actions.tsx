@@ -5,19 +5,51 @@ import { useRouter } from 'next/navigation';
 import { useConfirm } from '@/hooks/use-confirm';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
-import { sendOrderAction, deleteOrderAction } from '../../actions';
+import { sendOrderAction, deleteOrderAction, closeOrderAction } from '../../actions';
 
 interface OrderActionsProps {
   orderId: string;
   canEdit: boolean;
   canReceive: boolean;
+  canClose?: boolean;
 }
 
-export function OrderActions({ orderId, canEdit, canReceive }: OrderActionsProps) {
+export function OrderActions({ orderId, canEdit, canReceive, canClose = false }: OrderActionsProps) {
   const router = useRouter();
   const confirm = useConfirm();
   const [isSending, setIsSending] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleCloseOrder = async () => {
+    const confirmed = await confirm({
+      title: 'Close Order',
+      message: 'This will mark the order as complete. You will not be able to receive any more items against this order. Continue?',
+      confirmLabel: 'Close Order',
+      variant: 'neutral',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsClosing(true);
+    try {
+      const result = await closeOrderAction(orderId);
+      if (result.success) {
+        toast.success('Order closed successfully');
+        router.refresh();
+      } else {
+        toast.error(result.error || 'Failed to close order');
+      }
+    } catch (error: unknown) {
+      console.error('Failed to close order:', error);
+      const message = error instanceof Error ? error.message : 'Failed to close order';
+      toast.error(message);
+    } finally {
+      setIsClosing(false);
+    }
+  };
 
   const handleSendOrder = async () => {
     const confirmed = await confirm({
@@ -82,6 +114,21 @@ export function OrderActions({ orderId, canEdit, canReceive }: OrderActionsProps
   };
 
   if (!canEdit) {
+    // If not editable (sent/partial), show close option if allowed
+    if (canClose) {
+      return (
+        <Button
+          type="button"
+          onClick={handleCloseOrder}
+          disabled={isClosing}
+          variant="secondary"
+          size="md"
+          className="flex items-center gap-2"
+        >
+          {isClosing ? 'Closing...' : 'Close Order'}
+        </Button>
+      );
+    }
     return null;
   }
 

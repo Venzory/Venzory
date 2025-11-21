@@ -77,6 +77,7 @@ export interface AddGoodsReceiptLineInput {
   expiryDate?: Date | null;
   notes?: string | null;
   scannedGtin?: string | null;
+  skipped?: boolean;
 }
 
 /**

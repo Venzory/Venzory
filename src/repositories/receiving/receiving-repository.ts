@@ -239,6 +239,7 @@ export class ReceivingRepository extends BaseRepository {
         expiryDate: input.expiryDate ?? null,
         notes: input.notes ?? null,
         scannedGtin: input.scannedGtin ?? null,
+        skipped: input.skipped ?? false,
       },
     });
 

@@ -67,11 +67,18 @@ export function ExpectedItemsForm({
   }
 
   const handleSkip = () => {
-    if (!isLastItem) {
-      setCurrentIndex((prev) => prev + 1);
-      setFormKey((prev) => prev + 1);
-      setExpiryWarning(false);
-    }
+    // Create a FormData object with skipped=true flag and zero quantity
+    const formData = new FormData();
+    formData.append('receiptId', receiptId);
+    formData.append('itemId', currentItem.itemId);
+    formData.append('quantity', '0');
+    formData.append('skipped', 'true');
+    
+    // Submit the action directly
+    const submitter = formAction; // Using the hook's dispatch function
+    submitter(formData);
+    
+    // Optimistic UI update handled by useEffect on state.success
   };
 
   const handlePrevious = () => {

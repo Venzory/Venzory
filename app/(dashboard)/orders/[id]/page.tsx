@@ -46,6 +46,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   const canEdit = canManage && order.status === OrderStatus.DRAFT;
   const canReceive = canManage && (order.status === OrderStatus.SENT || order.status === OrderStatus.PARTIALLY_RECEIVED);
+  const canClose = canManage && (order.status === OrderStatus.SENT || order.status === OrderStatus.PARTIALLY_RECEIVED);
 
   // Get all locations for receiving
   const locations = await getInventoryService().getLocations(ctx);
@@ -98,6 +99,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             orderId={order.id} 
             canEdit={canEdit} 
             canReceive={canReceive}
+            canClose={canClose}
           />
           {canReceive ? (
             <Link href={`/receiving/new?orderId=${order.id}`}>

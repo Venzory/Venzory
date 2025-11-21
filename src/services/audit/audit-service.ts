@@ -224,6 +224,25 @@ export class AuditService {
   }
 
   /**
+   * Log order closed manually
+   */
+  async logOrderClosed(
+    ctx: RequestContext,
+    orderId: string,
+    tx?: TransactionClient
+  ): Promise<void> {
+    await this.log(
+      ctx,
+      {
+        entityType: 'Order',
+        entityId: orderId,
+        action: 'CLOSED',
+      },
+      tx
+    );
+  }
+
+  /**
    * Log goods receipt confirmation
    */
   async logGoodsReceiptConfirmed(

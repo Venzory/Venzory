@@ -123,7 +123,9 @@ export class ReceivingService {
     requireRole(ctx, 'STAFF');
 
     // Validate input
-    validatePositiveQuantity(input.quantity);
+    if (!input.skipped) {
+      validatePositiveQuantity(input.quantity);
+    }
     if (input.expiryDate) {
       validateExpiryDate(input.expiryDate);
     }
@@ -478,10 +480,17 @@ export class ReceivingService {
 
     // Calculate total received quantities per item
     const receivedQuantities = new Map<string, number>();
+    // Also track if any items were skipped across all receipts
+    const skippedItems = new Set<string>();
+    
     for (const receipt of confirmedReceipts) {
       for (const line of receipt.lines ?? []) {
         const current = receivedQuantities.get(line.itemId) || 0;
         receivedQuantities.set(line.itemId, current + line.quantity);
+        
+        if (line.skipped) {
+          skippedItems.add(line.itemId);
+        }
       }
     }
 
@@ -494,14 +503,22 @@ export class ReceivingService {
       
       if (receivedQty > 0) {
         anyItemReceived = true;
+      } else if (skippedItems.has(orderItem.itemId)) {
+        // If item was skipped, we count it as "interacted with" (so order isn't just SENT)
+        // but it definitely prevents full completion automatically
+        anyItemReceived = true; 
       }
       
       if (receivedQty < orderItem.quantity) {
+        // If quantity is less than ordered, it's not fully received.
+        // Even if skipped, we treat it as partial unless manually closed.
         allItemsFullyReceived = false;
       }
     }
 
     // Determine new order status
+    // Note: Skipped items prevent automatic 'RECEIVED' status because 
+    // receivedQty < orderedQty remains true.
     let newStatus: 'PARTIALLY_RECEIVED' | 'RECEIVED';
     if (allItemsFullyReceived) {
       newStatus = 'RECEIVED';

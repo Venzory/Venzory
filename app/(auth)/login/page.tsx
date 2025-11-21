@@ -24,6 +24,12 @@ export default function LoginPage() {
         <Suspense fallback={<div className="text-center text-slate-600 dark:text-slate-400">Loading...</div>}>
           <LoginForm />
         </Suspense>
+        <p className="text-center text-sm text-slate-600 dark:text-slate-400">
+          No account yet?{' '}
+          <Link href="/register" className="hover:underline">
+            Sign up
+          </Link>
+        </p>
         <p className="text-center text-xs text-slate-500">
           By continuing you agree to store data in accordance with your practice policies.
         </p>

@@ -43,7 +43,11 @@ export class OrderRepository extends BaseRepository {
     }
 
     if (filters?.status) {
-      where.status = filters.status;
+      if (Array.isArray(filters.status)) {
+        where.status = { in: filters.status };
+      } else {
+        where.status = filters.status;
+      }
     }
 
     if (filters?.createdById) {

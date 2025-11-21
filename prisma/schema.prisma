@@ -478,6 +478,7 @@ model GoodsReceiptLine {
   expiryDate  DateTime?
   notes       String?
   scannedGtin String?
+  skipped     Boolean   @default(false)
   createdAt   DateTime  @default(now())
 
   receipt GoodsReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)

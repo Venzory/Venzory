@@ -1,0 +1,2 @@
+ALTER TABLE "GoodsReceiptLine" ADD COLUMN "skipped" BOOLEAN NOT NULL DEFAULT false;
+

@@ -137,7 +137,7 @@ export interface AddOrderItemInput {
 export interface OrderFilters {
   practiceId: string;
   practiceSupplierId?: string;
-  status?: OrderStatus;
+  status?: OrderStatus | OrderStatus[];
   createdById?: string;
   dateFrom?: Date;
   dateTo?: Date;

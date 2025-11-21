@@ -28,7 +28,7 @@ const createGoodsReceiptSchema = z.object({
 const addReceiptLineSchema = z.object({
   receiptId: z.string().min(1, 'Receipt ID is required'),
   itemId: z.string().min(1, 'Item is required'),
-  quantity: z.coerce.number().int('Quantity must be a whole number').positive('Quantity must be at least 1').max(999999, 'Quantity is too large'),
+  quantity: z.coerce.number().int('Quantity must be a whole number').min(0).max(999999, 'Quantity is too large'),
   batchNumber: z.string().max(128, 'Batch number is too long').optional().nullable().transform((value) => value && value.trim() ? value.trim() : null),
   expiryDate: z.string().optional().nullable().transform((value) => {
     if (!value || !value.trim()) return null;
@@ -38,6 +38,7 @@ const addReceiptLineSchema = z.object({
   }),
   scannedGtin: z.string().max(64, 'GTIN is too long').optional().nullable().transform((value) => value && value.trim() ? value.trim() : null),
   notes: z.string().max(256, 'Notes are too long').optional().nullable().transform((value) => value && value.trim() ? value.trim() : null),
+  skipped: z.coerce.boolean().optional().default(false),
 });
 
 const updateReceiptLineSchema = z.object({
@@ -172,7 +173,7 @@ export async function addReceiptLineAction(_prevState: unknown, formData: FormDa
       return { error: errorMessage } as const;
     }
 
-    const { receiptId, itemId, quantity, batchNumber, expiryDate, scannedGtin, notes } = parsed.data;
+    const { receiptId, itemId, quantity, batchNumber, expiryDate, scannedGtin, notes, skipped } = parsed.data;
 
     // Add receipt line using service
     const result = await receivingService.addReceiptLine(ctx, receiptId, {
@@ -182,6 +183,7 @@ export async function addReceiptLineAction(_prevState: unknown, formData: FormDa
       expiryDate,
       scannedGtin,
       notes,
+      skipped,
     });
 
     if (isDomainError(result)) {
