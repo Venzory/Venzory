@@ -51,7 +51,7 @@ export const {
           const { host } = new URL(url);
 
           await resend.emails.send({
-            from: provider.from,
+            from: provider.from || 'Venzory <noreply@venzory.com>',
             to: email,
             subject: `Sign in to ${host}`,
             text: `Sign in to ${host}\n${url}\n\n`,
