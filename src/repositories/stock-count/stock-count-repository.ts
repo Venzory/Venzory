@@ -71,6 +71,18 @@ export class StockCountRepository extends BaseRepository {
   }
 
   /**
+   * Count stock count sessions
+   */
+  async countStockCountSessions(
+    practiceId: string
+  ): Promise<number> {
+    const client = this.getClient();
+    return client.stockCountSession.count({
+      where: this.scopeToPractice(practiceId),
+    });
+  }
+
+  /**
    * Find stock count session by ID
    */
   async findStockCountSessionById(

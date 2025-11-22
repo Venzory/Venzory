@@ -91,6 +91,48 @@ export class OrderRepository extends BaseRepository {
   }
 
   /**
+   * Count orders
+   */
+  async countOrders(
+    practiceId: string,
+    filters?: Partial<OrderFilters>
+  ): Promise<number> {
+    const client = this.getClient();
+    
+    const where: Prisma.OrderWhereInput = {
+      ...this.scopeToPractice(practiceId),
+    };
+
+    if (filters?.practiceSupplierId) {
+      where.practiceSupplierId = filters.practiceSupplierId;
+    }
+
+    if (filters?.status) {
+      if (Array.isArray(filters.status)) {
+        where.status = { in: filters.status };
+      } else {
+        where.status = filters.status;
+      }
+    }
+
+    if (filters?.createdById) {
+      where.createdById = filters.createdById;
+    }
+
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.createdAt = {};
+      if (filters.dateFrom) {
+        where.createdAt.gte = filters.dateFrom;
+      }
+      if (filters.dateTo) {
+        where.createdAt.lte = filters.dateTo;
+      }
+    }
+
+    return client.order.count({ where });
+  }
+
+  /**
    * Find order by ID
    */
   async findOrderById(

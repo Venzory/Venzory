@@ -1,26 +1,28 @@
-import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { PracticeRole } from '@prisma/client';
 
 import { PageHeader } from '@/components/layout/PageHeader';
-import { DataTable } from '@/components/ui/data-table';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getOrderService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
-import { Card } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
-import { Package } from 'lucide-react';
-import { calculateOrderTotal } from '@/lib/prisma-transforms';
+import { Card } from '@/components/ui/card';
+import { parseListParams } from '@/lib/url-params';
 import { selectQuickTemplates } from './_utils/quick-reorder';
 import { QuickOrderButton } from './_components/quick-order-button';
-import { getOrderSupplierDisplay } from '../dashboard/_utils/order-display';
-import { OrderStatusBadge } from '../dashboard/_utils/order-status-badge';
+import { OrdersList } from './_components/orders-list';
 
-export default async function OrdersPage() {
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
+  const params = searchParams ? await searchParams : {};
+
+  const { page: currentPage, limit: itemsPerPage, sortBy, sortOrder } = parseListParams(params);
 
   const canManage = hasRole({
     memberships: session.user.memberships,
@@ -28,10 +30,20 @@ export default async function OrdersPage() {
     minimumRole: PracticeRole.STAFF,
   });
 
-  const [orders, allTemplates] = await Promise.all([
-    getOrderService().findOrders(ctx, {}),
+  const [orders, totalOrders, allTemplates] = await Promise.all([
+    getOrderService().findOrders(
+      ctx,
+      {},
+      {
+        pagination: { page: currentPage, limit: itemsPerPage },
+        sorting: sortBy ? { sortBy, sortOrder: sortOrder as 'asc' | 'desc' } : undefined,
+      }
+    ),
+    getOrderService().countOrders(ctx, {}),
     canManage ? getOrderService().findTemplates(ctx) : Promise.resolve([]),
   ]);
+
+  const totalPages = Math.ceil(totalOrders / itemsPerPage);
 
   // Fetch templates for quick reorder (only if user can manage orders)
   let quickTemplates: any[] = [];
@@ -62,130 +74,17 @@ export default async function OrdersPage() {
         <QuickReorderSection templates={quickTemplates} />
       )}
 
-      <OrdersList orders={orders} canManage={canManage} />
-    </section>
-  );
-}
-
-function OrdersList({
-  orders,
-  canManage,
-}: {
-  orders: any[];
-  canManage: boolean;
-}) {
-  if (orders.length === 0) {
-    return (
-      <EmptyState
-        icon={Package}
-        title="No orders yet"
-        description={
-          canManage
-            ? 'Start tracking your inventory by creating your first purchase order. You can order from any linked supplier.'
-            : 'Orders will appear here once created by staff members.'
-        }
-        action={
-          canManage ? (
-            <Link href="/orders/new">
-              <Button variant="primary">Create Your First Order</Button>
-            </Link>
-          ) : undefined
-        }
+      <OrdersList 
+        orders={orders} 
+        canManage={canManage}
+        currentSort={sortBy || 'createdAt'}
+        currentSortOrder={sortOrder || 'desc'}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalOrders}
+        itemsPerPage={itemsPerPage}
       />
-    );
-  }
-
-  const columns = [
-    {
-      accessorKey: 'createdAt',
-      header: 'Date',
-      cell: (order: any) => (
-        <div className="flex flex-col">
-          <span>{formatDistanceToNow(order.createdAt, { addSuffix: true })}</span>
-          <span className="text-xs text-slate-500">
-            {new Date(order.createdAt).toLocaleDateString()}
-          </span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'supplier',
-      header: 'Supplier',
-      cell: (order: any) => {
-        const { name: supplierName, linkId: supplierLinkId } = getOrderSupplierDisplay(order);
-        return supplierLinkId ? (
-          <Link
-            href={`/suppliers#${supplierLinkId}`}
-            className="font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-          >
-            {supplierName}
-          </Link>
-        ) : (
-          <span className="text-slate-600 dark:text-slate-400">{supplierName}</span>
-        );
-      },
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: (order: any) => <OrderStatusBadge status={order.status} />,
-    },
-    {
-      accessorKey: 'items',
-      header: 'Items',
-      className: 'text-right',
-      cell: (order: any) => {
-        const itemCount = order.items?.length ?? 0;
-        return (
-          <span className="text-slate-700 dark:text-slate-300">
-            {itemCount} {itemCount === 1 ? 'item' : 'items'}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: 'total',
-      header: 'Total',
-      className: 'text-right',
-      cell: (order: any) => {
-        const total = calculateOrderTotal(order.items || []);
-        return (
-          <span className="font-medium text-slate-900 dark:text-slate-200">
-            {total > 0 ? `€${total.toFixed(2)}` : '-'}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: 'createdBy',
-      header: 'Created By',
-      cell: (order: any) => (
-        <span className="text-slate-600 text-xs dark:text-slate-400">
-          {order.createdBy?.name || order.createdBy?.email || 'Unknown'}
-        </span>
-      ),
-    },
-    {
-      accessorKey: 'actions',
-      header: '',
-      className: 'text-right',
-      cell: (order: any) => (
-        <Link
-          href={`/orders/${order.id}`}
-          className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-        >
-          View →
-        </Link>
-      ),
-    },
-  ];
-
-  return (
-    <Card className="overflow-hidden p-0">
-      <div className="overflow-x-auto">
-        <DataTable columns={columns} data={orders} className="border-0" />
-      </div>
-    </Card>
+    </section>
   );
 }
 
@@ -237,4 +136,3 @@ function QuickReorderSection({ templates }: { templates: any[] }) {
     </Card>
   );
 }
-

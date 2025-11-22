@@ -32,7 +32,7 @@ export default async function NeedsAttentionPage() {
   const [itemsResult, sentOrders, receivingMismatches] = await Promise.all([
     // Fetch enough items to cover likely low stock. Ideally filtered in DB but logic is complex.
     getInventoryService().findItems(ctx, {}, { page: 1, limit: 500 }),
-    getOrderService().findOrders(ctx, { status: 'SENT' }, { page: 1, limit: 100 }),
+    getOrderService().findOrders(ctx, { status: 'SENT' }, { pagination: { page: 1, limit: 100 } }),
     getReceivingService().getReceivingMismatches(ctx),
   ]);
 

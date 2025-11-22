@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     // Limit items to 100 for dashboard calculations
     getInventoryService().findItems(ctx, {}, { page: 1, limit: 100 }),
     // Limit orders to recent 50 for stats
-    getOrderService().findOrders(ctx, {}, { page: 1, limit: 50 }),
+    getOrderService().findOrders(ctx, {}, { pagination: { page: 1, limit: 50 } }),
     // Fetch recent stock adjustments
     getInventoryService().getRecentAdjustments(ctx, 5),
     // Fetch practice onboarding status

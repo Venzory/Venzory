@@ -1010,14 +1010,29 @@ export class InventoryService {
    */
   async getStockCountSessions(
     ctx: RequestContext,
-    pagination?: { page?: number; limit?: number }
+    options?: {
+      pagination?: { page?: number; limit?: number };
+      sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' };
+    }
   ): Promise<any[]> {
+    const orderBy = options?.sorting?.sortBy 
+      ? { [options.sorting.sortBy]: options.sorting.sortOrder || 'desc' }
+      : undefined;
+
     return this.stockCountRepository.findStockCountSessions(ctx.practiceId, {
       pagination: {
-        page: pagination?.page ?? 1,
-        limit: pagination?.limit ?? 50,
+        page: options?.pagination?.page ?? 1,
+        limit: options?.pagination?.limit ?? 50,
       },
+      orderBy,
     });
+  }
+
+  /**
+   * Count stock count sessions
+   */
+  async countStockCountSessions(ctx: RequestContext): Promise<number> {
+    return this.stockCountRepository.countStockCountSessions(ctx.practiceId);
   }
 
   /**

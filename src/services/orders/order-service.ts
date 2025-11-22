@@ -53,14 +53,32 @@ export class OrderService {
   async findOrders(
     ctx: RequestContext,
     filters?: Partial<OrderFilters>,
-    pagination?: { page?: number; limit?: number }
+    options?: {
+      pagination?: { page?: number; limit?: number };
+      sorting?: { sortBy?: string; sortOrder?: 'asc' | 'desc' };
+    }
   ): Promise<OrderWithRelations[]> {
+    const orderBy = options?.sorting?.sortBy 
+      ? { [options.sorting.sortBy]: options.sorting.sortOrder || 'desc' }
+      : undefined;
+
     return this.orderRepository.findOrders(ctx.practiceId, filters, {
       pagination: {
-        page: pagination?.page ?? 1,
-        limit: pagination?.limit ?? 50,
+        page: options?.pagination?.page ?? 1,
+        limit: options?.pagination?.limit ?? 50,
       },
+      orderBy,
     });
+  }
+
+  /**
+   * Count orders with filters
+   */
+  async countOrders(
+    ctx: RequestContext,
+    filters?: Partial<OrderFilters>
+  ): Promise<number> {
+    return this.orderRepository.countOrders(ctx.practiceId, filters);
   }
 
   /**
