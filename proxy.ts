@@ -49,6 +49,10 @@ async function setCsrfCookie(response: NextResponse, request: Request): Promise<
     const verified = await parseAndVerifySignedToken(existingToken);
     if (verified) {
       needsNewToken = false;
+      // Use existing token
+      // Force reset of cookie to ensure HttpOnly is removed if present
+      const cookieValue = `${cookieName}=${encodeURIComponent(existingToken)}; Path=/; SameSite=Lax; Max-Age=3600${isProduction ? '; Secure' : ''}`;
+      response.headers.append('Set-Cookie', cookieValue);
     }
   }
   
