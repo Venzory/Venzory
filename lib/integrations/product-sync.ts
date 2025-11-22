@@ -1,6 +1,15 @@
 /**
  * Product Synchronization Service
  * 
+ * ⚠️ SECURITY WARNING:
+ * This module bypasses standard access control checks (isPlatformOwner).
+ * It is intended for internal system processes (CLI, cron jobs) or 
+ * rigorously checked API endpoints only.
+ * 
+ * CALLER RESPONSIBILITY:
+ * Any code invoking these functions MUST ensure the caller is authorized
+ * (e.g., checks isPlatformOwner() before calling).
+ * 
  * Core logic for creating/updating Products and SupplierCatalogs.
  * This is the main entry point for all supplier data ingestion flows.
  * 

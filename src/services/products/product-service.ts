@@ -8,6 +8,7 @@ import { InventoryRepository } from '@/src/repositories/inventory';
 import { AuditService } from '../audit/audit-service';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
+import { isPlatformOwner } from '@/lib/owner-guard';
 import { withTransaction } from '@/src/repositories/base';
 import {
   Product,
@@ -21,6 +22,7 @@ import {
   ValidationError,
   BusinessRuleViolationError,
   NotFoundError,
+  ForbiddenError,
 } from '@/src/domain/errors';
 import { validateStringLength, validateGtinOrThrow, validatePrice } from '@/src/domain/validators';
 
@@ -56,8 +58,11 @@ export class ProductService {
     ctx: RequestContext,
     input: CreateProductInput
   ): Promise<Product> {
-    // Check permissions
-    requireRole(ctx, 'ADMIN');
+    // Check permissions - Platform Owner ONLY
+    if (!isPlatformOwner(ctx.userEmail)) {
+      throw new ForbiddenError('Only the platform owner can create products.');
+    }
+    // requireRole(ctx, 'ADMIN'); // Redundant for owner, but kept if we relax this later. For now strict owner check.
 
     // Validate input
     validateStringLength(input.name, 'Product name', 1, 255);
@@ -116,8 +121,10 @@ export class ProductService {
     productId: string,
     input: UpdateProductInput
   ): Promise<Product> {
-    // Check permissions
-    requireRole(ctx, 'ADMIN');
+    // Check permissions - Platform Owner ONLY
+    if (!isPlatformOwner(ctx.userEmail)) {
+      throw new ForbiddenError('Only the platform owner can update products.');
+    }
 
     // Validate input
     if (input.name !== undefined) {
@@ -177,8 +184,10 @@ export class ProductService {
    * Delete product
    */
   async deleteProduct(ctx: RequestContext, productId: string): Promise<void> {
-    // Check permissions
-    requireRole(ctx, 'ADMIN');
+    // Check permissions - Platform Owner ONLY
+    if (!isPlatformOwner(ctx.userEmail)) {
+      throw new ForbiddenError('Only the platform owner can delete products.');
+    }
 
     return withTransaction(async (tx) => {
       // Verify product exists
@@ -215,8 +224,10 @@ export class ProductService {
    * Trigger GS1 lookup for product
    */
   async triggerGs1Lookup(ctx: RequestContext, productId: string): Promise<void> {
-    // Check permissions
-    requireRole(ctx, 'ADMIN');
+    // Check permissions - Platform Owner ONLY
+    if (!isPlatformOwner(ctx.userEmail)) {
+      throw new ForbiddenError('Only the platform owner can trigger GS1 lookups.');
+    }
 
     return withTransaction(async (tx) => {
       // Verify product exists
