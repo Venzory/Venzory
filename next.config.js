@@ -9,6 +9,8 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
+  // Enable Turbopack by default in Next.js 16, explicitly clearing this check
+  turbopack: {},
   serverExternalPackages: ['pino', 'pino-pretty'],
   webpack: (config) => {
     config.ignoreWarnings = [

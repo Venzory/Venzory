@@ -40,7 +40,7 @@ export const {
 
         const email = parsed.data.email.toLowerCase();
         const password = parsed.data.password;
-
+        
         // Enforce rate limiting
         let ip = 'unknown';
         if (request instanceof Request) {

@@ -68,7 +68,7 @@ export function RegisterForm() {
         
         if (err instanceof ClientApiError && err.details) {
           // Extract field errors from validation error details
-          setFieldErrors(err.details);
+          setFieldErrors(err.details as Record<string, string[]>);
         } else if (err instanceof Error) {
           setError(err.message);
         } else {

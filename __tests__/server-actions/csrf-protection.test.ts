@@ -76,7 +76,7 @@ describe('Server Actions CSRF Protection', () => {
       const formData = new FormData();
       formData.append('name', 'Test Item');
       
-      await expect(upsertItemAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(upsertItemAction({}, formData)).rejects.toThrow('Invalid request');
     });
 
     it('should reject action when header token is missing', async () => {
@@ -97,7 +97,7 @@ describe('Server Actions CSRF Protection', () => {
       const formData = new FormData();
       formData.append('name', 'Test Item');
       
-      await expect(upsertItemAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(upsertItemAction({}, formData)).rejects.toThrow('Invalid request');
     });
 
     it('should reject action when both cookie and header are missing', async () => {
@@ -114,7 +114,7 @@ describe('Server Actions CSRF Protection', () => {
       formData.append('supplierId', 'test-supplier-id');
       formData.append('items', JSON.stringify([{ itemId: 'test', quantity: 1 }]));
       
-      await expect(createDraftOrderAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(createDraftOrderAction({}, formData)).rejects.toThrow('Invalid request');
     });
   });
 
@@ -158,7 +158,7 @@ describe('Server Actions CSRF Protection', () => {
       formData.append('locationId', 'test-location');
       formData.append('quantity', '5');
       
-      await expect(createStockAdjustmentAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(createStockAdjustmentAction({}, formData)).rejects.toThrow('Invalid request');
     });
   });
 
@@ -176,8 +176,8 @@ describe('Server Actions CSRF Protection', () => {
       const formData = new FormData();
       formData.append('name', 'Test');
       
-      await expect(upsertLocationAction(null, formData)).rejects.toThrow('Invalid request');
-      await expect(updatePracticeSupplierAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(upsertLocationAction({}, formData)).rejects.toThrow('Invalid request');
+      await expect(updatePracticeSupplierAction({}, formData)).rejects.toThrow('Invalid request');
     });
 
     it('should protect order actions', async () => {
@@ -218,7 +218,7 @@ describe('Server Actions CSRF Protection', () => {
       const formData = new FormData();
       formData.append('locationId', 'test-location');
       
-      await expect(createGoodsReceiptAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(createGoodsReceiptAction({}, formData)).rejects.toThrow('Invalid request');
       await expect(confirmGoodsReceiptAction('test-receipt-id')).rejects.toThrow();
       await expect(deleteGoodsReceiptAction('test-receipt-id')).rejects.toThrow();
     });
@@ -239,7 +239,7 @@ describe('Server Actions CSRF Protection', () => {
       const formData = new FormData();
       formData.append('locationId', 'test-location');
       
-      await expect(createStockCountSessionAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(createStockCountSessionAction({}, formData)).rejects.toThrow('Invalid request');
       await expect(completeStockCountAction('test-session-id', true)).rejects.toThrow();
       await expect(deleteStockCountSessionAction('test-session-id')).rejects.toThrow();
     });
@@ -260,8 +260,8 @@ describe('Server Actions CSRF Protection', () => {
       const formData = new FormData();
       formData.append('name', 'Test Product');
       
-      await expect(createProductAction(null, formData)).rejects.toThrow('Invalid request');
-      await expect(updateProductAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(createProductAction({}, formData)).rejects.toThrow('Invalid request');
+      await expect(updateProductAction({}, formData)).rejects.toThrow('Invalid request');
       await expect(deleteProductAction('test-product-id')).rejects.toThrow('Invalid request');
     });
 
@@ -281,8 +281,8 @@ describe('Server Actions CSRF Protection', () => {
       const formData = new FormData();
       formData.append('name', 'Test Practice');
       
-      await expect(updatePracticeSettingsAction(null, formData)).rejects.toThrow('Invalid request');
-      await expect(updateUserRoleAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(updatePracticeSettingsAction({}, formData)).rejects.toThrow('Invalid request');
+      await expect(updateUserRoleAction({}, formData)).rejects.toThrow('Invalid request');
       await expect(removeUserAction('test-user-id')).rejects.toThrow('Invalid request');
     });
 
@@ -302,8 +302,8 @@ describe('Server Actions CSRF Protection', () => {
       const formData = new FormData();
       formData.append('practiceSupplierId', 'test-supplier-id');
       
-      await expect(updatePracticeSupplierAction(null, formData)).rejects.toThrow('Invalid request');
-      await expect(linkGlobalSupplierAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(updatePracticeSupplierAction({}, formData)).rejects.toThrow('Invalid request');
+      await expect(linkGlobalSupplierAction({}, formData)).rejects.toThrow('Invalid request');
       await expect(unlinkPracticeSupplierAction('test-supplier-id')).rejects.toThrow();
     });
   });
@@ -326,7 +326,7 @@ describe('Server Actions CSRF Protection', () => {
       const formData = new FormData();
       formData.append('name', 'Test Item');
       
-      await expect(upsertItemAction(null, formData)).rejects.toThrow('Invalid request');
+      await expect(upsertItemAction({}, formData)).rejects.toThrow('Invalid request');
     });
 
     it('should reject empty token strings', async () => {

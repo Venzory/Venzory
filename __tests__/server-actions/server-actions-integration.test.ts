@@ -225,7 +225,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('sku', 'TEST-001');
       formData.append('unit', 'piece');
       
-      const result = await upsertItemAction(null, formData);
+      const result = await upsertItemAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Item created');
@@ -240,7 +240,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('itemId', 'test-item-id');
       formData.append('name', 'Updated Item');
       
-      const result = await upsertItemAction(null, formData);
+      const result = await upsertItemAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Item updated');
@@ -257,7 +257,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('quantity', '5');
       formData.append('reason', 'Inventory correction');
       
-      const result = await createStockAdjustmentAction(null, formData);
+      const result = await createStockAdjustmentAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Stock adjustment recorded');
@@ -272,7 +272,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('name', 'Test Location');
       formData.append('code', 'LOC-001');
       
-      const result = await upsertLocationAction(null, formData);
+      const result = await upsertLocationAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Location created');
@@ -295,7 +295,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('items[1].unitPrice', '3.50');
       
       // Should redirect on success
-      await expect(createDraftOrderAction(null, formData)).rejects.toThrow('NEXT_REDIRECT');
+      await expect(createDraftOrderAction({}, formData)).rejects.toThrow('NEXT_REDIRECT');
     });
 
 
@@ -368,7 +368,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('supplierId', 'test-supplier-id');
       
       // Should redirect on success
-      await expect(createGoodsReceiptAction(null, formData)).rejects.toThrow('NEXT_REDIRECT');
+      await expect(createGoodsReceiptAction({}, formData)).rejects.toThrow('NEXT_REDIRECT');
     });
 
     it('should add receipt line with valid CSRF token', async () => {
@@ -381,7 +381,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('itemId', 'test-item-id');
       formData.append('quantity', '10');
       
-      const result = await addReceiptLineAction(null, formData);
+      const result = await addReceiptLineAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Item added to receipt');
@@ -398,7 +398,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('locationId', 'test-location-id');
       formData.append('notes', 'Monthly stock count');
       
-      const result = await createStockCountSessionAction(null, formData);
+      const result = await createStockCountSessionAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe(true);
@@ -415,7 +415,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('itemId', 'test-item-id');
       formData.append('countedQuantity', '50');
       
-      const result = await addCountLineAction(null, formData);
+      const result = await addCountLineAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe(true);
@@ -432,7 +432,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('name', 'Test Product');
       formData.append('brand', 'Test Brand');
       
-      const result = await createProductAction(null, formData);
+      const result = await createProductAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Product created successfully');
@@ -448,7 +448,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('productId', 'test-product-id');
       formData.append('name', 'Updated Product');
       
-      const result = await updateProductAction(null, formData);
+      const result = await updateProductAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Product updated successfully');
@@ -465,7 +465,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('name', 'Updated Practice Name');
       formData.append('city', 'Test City');
       
-      const result = await updatePracticeSettingsAction(null, formData);
+      const result = await updatePracticeSettingsAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Practice settings updated');
@@ -480,7 +480,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('userId', 'test-user-id');
       formData.append('role', 'STAFF');
       
-      const result = await updateUserRoleAction(null, formData);
+      const result = await updateUserRoleAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('User role updated');
@@ -498,7 +498,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('accountNumber', 'ACC-12345');
       formData.append('isPreferred', 'true');
       
-      const result = await updatePracticeSupplierAction(null, formData);
+      const result = await updatePracticeSupplierAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Supplier settings updated successfully.');
@@ -512,7 +512,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       const formData = new FormData();
       formData.append('globalSupplierId', 'test-global-supplier-id');
       
-      const result = await linkGlobalSupplierAction(null, formData);
+      const result = await linkGlobalSupplierAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Supplier linked successfully.');
@@ -530,7 +530,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       formData.append('practiceSupplierId', 'test-supplier-id');
       formData.append('name', 'Test Catalog Item');
       
-      const result = await addToCatalogAction(null, formData);
+      const result = await addToCatalogAction({}, formData);
       
       expect(result).toHaveProperty('success');
       expect(result.success).toBe('Product added to your catalog successfully');
@@ -548,13 +548,13 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       // First action
       const formData1 = new FormData();
       formData1.append('name', 'Item 1');
-      const result1 = await upsertItemAction(null, formData1);
+      const result1 = await upsertItemAction({}, formData1);
       expect(result1).toHaveProperty('success');
       
       // Second action with same token
       const formData2 = new FormData();
       formData2.append('name', 'Product 1');
-      const result2 = await createProductAction(null, formData2);
+      const result2 = await createProductAction({}, formData2);
       expect(result2).toHaveProperty('success');
     });
   });
