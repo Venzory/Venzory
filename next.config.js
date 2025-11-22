@@ -9,6 +9,7 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
+  serverExternalPackages: ['pino', 'pino-pretty'],
   webpack: (config) => {
     config.ignoreWarnings = [
       { module: /node_modules\/@opentelemetry\/instrumentation/ },
