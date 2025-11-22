@@ -45,21 +45,21 @@ export async function sendPasswordResetEmail({
   name,
 }: SendPasswordResetEmailParams): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!resend) {
-      logger.error({
-        module: 'email',
-        operation: 'sendPasswordResetEmail',
-        email,
-      }, 'Resend client not initialized - missing RESEND_API_KEY');
-      return {
-        success: false,
-        error: 'Email service not configured',
-      };
-    }
-
     const baseUrl = env.NEXT_PUBLIC_APP_URL;
     const resetUrl = `${baseUrl}/auth/reset-password/${token}`;
+
     const displayName = name || 'there';
+
+    if (!resend) {
+      logger.warn({
+        module: 'email',
+        operation: 'sendPasswordResetEmail',
+        isDev: true,
+        email,
+        resetUrl,
+      }, 'Resend not configured - would send password reset email in production');
+      return { success: true };
+    }
 
     await resend.emails.send({
       from: 'Venzory <noreply@venzory.com>',

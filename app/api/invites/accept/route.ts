@@ -53,13 +53,10 @@ export const POST = apiHandler(async (request: Request) => {
   // Accept invite using AuthService (throws NotFoundError, ConflictError, ValidationError as needed)
   const result = await getAuthService().acceptInvite(token, name, password);
 
-  // Get the email from the accepted invite for sign-in
-  const invite = await getAuthService().validateInviteToken(token);
-
   // Sign the user in
   try {
     await signIn('credentials', {
-      email: invite.email,
+      email: result.email,
       password,
       redirect: false,
     });

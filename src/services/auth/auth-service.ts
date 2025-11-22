@@ -36,6 +36,7 @@ interface AcceptInviteResult {
   userId: string;
   practiceId: string;
   redirectTo: string;
+  email: string;
 }
 
 /**
@@ -397,6 +398,7 @@ class AuthServiceImpl implements IAuthService {
       userId,
       practiceId: invite.practiceId,
       redirectTo,
+      email: normalizedEmail,
     };
   }
 
