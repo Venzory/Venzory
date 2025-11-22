@@ -32,7 +32,7 @@ export function ProductDeleteButton({ productId }: { productId: string }) {
     try {
       await deleteProductAction(productId);
       toast.success('Product deleted successfully');
-      router.push('/settings/products');
+      router.push('/owner/product-master');
     } catch (error) {
       console.error('Failed to delete product:', error);
       const message = error instanceof Error ? error.message : 'Failed to delete product';

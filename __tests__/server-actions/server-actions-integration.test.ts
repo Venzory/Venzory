@@ -95,6 +95,7 @@ vi.mock('@/src/services/inventory', () => ({
     createItem: vi.fn(() => ({ id: 'test-item-id', name: 'Test Item' })),
     updateItem: vi.fn(() => ({ id: 'test-item-id', name: 'Updated Item' })),
     deleteItem: vi.fn(),
+    addItemFromCatalog: vi.fn(() => ({ id: 'test-item-id' })),
   })),
 }));
 
@@ -426,7 +427,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should create product with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { createProductAction } = await import('@/app/(dashboard)/settings/products/actions');
+      const { createProductAction } = await import('@/app/(dashboard)/owner/product-master/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Product');
@@ -442,7 +443,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should update product with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { updateProductAction } = await import('@/app/(dashboard)/settings/products/actions');
+      const { updateProductAction } = await import('@/app/(dashboard)/owner/product-master/actions');
       
       const formData = new FormData();
       formData.append('productId', 'test-product-id');
@@ -543,7 +544,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       await mockValidCsrfHeaders();
 
       const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
-      const { createProductAction } = await import('@/app/(dashboard)/settings/products/actions');
+      const { createProductAction } = await import('@/app/(dashboard)/owner/product-master/actions');
       
       // First action
       const formData1 = new FormData();

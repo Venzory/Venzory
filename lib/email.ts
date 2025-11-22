@@ -50,18 +50,32 @@ export async function sendPasswordResetEmail({
 
     const displayName = name || 'there';
 
-    if (!resend) {
-      logger.warn({
+    // In development, ALWAYS log the email details for visibility, regardless of whether resend is configured
+    if (process.env.NODE_ENV === 'development') {
+      console.log('\n📨 EMAIL LOG (Dev Mode):', JSON.stringify({
         module: 'email',
         operation: 'sendPasswordResetEmail',
-        isDev: true,
+        resendInitialized: !!resend,
         email,
+        subject: 'Reset your Venzory password',
         resetUrl,
-      }, 'Resend not configured - would send password reset email in production');
+      }, null, 2), '\n');
+    }
+
+    if (!resend) {
+      // Log for production if not configured (already covered by dev log above, but good for consistency)
+      if (process.env.NODE_ENV !== 'development') {
+        logger.warn({
+          module: 'email',
+          operation: 'sendPasswordResetEmail',
+          email,
+          subject: 'Reset your Venzory password',
+        }, 'Resend not configured - would send password reset email');
+      }
       return { success: true };
     }
 
-    await resend.emails.send({
+    const response = await resend.emails.send({
       from: 'Venzory <noreply@venzory.com>',
       to: email,
       subject: 'Reset your Venzory password',
@@ -138,6 +152,13 @@ If you didn't request a password reset, you can safely ignore this email. Your p
       `.trim(),
     });
 
+    // Force log the raw response in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('\n📬 RESEND RESPONSE (Dev Mode):', JSON.stringify(response, null, 2), '\n');
+    }
+
+    const { data, error } = response;
+
     return { success: true };
   } catch (error) {
     logger.error({
@@ -166,22 +187,30 @@ export async function sendUserInviteEmail({
     const roleDisplay = role.charAt(0) + role.slice(1).toLowerCase();
     const inviter = inviterName || 'An administrator';
 
-    if (!resend) {
-      // In dev: log invite details instead of crashing
-      logger.warn({
+    // In development, ALWAYS log the email details for visibility
+    if (process.env.NODE_ENV === 'development') {
+      console.log('\n📨 EMAIL LOG (Dev Mode):', JSON.stringify({
         module: 'email',
         operation: 'sendUserInviteEmail',
-        isDev: true,
         email,
-        practiceName,
-        role: roleDisplay,
-        invitedBy: inviter,
+        subject: `You've been invited to join ${practiceName}`,
         inviteUrl,
-      }, 'Resend not configured - would send invite email in production');
+      }, null, 2), '\n');
+    }
+
+    if (!resend) {
+      if (process.env.NODE_ENV !== 'development') {
+        logger.warn({
+          module: 'email',
+          operation: 'sendUserInviteEmail',
+          email,
+          subject: `You've been invited to join ${practiceName}`,
+        }, 'Resend not configured - would send invite email');
+      }
       return { success: true }; // Don't fail in dev
     }
 
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: 'Venzory <noreply@venzory.com>',
       to: email,
       subject: `You've been invited to join ${practiceName}`,

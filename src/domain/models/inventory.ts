@@ -154,6 +154,7 @@ export interface InventoryFilters {
   practiceSupplierId?: string;
   productId?: string;
   lowStockOnly?: boolean;
+  itemIds?: string[];
 }
 
 /**

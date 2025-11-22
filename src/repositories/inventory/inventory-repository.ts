@@ -62,6 +62,11 @@ export class InventoryRepository extends BaseRepository {
       where.productId = filters.productId;
     }
 
+    // Filter by item IDs
+    if (filters?.itemIds && filters.itemIds.length > 0) {
+      where.id = { in: filters.itemIds };
+    }
+
     const items = await client.item.findMany({
       where,
       include: {

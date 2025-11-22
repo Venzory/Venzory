@@ -455,7 +455,66 @@ export class OrderRepository extends BaseRepository {
     filters?: Partial<OrderFilters>,
     options?: FindOptions
   ): Promise<OrderSummary[]> {
-    const orders = await this.findOrders(practiceId, filters, options);
+    const client = this.getClient(options?.tx);
+    
+    const where: Prisma.OrderWhereInput = {
+      ...this.scopeToPractice(practiceId),
+    };
+
+    // Apply filters (same logic as findOrders)
+    if (filters?.practiceSupplierId) {
+      where.practiceSupplierId = filters.practiceSupplierId;
+    }
+
+    if (filters?.status) {
+      if (Array.isArray(filters.status)) {
+        where.status = { in: filters.status };
+      } else {
+        where.status = filters.status;
+      }
+    }
+
+    if (filters?.createdById) {
+      where.createdById = filters.createdById;
+    }
+
+    if (filters?.dateFrom || filters?.dateTo) {
+      where.createdAt = {};
+      if (filters.dateFrom) {
+        where.createdAt.gte = filters.dateFrom;
+      }
+      if (filters.dateTo) {
+        where.createdAt.lte = filters.dateTo;
+      }
+    }
+
+    // Optimized query selecting only necessary fields
+    const orders = await client.order.findMany({
+      where,
+      select: {
+        id: true,
+        reference: true,
+        status: true,
+        createdAt: true,
+        sentAt: true,
+        practiceSupplier: {
+          select: {
+            customLabel: true,
+            globalSupplier: {
+              select: { name: true }
+            }
+          }
+        },
+        items: {
+          select: {
+            quantity: true,
+            unitPrice: true
+          }
+        }
+      },
+      orderBy: options?.orderBy ?? { createdAt: 'desc' },
+      ...this.buildPagination(options?.pagination),
+    });
 
     return orders.map((order) => ({
       id: order.id,

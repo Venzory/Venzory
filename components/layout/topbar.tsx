@@ -13,7 +13,7 @@ type TopBarProps = {
 
 export function TopBar({ userName, practiceName, onMenuClick }: TopBarProps) {
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-surface/60 px-4 backdrop-blur md:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-surface/60 px-4 backdrop-blur md:px-6">
       {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}

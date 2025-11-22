@@ -10,9 +10,10 @@ import { z } from 'zod';
 
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getProductService } from '@/src/services/products';
-import { isDomainError } from '@/src/domain/errors';
+import { isDomainError, ForbiddenError } from '@/src/domain/errors';
 import { enrichProductWithGs1Data, isValidGtin } from '@/lib/integrations';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
+import { isPlatformOwner } from '@/lib/owner-guard';
 
 const productService = getProductService();
 
@@ -62,6 +63,11 @@ export async function createProductAction(_prevState: unknown, formData: FormDat
     // Build request context
     const ctx = await buildRequestContext();
 
+    // Enforce Owner Access
+    if (!isPlatformOwner(ctx.userEmail)) {
+        return { error: 'Only the platform owner can create products.' } as const;
+    }
+
     // Parse and validate input
     const parsed = createProductSchema.safeParse({
       gtin: formData.get('gtin'),
@@ -95,7 +101,7 @@ export async function createProductAction(_prevState: unknown, formData: FormDat
       });
     }
 
-    revalidatePath('/settings/products');
+    revalidatePath('/owner/product-master');
     return { success: 'Product created successfully', productId: product.id } as const;
   } catch (error) {
     console.error('[Product Actions] Error creating product:', error);
@@ -114,6 +120,11 @@ export async function updateProductAction(_prevState: unknown, formData: FormDat
   try {
     // Build request context
     const ctx = await buildRequestContext();
+
+    // Enforce Owner Access
+    if (!isPlatformOwner(ctx.userEmail)) {
+        return { error: 'Only the platform owner can update products.' } as const;
+    }
 
     // Parse and validate input
     const parsed = updateProductSchema.safeParse({
@@ -136,8 +147,8 @@ export async function updateProductAction(_prevState: unknown, formData: FormDat
       description,
     });
 
-    revalidatePath('/settings/products');
-    revalidatePath(`/settings/products/${productId}`);
+    revalidatePath('/owner/product-master');
+    revalidatePath(`/owner/product-master/${productId}`);
     return { success: 'Product updated successfully' } as const;
   } catch (error) {
     console.error('[Product Actions] Error updating product:', error);
@@ -157,14 +168,19 @@ export async function triggerGs1LookupAction(productId: string) {
     // Build request context
     const ctx = await buildRequestContext();
 
+    // Enforce Owner Access
+    if (!isPlatformOwner(ctx.userEmail)) {
+        throw new ForbiddenError('Only the platform owner can trigger GS1 lookup.');
+    }
+
     // Trigger GS1 lookup via service
     await productService.triggerGs1Lookup(ctx, productId);
 
     // Perform actual lookup (in background, but we'll do it synchronously for now)
     await enrichProductWithGs1Data(productId);
 
-    revalidatePath('/settings/products');
-    revalidatePath(`/settings/products/${productId}`);
+    revalidatePath('/owner/product-master');
+    revalidatePath(`/owner/product-master/${productId}`);
   } catch (error) {
     console.error('[Product Actions] Error triggering GS1 lookup:', error);
     
@@ -183,10 +199,15 @@ export async function deleteProductAction(productId: string) {
     // Build request context
     const ctx = await buildRequestContext();
 
+    // Enforce Owner Access
+    if (!isPlatformOwner(ctx.userEmail)) {
+        throw new ForbiddenError('Only the platform owner can delete products.');
+    }
+
     // Delete product via service
     await productService.deleteProduct(ctx, productId);
 
-    revalidatePath('/settings/products');
+    revalidatePath('/owner/product-master');
   } catch (error: unknown) {
     console.error('[Product Actions] Error deleting product:', error);
     
@@ -198,4 +219,3 @@ export async function deleteProductAction(productId: string) {
     throw new Error(message);
   }
 }
-

@@ -8,6 +8,7 @@ import { hash } from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { MembershipStatus, PracticeRole, User, Practice, UserInvite, PasswordResetToken } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { env } from '@/lib/env';
 import { withTransaction } from '@/src/repositories/base/transaction';
 import { UserRepository } from '@/src/repositories/users';
 import { sendPasswordResetEmail, sendUserInviteEmail } from '@/lib/email';
@@ -220,20 +221,17 @@ class AuthServiceImpl implements IAuthService {
       },
     });
 
-    // Send password reset email (don't fail request if email fails)
-    try {
-      await sendPasswordResetEmail({
-        email: user.email,
-        token,
-        name: user.name,
-      });
-    } catch (error) {
-      logger.error({
-        module: 'AuthService',
-        operation: 'requestPasswordReset',
-        email: user.email,
-        error: error instanceof Error ? error.message : String(error),
-      }, 'Failed to send password reset email');
+    // Send password reset email
+    // In dev: fail if email fails
+    // In prod: swallow error to prevent enumeration
+    const emailResult = await sendPasswordResetEmail({
+      email: user.email,
+      token,
+      name: user.name,
+    });
+
+    if (!emailResult.success && env.NODE_ENV === 'development') {
+      throw new Error(`Failed to send password reset email: ${emailResult.error}`);
     }
 
     return { message };
@@ -527,29 +525,22 @@ class AuthServiceImpl implements IAuthService {
       },
     });
 
-    // Send invitation email (don't fail request if email fails)
-    try {
-      const inviter = await prisma.user.findUnique({
-        where: { id: inviterUserId },
-        select: { name: true },
-      });
+    // Send invitation email
+    const inviter = await prisma.user.findUnique({
+      where: { id: inviterUserId },
+      select: { name: true },
+    });
 
-      await sendUserInviteEmail({
-        email: normalizedEmail,
-        token,
-        practiceName: practice.name,
-        role,
-        inviterName: inviter?.name ?? undefined,
-      });
-    } catch (error) {
-      logger.error({
-        module: 'AuthService',
-        operation: 'createInvite',
-        email: normalizedEmail,
-        practiceId,
-        role,
-        error: error instanceof Error ? error.message : String(error),
-      }, 'Failed to send invite email');
+    const emailResult = await sendUserInviteEmail({
+      email: normalizedEmail,
+      token,
+      practiceName: practice.name,
+      role,
+      inviterName: inviter?.name ?? undefined,
+    });
+
+    if (!emailResult.success && env.NODE_ENV === 'development') {
+      throw new Error(`Failed to send invite email: ${emailResult.error}`);
     }
 
     return invite;

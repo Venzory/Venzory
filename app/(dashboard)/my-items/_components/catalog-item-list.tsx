@@ -12,6 +12,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast';
 import { createOrdersFromCatalogAction } from '../actions';
 import { DeleteItemButton } from './delete-item-button';
+import { DataTable } from '@/components/ui/data-table';
 
 interface ItemWithStockInfo {
   id: string;
@@ -76,24 +77,6 @@ export function CatalogItemList({
     }
   }, [highlightedId]);
 
-  const toggleSelectAll = () => {
-    if (selectedItemIds.size === items.length) {
-      setSelectedItemIds(new Set());
-    } else {
-      setSelectedItemIds(new Set(items.map(i => i.id)));
-    }
-  };
-
-  const toggleItem = (itemId: string) => {
-    const newSet = new Set(selectedItemIds);
-    if (newSet.has(itemId)) {
-      newSet.delete(itemId);
-    } else {
-      newSet.add(itemId);
-    }
-    setSelectedItemIds(newSet);
-  };
-
   const handleCreateOrders = async () => {
     if (selectedItemIds.size === 0) return;
 
@@ -115,14 +98,14 @@ export function CatalogItemList({
     }
   };
 
-  const handleSort = (column: string) => {
+  const handleSort = (column: string, direction: 'asc' | 'desc') => {
     const params = new URLSearchParams(searchParams);
     
     if (currentSort === column) {
-      // Toggle sort order
-      params.set('sortOrder', currentSortOrder === 'asc' ? 'desc' : 'asc');
+       // direction is toggled by DataTable if we pass sortOrder correctly
+       // or we can just rely on toggle logic here if we want
+       params.set('sortOrder', direction);
     } else {
-      // New column, default to ascending
       params.set('sortBy', column);
       params.set('sortOrder', 'asc');
     }
@@ -139,31 +122,126 @@ export function CatalogItemList({
     router.push(`/my-items?${params.toString()}`);
   };
 
-  const SortableHeader = ({ column, label }: { column: string; label: string }) => {
-    const isActive = currentSort === column;
-    const isAsc = currentSortOrder === 'asc';
-
-    return (
-      <th 
-        className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-        onClick={() => handleSort(column)}
-      >
-        <div className="flex items-center gap-1">
-          <span>{label}</span>
-          {isActive && (
-            <>
-              {isAsc ? (
-                <ArrowUp className="h-3 w-3" />
-              ) : (
-                <ArrowDown className="h-3 w-3" />
-              )}
-            </>
-          )}
-          {!isActive && <span className="h-3 w-3" />}
-        </div>
-      </th>
-    );
-  };
+  const columns = [
+    {
+        accessorKey: 'name',
+        header: 'Item Name',
+        enableSorting: true,
+        cell: (item: ItemWithStockInfo) => (
+            <div className="flex items-center gap-2">
+                <div className="flex-shrink-0 w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
+                    <Package className="h-4 w-4 text-slate-400" />
+                </div>
+                <Link 
+                    href={`/inventory?q=${encodeURIComponent(item.name)}`}
+                    className="font-medium text-slate-900 dark:text-slate-200 hover:text-brand transition"
+                >
+                    {item.name}
+                </Link>
+            </div>
+        )
+    },
+    {
+        accessorKey: 'sku',
+        header: 'SKU',
+        enableSorting: true,
+        cell: (item: ItemWithStockInfo) => (
+            <span className="font-mono text-xs text-slate-700 dark:text-slate-300">
+                {item.sku || '-'}
+            </span>
+        )
+    },
+    {
+        accessorKey: 'brand',
+        header: 'Brand',
+        enableSorting: true,
+        cell: (item: ItemWithStockInfo) => (
+            <span className="text-slate-700 dark:text-slate-300">
+                {item.product?.brand || '-'}
+            </span>
+        )
+    },
+    {
+        accessorKey: 'supplier',
+        header: 'Default Supplier',
+        enableSorting: true,
+        cell: (item: ItemWithStockInfo) => (
+            item.defaultPracticeSupplier ? (
+                <span className="text-slate-700 dark:text-slate-300">
+                    {item.defaultPracticeSupplier.customLabel || item.defaultPracticeSupplier.globalSupplier.name}
+                </span>
+            ) : (
+                <span className="text-slate-500 dark:text-slate-400 italic">No default</span>
+            )
+        )
+    },
+    {
+        accessorKey: 'stock',
+        header: 'Total Stock',
+        enableSorting: true,
+        cell: (item: ItemWithStockInfo) => (
+            <div className="flex items-center gap-2">
+                <span className={`text-lg font-semibold ${
+                    item.isLowStock 
+                        ? 'text-orange-600 dark:text-orange-400' 
+                        : 'text-slate-900 dark:text-white'
+                }`}>
+                    {item.totalStock}
+                </span>
+                {item.isLowStock && (
+                    <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                )}
+            </div>
+        )
+    },
+    {
+        accessorKey: 'status',
+        header: 'Status',
+        enableSorting: true,
+        cell: (item: ItemWithStockInfo) => (
+            item.isLowStock ? (
+                <div className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full text-xs font-medium">
+                    <AlertTriangle className="h-3 w-3" />
+                    Low Stock
+                </div>
+            ) : (
+                <span className="inline-flex px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-medium">
+                    Good
+                </span>
+            )
+        )
+    },
+    {
+        accessorKey: 'actions',
+        header: 'Actions',
+        className: 'text-right',
+        cell: (item: ItemWithStockInfo) => (
+            <div className="flex items-center justify-end gap-2">
+                <Link href={`/inventory?q=${encodeURIComponent(item.name)}`}>
+                    <Button variant="ghost" size="sm" className="text-xs">
+                        Inventory
+                    </Button>
+                </Link>
+                
+                {canManage && (
+                    <>
+                        <Link href={`/orders/new?item=${item.id}`}>
+                            <Button variant="secondary" size="sm" className="text-xs">
+                                Order
+                            </Button>
+                        </Link>
+                        <DeleteItemButton itemId={item.id} itemName={item.name} />
+                    </>
+                )}
+            </div>
+        )
+    }
+  ];
+  
+  const getRowClassName = (item: ItemWithStockInfo) => {
+    if (item.id === highlightedId) return 'bg-brand/10 dark:bg-brand/20';
+    return '';
+  }
 
   if (items.length === 0) {
     if (hasActiveFilters) {
@@ -225,155 +303,18 @@ export function CatalogItemList({
       {/* Table */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
-              <tr>
-                {canManage && (
-                  <th className="px-4 py-3 w-8">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600 dark:border-slate-700 dark:bg-slate-800"
-                      checked={selectedItemIds.size === items.length && items.length > 0}
-                      onChange={toggleSelectAll}
-                      disabled={isSubmitting}
-                    />
-                  </th>
-                )}
-                <SortableHeader column="name" label="Item Name" />
-                <SortableHeader column="sku" label="SKU" />
-                <SortableHeader column="brand" label="Brand" />
-                <SortableHeader column="supplier" label="Default Supplier" />
-                <SortableHeader column="stock" label="Total Stock" />
-                <SortableHeader column="status" label="Status" />
-                <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {items.map((item) => {
-                const isHighlighted = item.id === highlightedId;
-                const isSelected = selectedItemIds.has(item.id);
-
-                return (
-                  <tr
-                    key={item.id}
-                    className={`transition ${
-                      isHighlighted 
-                        ? 'bg-brand/10 dark:bg-brand/20' 
-                        : isSelected
-                        ? 'bg-sky-50 dark:bg-sky-900/20'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                    }`}
-                  >
-                    {canManage && (
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600 dark:border-slate-700 dark:bg-slate-800"
-                          checked={isSelected}
-                          onChange={() => toggleItem(item.id)}
-                          disabled={isSubmitting}
-                        />
-                      </td>
-                    )}
-
-                    {/* Item Name */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-shrink-0 w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
-                          <Package className="h-4 w-4 text-slate-400" />
-                        </div>
-                        <Link 
-                          href={`/inventory?q=${encodeURIComponent(item.name)}`}
-                          className="font-medium text-slate-900 dark:text-slate-200 hover:text-brand transition"
-                        >
-                          {item.name}
-                        </Link>
-                      </div>
-                    </td>
-
-                    {/* SKU */}
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-slate-700 dark:text-slate-300">
-                        {item.sku || '-'}
-                      </span>
-                    </td>
-
-                    {/* Brand */}
-                    <td className="px-4 py-3">
-                      <span className="text-slate-700 dark:text-slate-300">
-                        {item.product?.brand || '-'}
-                      </span>
-                    </td>
-
-                    {/* Default Supplier */}
-                    <td className="px-4 py-3">
-                      {item.defaultPracticeSupplier ? (
-                        <span className="text-slate-700 dark:text-slate-300">
-                          {item.defaultPracticeSupplier.customLabel || item.defaultPracticeSupplier.globalSupplier.name}
-                        </span>
-                      ) : (
-                        <span className="text-slate-500 dark:text-slate-400 italic">No default</span>
-                      )}
-                    </td>
-
-                    {/* Total Stock */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-lg font-semibold ${
-                          item.isLowStock 
-                            ? 'text-orange-600 dark:text-orange-400' 
-                            : 'text-slate-900 dark:text-white'
-                        }`}>
-                          {item.totalStock}
-                        </span>
-                        {item.isLowStock && (
-                          <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      {item.isLowStock ? (
-                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full text-xs font-medium">
-                          <AlertTriangle className="h-3 w-3" />
-                          Low Stock
-                        </div>
-                      ) : (
-                        <span className="inline-flex px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-medium">
-                          Good
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link href={`/inventory?q=${encodeURIComponent(item.name)}`}>
-                          <Button variant="ghost" size="sm" className="text-xs">
-                            Inventory
-                          </Button>
-                        </Link>
-                        
-                        {canManage && (
-                          <>
-                            <Link href={`/orders/new?item=${item.id}`}>
-                              <Button variant="secondary" size="sm" className="text-xs">
-                                Order
-                              </Button>
-                            </Link>
-                            <DeleteItemButton itemId={item.id} itemName={item.name} />
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+            <DataTable 
+                columns={columns}
+                data={items}
+                className="border-0"
+                selectable={canManage}
+                selectedRows={selectedItemIds}
+                onSelectionChange={setSelectedItemIds}
+                onSort={handleSort}
+                sortColumn={currentSort}
+                sortOrder={currentSortOrder as 'asc' | 'desc'}
+                getRowClassName={getRowClassName}
+            />
         </div>
       </div>
 

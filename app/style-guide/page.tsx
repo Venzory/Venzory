@@ -550,25 +550,25 @@ export default function StyleGuidePage() {
           title="DataTable"
           description="Responsive table component with hover states."
           code={`const columns = [
-  { key: 'sku', label: 'SKU' },
-  { key: 'name', label: 'Name' },
-  { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status} /> },
+  { accessorKey: 'sku', header: 'SKU' },
+  { accessorKey: 'name', header: 'Name' },
+  { accessorKey: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
 ];
-<DataTable columns={columns} rows={data} />`}
+<DataTable columns={columns} data={data} />`}
           usage="Use DataTable for displaying tabular data. Supports custom render functions for complex cells. Wraps in overflow-x-auto for responsive behavior."
         >
           <DataTable
             columns={[
-              { key: 'sku', label: 'SKU' },
-              { key: 'name', label: 'Product Name' },
+              { accessorKey: 'sku', header: 'SKU' },
+              { accessorKey: 'name', header: 'Product Name' },
               { 
-                key: 'status', 
-                label: 'Status',
-                render: (row) => <StatusBadge status={row.status as any} />
+                accessorKey: 'status', 
+                header: 'Status',
+                cell: (row) => <StatusBadge status={row.status as any} />
               },
-              { key: 'qty', label: 'Quantity' },
+              { accessorKey: 'qty', header: 'Quantity' },
             ]}
-            rows={[
+            data={[
               { sku: 'MED-001', name: 'Surgical Gloves', status: 'received', qty: '500' },
               { sku: 'MED-002', name: 'Face Masks', status: 'in-progress', qty: '1,200' },
               { sku: 'MED-003', name: 'Hand Sanitizer', status: 'draft', qty: '75' },

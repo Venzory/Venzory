@@ -32,15 +32,30 @@ export const {
     Resend({
       from: env.EMAIL_FROM,
       sendVerificationRequest: async ({ identifier: email, url, provider }) => {
-        // In dev: log magic link if API key is missing
-        if (!env.RESEND_API_KEY) {
-          logger.warn({
+        // In development, ALWAYS log the magic link details for visibility
+        if (process.env.NODE_ENV === 'development') {
+          const { host } = new URL(url);
+          console.log('\n📨 EMAIL LOG (Dev Mode):', JSON.stringify({
             module: 'auth',
             operation: 'sendVerificationRequest',
-            isDev: true,
             email,
+            subject: `Sign in to ${host}`,
             url,
-          }, 'Resend not configured - would send magic link in production');
+          }, null, 2), '\n');
+        }
+
+        // Gracefully handle missing API key if not in development (already logged above for dev)
+        if (!env.RESEND_API_KEY) {
+           if (process.env.NODE_ENV !== 'development') {
+            const { host } = new URL(url);
+            logger.warn({
+              module: 'auth',
+              operation: 'sendVerificationRequest',
+              email,
+              subject: `Sign in to ${host}`,
+              url,
+            }, 'Resend not configured - would send magic link');
+           }
           return;
         }
 
@@ -50,7 +65,7 @@ export const {
 
           const { host } = new URL(url);
 
-          await resend.emails.send({
+          const { data, error } = await resend.emails.send({
             from: provider.from || 'Venzory <noreply@venzory.com>',
             to: email,
             subject: `Sign in to ${host}`,
@@ -90,6 +105,24 @@ export const {
               </body>
             `,
           });
+
+          if (error) {
+            logger.error({ 
+              module: 'auth',
+              operation: 'sendVerificationRequest',
+              email,
+              resendError: error
+            }, 'Resend API returned error for magic link');
+            throw new Error(`Failed to send verification email: ${error.message}`);
+          }
+
+          logger.info({
+            module: 'auth',
+            operation: 'sendVerificationRequest',
+            email,
+            messageId: data?.id,
+          }, 'Magic link sent successfully via Resend');
+
         } catch (error) {
           logger.error({ 
             module: 'auth',

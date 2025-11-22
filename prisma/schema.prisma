@@ -347,6 +347,8 @@ model Order {
   @@index([practiceId])
   @@index([practiceSupplierId])
   @@index([practiceId, status, createdAt])
+  @@index([practiceId, createdAt]) // Optimization for sorting by date
+  @@index([practiceId, updatedAt]) // Optimization for receiving mismatches
 }
 
 model OrderItem {

@@ -484,14 +484,11 @@ export class OrderService {
 
     return withTransaction(async (tx) => {
       // Fetch selected items with inventory and supplier info
-      const items = await this.inventoryRepository.findItems(
+      // Optimized: Filter by IDs in database instead of fetching all
+      const selectedItems = await this.inventoryRepository.findItems(
         ctx.practiceId,
-        undefined,
+        { itemIds: selectedItemIds },
         { tx }
-      );
-
-      const selectedItems = items.filter((item) =>
-        selectedItemIds.includes(item.id)
       );
 
       // Group by practice supplier (Phase 2)
@@ -609,14 +606,11 @@ export class OrderService {
     return withTransaction(async (tx) => {
       // Fetch selected items with inventory and supplier info
       // Using findItems to get all related data including suppliers
-      const items = await this.inventoryRepository.findItems(
+      // Optimized: Filter by IDs in database
+      const selectedItems = await this.inventoryRepository.findItems(
         ctx.practiceId,
-        undefined,
+        { itemIds: selectedItemIds },
         { tx }
-      );
-
-      const selectedItems = items.filter((item) =>
-        selectedItemIds.includes(item.id)
       );
 
       // Group by practice supplier

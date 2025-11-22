@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { PracticeRole } from '@prisma/client';
 import { format } from 'date-fns';
 
 import { requireActivePractice } from '@/lib/auth';
+import { isPlatformOwner } from '@/lib/owner-guard';
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getProductService } from '@/src/services';
-import { hasRole, canManageProducts, canViewProductPricing } from '@/lib/rbac';
+import { canViewProductPricing } from '@/lib/rbac';
 import { decimalToNumber } from '@/lib/prisma-transforms';
 
 import { Gs1StatusBadge } from '../_components/gs1-status-badge';
@@ -22,19 +22,15 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const { session, practiceId } = await requireActivePractice();
   const ctx = await buildRequestContext();
 
-  // Check if user is ADMIN (Product Master Data is admin-only)
-  const isAdmin = hasRole({
-    memberships: session.user.memberships,
-    practiceId,
-    minimumRole: PracticeRole.ADMIN,
-  });
+  // Check if user is PLATFORM OWNER
+  const isOwner = isPlatformOwner(session.user.email);
 
-  if (!isAdmin) {
+  if (!isOwner) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Access Denied</h1>
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          Only administrators can access product master data management.
+          Only the platform owner can access product master data.
         </p>
       </div>
     );
@@ -48,10 +44,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     notFound();
   }
 
-  const canManage = canManageProducts({
-    memberships: session.user.memberships,
-    practiceId,
-  });
+  // Owner can always manage
+  const canManage = isOwner;
 
   const canViewPricing = canViewProductPricing({
     memberships: session.user.memberships,
@@ -65,7 +59,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <Link
-              href="/settings/products"
+              href="/owner/product-master"
               className="text-sm text-slate-600 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
             >
               ← Back to Products
@@ -330,4 +324,3 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     </div>
   );
 }
-

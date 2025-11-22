@@ -57,7 +57,8 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
       practiceSupplierId: supplier,
     }, {
       page: canSortServerSide ? currentPage : 1,
-      limit: canSortServerSide ? itemsPerPage : 10000, // Fetch all if client-side sorting needed
+      // Limit client-side sorting dataset to prevent memory issues
+      limit: canSortServerSide ? itemsPerPage : 2000, 
       sortBy: serverSortBy,
       sortOrder: canSortServerSide ? (sortOrder as 'asc' | 'desc') : undefined,
     }),

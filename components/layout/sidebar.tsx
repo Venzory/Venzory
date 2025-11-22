@@ -70,7 +70,6 @@ const navSections: NavSection[] = [
     title: 'Settings',
     items: [
       { href: '/settings', label: 'Settings', icon: Settings, minRole: 'STAFF' },
-      { href: '/settings/products', label: 'Product Master Data', icon: Package2, minRole: 'ADMIN' },
     ],
   },
 ];
@@ -111,6 +110,7 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
       title: 'Platform',
       items: [
         { href: '/owner', label: 'Owner Console', icon: Shield },
+        { href: '/owner/product-master', label: 'Product Master Data', icon: Package2 },
       ],
     });
   }
@@ -207,9 +207,9 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto p-3">
           {filteredNavSections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-6' : ''}>
+            <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-8' : ''}>
               {section.title && (!isCollapsed || !mounted) && (
-                <div className="mb-2 px-3 text-xs font-semibold uppercase text-sidebar-text-muted">
+                <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-text-muted/80">
                   {section.title}
                 </div>
               )}
@@ -224,10 +224,10 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
                       key={item.href}
                       href={item.href}
                       onClick={handleLinkClick}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
                         isActive
-                          ? 'border-l-2 border-sidebar-active-border bg-sidebar-active-bg text-sidebar-active-text'
-                          : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text'
+                          ? 'bg-sidebar-active-bg text-sidebar-active-text font-medium'
+                          : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text font-normal'
                       } ${isCollapsed && mounted ? 'justify-center' : ''}`}
                       aria-current={isActive ? 'page' : undefined}
                       title={isCollapsed && mounted ? item.label : undefined}

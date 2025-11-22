@@ -22,16 +22,16 @@ export function PageHeader({
       {breadcrumb && <div className="flex items-center gap-2">{breadcrumb}</div>}
       
       {meta && (
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{meta}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">{meta}</p>
       )}
       
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-3xl font-bold tracking-tight text-text">
             {title}
           </h1>
           {subtitle && (
-            <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">{subtitle}</p>
+            <p className="max-w-2xl text-sm text-text-secondary">{subtitle}</p>
           )}
         </div>
         

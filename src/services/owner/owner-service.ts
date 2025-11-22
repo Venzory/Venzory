@@ -42,6 +42,68 @@ export class OwnerService {
   }
 
   /**
+   * Get product data overview for owner dashboard.
+   * Requires platform owner permissions.
+   */
+  async getProductDataOverview(userEmail: string | null | undefined) {
+    if (!userEmail) {
+      throw new UnauthorizedError('User not authenticated');
+    }
+
+    if (!isPlatformOwner(userEmail)) {
+      throw new ForbiddenError('Access denied: Platform Owner only');
+    }
+
+    const [
+      productCount,
+      globalSupplierCount,
+      catalogCount,
+      itemCount,
+      topPractices
+    ] = await Promise.all([
+      prisma.product.count(),
+      prisma.globalSupplier.count(),
+      prisma.supplierCatalog.count(),
+      prisma.item.count(),
+      prisma.practice.findMany({
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          _count: {
+            select: {
+              items: true,
+              practiceSuppliers: true,
+            }
+          }
+        },
+        orderBy: {
+          items: {
+            _count: 'desc'
+          }
+        },
+        take: 5
+      })
+    ]);
+
+    return {
+      counts: {
+        products: productCount,
+        globalSuppliers: globalSupplierCount,
+        catalogEntries: catalogCount,
+        items: itemCount,
+      },
+      topPractices: topPractices.map(p => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        itemCount: p._count.items,
+        supplierCount: p._count.practiceSuppliers,
+      }))
+    };
+  }
+
+  /**
    * Get members of a specific practice.
    * Requires platform owner permissions.
    */

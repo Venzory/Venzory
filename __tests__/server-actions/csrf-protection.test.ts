@@ -42,6 +42,11 @@ vi.mock('@/src/services/inventory', () => ({
     updateItem: vi.fn(),
     deleteItem: vi.fn(),
   })),
+  getItemService: vi.fn(() => ({
+    createItem: vi.fn(),
+    updateItem: vi.fn(),
+    deleteItem: vi.fn(),
+  })),
 }));
 
 vi.mock('@/src/services/orders', () => ({
@@ -255,7 +260,7 @@ describe('Server Actions CSRF Protection', () => {
         createProductAction,
         updateProductAction,
         deleteProductAction
-      } = await import('@/app/(dashboard)/settings/products/actions');
+      } = await import('@/app/(dashboard)/owner/product-master/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Product');

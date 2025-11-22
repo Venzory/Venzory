@@ -18,17 +18,17 @@ export default async function PracticeDetailPage({ params }: { params: Promise<{
     const { practice, members } = result;
 
     const columns = [
-        { key: 'name', label: 'User', render: (row: any) => row.name || 'N/A' },
-        { key: 'email', label: 'Email' },
+        { accessorKey: 'name', header: 'User', cell: (row: any) => row.name || 'N/A' },
+        { accessorKey: 'email', header: 'Email' },
         { 
-            key: 'role', 
-            label: 'Role', 
-            render: (row: any) => <Badge variant="neutral">{row.role}</Badge> 
+            accessorKey: 'role', 
+            header: 'Role', 
+            cell: (row: any) => <Badge variant="neutral">{row.role}</Badge> 
         },
         { 
-            key: 'status', 
-            label: 'Status', 
-            render: (row: any) => (
+            accessorKey: 'status', 
+            header: 'Status', 
+            cell: (row: any) => (
                 <Badge variant={row.status === 'ACTIVE' ? 'success' : 'neutral'}>
                     {row.status}
                 </Badge>
@@ -45,7 +45,7 @@ export default async function PracticeDetailPage({ params }: { params: Promise<{
                     <CardTitle>Members</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <DataTable columns={columns} rows={members} />
+                    <DataTable columns={columns} data={members} />
                 </CardContent>
              </Card>
         </div>

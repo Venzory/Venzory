@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
+import { DataTable } from '@/components/ui/data-table';
 
 export const metadata = {
   title: 'Stock Count - Venzory',
@@ -47,6 +48,96 @@ export default async function StockCountPage() {
         return status;
     }
   };
+
+  const columns = [
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: (session: any) => (
+        <div className="flex items-center gap-2">
+            <Badge variant={getStatusVariant(session.status)}>
+                {getStatusLabel(session.status)}
+            </Badge>
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+                #{session.id.slice(0, 8)}
+            </span>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'location',
+      header: 'Location',
+      cell: (session: any) => (
+        <div className="flex items-center gap-2 text-sm">
+            <MapPin className="h-4 w-4 text-slate-400" />
+            <span className="font-medium text-slate-900 dark:text-slate-100">
+                {session?.location?.name ?? 'Unknown location'}
+            </span>
+        </div>
+      )
+    },
+    {
+      accessorKey: 'items',
+      header: 'Items Counted',
+      cell: (session: any) => (
+        <span className="text-sm text-slate-600 dark:text-slate-400">
+            {session.lines?.length ?? 0} items
+        </span>
+      )
+    },
+    {
+        accessorKey: 'date',
+        header: 'Date',
+        cell: (session: any) => (
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+                {session.status === StockCountStatus.COMPLETED && session.completedAt
+                ? `Completed ${format(new Date(session.completedAt), 'MMM d, yyyy')}`
+                : `Started ${format(new Date(session.createdAt), 'MMM d, yyyy')}`}
+            </span>
+        )
+    },
+    {
+        accessorKey: 'createdBy',
+        header: 'Created By',
+        cell: (session: any) => (
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+                {session?.createdBy?.name || session?.createdBy?.email || 'Unknown user'}
+            </span>
+        )
+    },
+    {
+        accessorKey: 'variance',
+        header: 'Variance',
+        cell: (session: any) => {
+            const lines = session?.lines ?? [];
+            const totalVariance = lines.reduce((sum: number, line: any) => {
+                const variance = line?.variance ?? 0;
+                return sum + Math.abs(variance);
+            }, 0);
+            
+            if (totalVariance === 0) return <span className="text-sm text-slate-500">-</span>;
+            
+            return (
+                <span className="text-amber-600 dark:text-amber-400 text-sm">
+                    ±{totalVariance}
+                </span>
+            )
+        }
+    },
+    {
+        accessorKey: 'actions',
+        header: '',
+        className: 'text-right',
+        cell: (session: any) => (
+            <Link
+                href={`/stock-count/${session.id}`}
+                className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+            >
+                View Details →
+            </Link>
+        )
+    }
+  ];
 
   return (
     <div className="space-y-8">
@@ -126,66 +217,8 @@ export default async function StockCountPage() {
             description="Start your first stock count to track inventory"
           />
         ) : (
-          <div className="divide-y divide-card-border">
-            {sessions.map((session) => {
-              const lines = session?.lines ?? [];
-              const totalVariance = lines.reduce((sum: number, line: any) => {
-                const variance = line?.variance ?? 0;
-                return sum + Math.abs(variance);
-              }, 0);
-
-              return (
-                <Link
-                  key={session.id}
-                  href={`/stock-count/${session.id}`}
-                  className="block p-6 transition hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Badge variant={getStatusVariant(session.status)}>
-                          {getStatusLabel(session.status)}
-                        </Badge>
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
-                          #{session.id.slice(0, 8)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="h-4 w-4 text-slate-400" />
-                        <span className="font-medium text-slate-900 dark:text-slate-100">
-                          {session?.location?.name ?? 'Unknown location'}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
-                        <span>{lines.length} items counted</span>
-                        {totalVariance > 0 && (
-                          <span className="text-amber-600 dark:text-amber-400">
-                            ±{totalVariance} variance
-                          </span>
-                        )}
-                        <span>
-                          {session.status === StockCountStatus.COMPLETED && session.completedAt
-                            ? `Completed ${format(new Date(session.completedAt), 'MMM d, yyyy')}`
-                            : `Started ${format(new Date(session.createdAt), 'MMM d, yyyy')}`}
-                        </span>
-                      </div>
-
-                      {session.notes && (
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          {session.notes}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="text-right text-sm text-slate-600 dark:text-slate-400">
-                      <div>{session?.createdBy?.name || session?.createdBy?.email || 'Unknown user'}</div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="overflow-x-auto">
+            <DataTable columns={columns} data={sessions} className="border-0" />
           </div>
         )}
       </div>

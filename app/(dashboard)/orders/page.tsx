@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { PracticeRole } from '@prisma/client';
 
 import { PageHeader } from '@/components/layout/PageHeader';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/data-table';
+import { DataTable } from '@/components/ui/data-table';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getOrderService } from '@/src/services';
@@ -95,76 +95,95 @@ function OrdersList({
     );
   }
 
+  const columns = [
+    {
+      accessorKey: 'createdAt',
+      header: 'Date',
+      cell: (order: any) => (
+        <div className="flex flex-col">
+          <span>{formatDistanceToNow(order.createdAt, { addSuffix: true })}</span>
+          <span className="text-xs text-slate-500">
+            {new Date(order.createdAt).toLocaleDateString()}
+          </span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'supplier',
+      header: 'Supplier',
+      cell: (order: any) => {
+        const { name: supplierName, linkId: supplierLinkId } = getOrderSupplierDisplay(order);
+        return supplierLinkId ? (
+          <Link
+            href={`/suppliers#${supplierLinkId}`}
+            className="font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+          >
+            {supplierName}
+          </Link>
+        ) : (
+          <span className="text-slate-600 dark:text-slate-400">{supplierName}</span>
+        );
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: (order: any) => <OrderStatusBadge status={order.status} />,
+    },
+    {
+      accessorKey: 'items',
+      header: 'Items',
+      className: 'text-right',
+      cell: (order: any) => {
+        const itemCount = order.items?.length ?? 0;
+        return (
+          <span className="text-slate-700 dark:text-slate-300">
+            {itemCount} {itemCount === 1 ? 'item' : 'items'}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'total',
+      header: 'Total',
+      className: 'text-right',
+      cell: (order: any) => {
+        const total = calculateOrderTotal(order.items || []);
+        return (
+          <span className="font-medium text-slate-900 dark:text-slate-200">
+            {total > 0 ? `€${total.toFixed(2)}` : '-'}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'createdBy',
+      header: 'Created By',
+      cell: (order: any) => (
+        <span className="text-slate-600 text-xs dark:text-slate-400">
+          {order.createdBy?.name || order.createdBy?.email || 'Unknown'}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'actions',
+      header: '',
+      className: 'text-right',
+      cell: (order: any) => (
+        <Link
+          href={`/orders/${order.id}`}
+          className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+        >
+          View →
+        </Link>
+      ),
+    },
+  ];
+
   return (
     <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Supplier</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Items</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead>Created By</TableHead>
-              <TableHead><span className="sr-only">Actions</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders.map((order) => {
-              const itemCount = order.items?.length ?? 0;
-              const total = calculateOrderTotal(order.items || []);
-
-              // Get supplier display name and ID for linking (same logic as dashboard)
-              const { name: supplierName, linkId: supplierLinkId } = getOrderSupplierDisplay(order);
-
-              return (
-                <TableRow key={order.id}>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span>{formatDistanceToNow(order.createdAt, { addSuffix: true })}</span>
-                      <span className="text-xs text-slate-500">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {supplierLinkId ? (
-                      <Link
-                        href={`/suppliers#${supplierLinkId}`}
-                        className="font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-                      >
-                        {supplierName}
-                      </Link>
-                    ) : (
-                      <span className="text-slate-600 dark:text-slate-400">{supplierName}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <OrderStatusBadge status={order.status} />
-                  </TableCell>
-                  <TableCell className="text-right text-slate-700 dark:text-slate-300">
-                    {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-slate-900 dark:text-slate-200">
-                    {total > 0 ? `€${total.toFixed(2)}` : '-'}
-                  </TableCell>
-                  <TableCell className="text-slate-600 text-xs dark:text-slate-400">
-                    {order.createdBy?.name || order.createdBy?.email || 'Unknown'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link
-                      href={`/orders/${order.id}`}
-                      className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
-                    >
-                      View →
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        <DataTable columns={columns} data={orders} className="border-0" />
       </div>
     </Card>
   );
