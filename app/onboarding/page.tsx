@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Welcome to Venzory',
 };
