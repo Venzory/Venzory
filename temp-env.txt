@@ -1,0 +1,3 @@
+DATABASE_URL="postgresql://venzory:venzory@localhost:5432/venzory_dev"
+DIRECT_URL="postgresql://venzory:venzory@localhost:5432/venzory_dev"
+

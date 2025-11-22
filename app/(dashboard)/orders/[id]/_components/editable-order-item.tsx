@@ -51,7 +51,7 @@ export function EditableOrderItem({
       formData.set('unitPrice', optimisticUnitPrice.toString());
       
       try {
-        await updateOrderItemAction(formData);
+        await updateOrderItemAction({}, formData);
       } catch (error: unknown) {
         // Rollback on error
         setOptimisticQuantity(previousQuantity);
@@ -79,7 +79,7 @@ export function EditableOrderItem({
       formData.set('unitPrice', validPrice.toString());
       
       try {
-        await updateOrderItemAction(formData);
+        await updateOrderItemAction({}, formData);
       } catch (error: unknown) {
         // Rollback on error
         setOptimisticUnitPrice(previousPrice);

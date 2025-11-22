@@ -20,6 +20,7 @@ import {
   FolderOpen,
   ListPlus,
   AlertTriangle,
+  Shield,
 } from 'lucide-react';
 
 type NavItem = {
@@ -77,11 +78,12 @@ const navSections: NavSection[] = [
 type SidebarProps = {
   practiceName?: string | null;
   userRole?: PracticeRole | null;
+  isOwner?: boolean;
   isOpen: boolean;
   onClose: () => void;
 };
 
-export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProps) {
+export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -103,6 +105,15 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
       }),
     }))
     .filter((section) => section.items.length > 0);
+
+  if (isOwner) {
+    filteredNavSections.push({
+      title: 'Platform',
+      items: [
+        { href: '/owner', label: 'Owner Console', icon: Shield },
+      ],
+    });
+  }
 
   // Load collapsed state from localStorage
   useEffect(() => {

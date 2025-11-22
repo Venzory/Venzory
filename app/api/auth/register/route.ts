@@ -5,6 +5,7 @@ import { getAuthService } from '@/src/services';
 import { registerRateLimiter, getClientIp } from '@/lib/rate-limit';
 import { apiHandler } from '@/lib/api-handler';
 import { ValidationError, RateLimitError } from '@/src/domain/errors';
+import { verifyCsrf } from '@/lib/csrf';
 
 const registerSchema = z.object({
   practiceName: z.string().min(2, 'Practice name is required').max(120),
@@ -20,6 +21,12 @@ const registerSchema = z.object({
 });
 
 export const POST = apiHandler(async (request: Request) => {
+  // Enforce CSRF protection explicitly (bypass enabled for /api/auth/* in apiHandler)
+  const isCsrfValid = await verifyCsrf(request);
+  if (!isCsrfValid) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 403 });
+  }
+
   const body = await request.json();
   const parsed = registerSchema.safeParse(body);
 

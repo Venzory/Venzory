@@ -2,6 +2,8 @@ import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
 import { PracticeRole } from '@prisma/client';
 
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/data-table';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getOrderService } from '@/src/services';
@@ -39,24 +41,22 @@ export default async function OrdersPage() {
 
   return (
     <section className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Orders</h1>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            Track purchase orders from draft through receipt across suppliers.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/orders/templates">
-            <Button variant="secondary">Order Templates</Button>
-          </Link>
-          {canManage && (
+      <PageHeader
+        title="Orders"
+        subtitle="Track purchase orders from draft through receipt across suppliers."
+        primaryAction={
+          canManage ? (
             <Link href="/orders/new">
               <Button variant="primary">Create Order</Button>
             </Link>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+        secondaryAction={
+          <Link href="/orders/templates">
+            <Button variant="secondary">Order Templates</Button>
+          </Link>
+        }
+      />
 
       {canManage && quickTemplates.length > 0 && (
         <QuickReorderSection templates={quickTemplates} />
@@ -98,31 +98,19 @@ function OrdersList({
   return (
     <Card className="overflow-hidden p-0">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950/40">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                Date
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                Supplier
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                Status
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                Items
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                Total
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                Created By
-              </th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Supplier</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Items</TableHead>
+              <TableHead className="text-right">Total</TableHead>
+              <TableHead>Created By</TableHead>
+              <TableHead><span className="sr-only">Actions</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {orders.map((order) => {
               const itemCount = order.items?.length ?? 0;
               const total = calculateOrderTotal(order.items || []);
@@ -131,16 +119,16 @@ function OrdersList({
               const { name: supplierName, linkId: supplierLinkId } = getOrderSupplierDisplay(order);
 
               return (
-                <tr key={order.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                <TableRow key={order.id}>
+                  <TableCell>
                     <div className="flex flex-col">
                       <span>{formatDistanceToNow(order.createdAt, { addSuffix: true })}</span>
                       <span className="text-xs text-slate-500">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     {supplierLinkId ? (
                       <Link
                         href={`/suppliers#${supplierLinkId}`}
@@ -151,32 +139,32 @@ function OrdersList({
                     ) : (
                       <span className="text-slate-600 dark:text-slate-400">{supplierName}</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3">
+                  </TableCell>
+                  <TableCell>
                     <OrderStatusBadge status={order.status} />
-                  </td>
-                  <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">
+                  </TableCell>
+                  <TableCell className="text-right text-slate-700 dark:text-slate-300">
                     {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-200">
+                  </TableCell>
+                  <TableCell className="text-right font-medium text-slate-900 dark:text-slate-200">
                     {total > 0 ? `€${total.toFixed(2)}` : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 text-xs dark:text-slate-400">
+                  </TableCell>
+                  <TableCell className="text-slate-600 text-xs dark:text-slate-400">
                     {order.createdBy?.name || order.createdBy?.email || 'Unknown'}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     <Link
                       href={`/orders/${order.id}`}
                       className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                     >
                       View →
                     </Link>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </Card>
   );

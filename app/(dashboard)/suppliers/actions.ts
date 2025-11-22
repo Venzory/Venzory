@@ -1,17 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 
 import logger from '@/lib/logger';
-import { requireActivePractice } from '@/lib/auth';
-import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { buildRequestContext, requireRole } from '@/src/lib/context/context-builder';
 import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
-import { hasRole } from '@/lib/rbac';
-import { PracticeRole } from '@prisma/client';
 import type { UpdatePracticeSupplierInput } from '@/src/domain/models/suppliers';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import { toAppError } from '@/src/lib/app-error';
+import { isDomainError } from '@/src/domain/errors';
 
 /**
  * Update practice-specific supplier settings
@@ -23,18 +20,10 @@ export async function updatePracticeSupplierAction(
   await verifyCsrfFromHeaders();
   
   try {
-    const { session, practiceId } = await requireActivePractice();
+    const ctx = await buildRequestContext();
 
     // Check RBAC - minimum STAFF role required
-    const canManage = hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    });
-
-    if (!canManage) {
-      return { error: 'You do not have permission to edit supplier settings.' };
-    }
+    requireRole(ctx, 'STAFF');
 
     const practiceSupplierId = formData.get('practiceSupplierId') as string;
     if (!practiceSupplierId) {
@@ -60,7 +49,7 @@ export async function updatePracticeSupplierAction(
     const repository = getPracticeSupplierRepository();
     await repository.updatePracticeSupplier(
       practiceSupplierId,
-      practiceId,
+      ctx.practiceId,
       input
     );
 
@@ -73,6 +62,10 @@ export async function updatePracticeSupplierAction(
   } catch (error: unknown) {
     logger.error({ error }, 'Failed to update practice supplier');
     
+    if (isDomainError(error)) {
+      return { error: error.message };
+    }
+
     const appError = toAppError(error);
     
     // Handle specific error cases
@@ -96,23 +89,15 @@ export async function unlinkPracticeSupplierAction(
 ): Promise<void> {
   await verifyCsrfFromHeaders();
   
-  const { session, practiceId } = await requireActivePractice();
-  
   try {
-    // Check RBAC - minimum STAFF role required
-    const canManage = hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    });
+    const ctx = await buildRequestContext();
 
-    if (!canManage) {
-      throw new Error('You do not have permission to remove suppliers.');
-    }
+    // Check RBAC - minimum STAFF role required
+    requireRole(ctx, 'STAFF');
 
     // Unlink via repository
     const repository = getPracticeSupplierRepository();
-    await repository.unlinkPracticeSupplier(practiceSupplierId, practiceId);
+    await repository.unlinkPracticeSupplier(practiceSupplierId, ctx.practiceId);
 
     revalidatePath('/suppliers');
     revalidatePath('/inventory');
@@ -120,6 +105,10 @@ export async function unlinkPracticeSupplierAction(
   } catch (error: unknown) {
     logger.error({ error }, 'Failed to unlink practice supplier');
     
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+
     const appError = toAppError(error);
     
     // Provide clearer error messages
@@ -130,8 +119,20 @@ export async function unlinkPracticeSupplierAction(
     // If foreign key constraint fails (P2003), soft delete by blocking instead
     if (appError.code === 'P2003') {
       try {
+        // Re-build context just in case, or reuse if in same scope (we are in catch block of same scope)
+        // But we need practiceId. We can't easily access 'ctx' from try block unless defined outside.
+        // Let's assume we need to rebuild or just fail if we can't recover ctx.
+        // Actually, this is tricky inside catch.
+        // Better to define ctx outside try? No, buildRequestContext throws.
+        // We'll retry building context or assume it failed before context was built?
+        // If context build failed, we can't proceed anyway.
+        
+        // However, if we are here, ctx might have been built successfully.
+        // Let's re-fetch context for the recovery attempt.
+        const ctx = await buildRequestContext();
+        
         const repository = getPracticeSupplierRepository();
-        await repository.updatePracticeSupplier(practiceSupplierId, practiceId, {
+        await repository.updatePracticeSupplier(practiceSupplierId, ctx.practiceId, {
           isBlocked: true,
           isPreferred: false, // Also remove preferred status
         });
@@ -140,7 +141,7 @@ export async function unlinkPracticeSupplierAction(
         revalidatePath('/inventory');
         revalidatePath('/dashboard');
         
-        // Successfully blocked, so we can proceed to redirect
+        // Successfully blocked, so we can proceed to redirect (void return)
         return;
       } catch (updateError) {
         logger.error({ error: updateError }, 'Failed to soft-delete (block) supplier');
@@ -166,18 +167,10 @@ export async function linkGlobalSupplierAction(
   await verifyCsrfFromHeaders();
   
   try {
-    const { session, practiceId } = await requireActivePractice();
+    const ctx = await buildRequestContext();
 
     // Check RBAC - minimum STAFF role required
-    const canManage = hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    });
-
-    if (!canManage) {
-      return { error: 'You do not have permission to add suppliers.' };
-    }
+    requireRole(ctx, 'STAFF');
 
     const globalSupplierId = formData.get('globalSupplierId') as string;
     if (!globalSupplierId) {
@@ -189,7 +182,7 @@ export async function linkGlobalSupplierAction(
     
     try {
       await repository.linkPracticeToGlobalSupplier({
-        practiceId,
+        practiceId: ctx.practiceId,
         globalSupplierId,
         // Default values - user can edit these after linking
         accountNumber: null,
@@ -221,7 +214,11 @@ export async function linkGlobalSupplierAction(
     }
   } catch (error: unknown) {
     logger.error({ error }, 'Failed to link global supplier');
+    
+    if (isDomainError(error)) {
+      return { error: error.message };
+    }
+
     return { error: 'Failed to link supplier. Please try again.' };
   }
 }
-

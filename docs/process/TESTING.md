@@ -197,6 +197,22 @@ export DATABASE_URL="postgresql://venzory:venzory@localhost:5432/venzory_test"
 npm run test:integration
 ```
 
+### Running Specific Integration Tests (e.g., Entrypoint Security)
+
+To run only the entrypoint security tests (useful for verifying security hardening):
+
+```bash
+# Linux / Mac
+export DATABASE_URL="postgresql://venzory:venzory@localhost:5432/venzory_test"
+export DIRECT_URL="postgresql://venzory:venzory@localhost:5432/venzory_test"
+npx vitest run -c vitest.integration.config.ts tests/integration/entrypoint-security.test.ts
+
+# Windows (PowerShell)
+$env:DATABASE_URL="postgresql://venzory:venzory@localhost:5432/venzory_test"
+$env:DIRECT_URL="postgresql://venzory:venzory@localhost:5432/venzory_test"
+npx vitest run -c vitest.integration.config.ts tests/integration/entrypoint-security.test.ts
+```
+
 **Important:**
 - Integration tests use `vitest.integration.config.ts` (separate from unit tests)
 - They use the **real Prisma client** (no mocks)

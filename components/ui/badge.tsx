@@ -1,13 +1,19 @@
 import type { ReactNode, HTMLAttributes } from 'react';
+import { cn } from '@/lib/utils';
 
 export type BadgeVariant = 'success' | 'error' | 'info' | 'warning' | 'neutral';
 
+/**
+ * Badge component props
+ */
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+  /** The visual style of the badge */
   variant?: BadgeVariant;
+  /** Badge content */
   children: ReactNode;
 }
 
-export function Badge({ variant = 'neutral', children, className = '', ...props }: BadgeProps) {
+export function Badge({ variant = 'neutral', children, className, ...props }: BadgeProps) {
   const variantStyles: Record<BadgeVariant, string> = {
     success: 'bg-green-100 text-green-800 border border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700',
     error: 'bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700',
@@ -18,11 +24,14 @@ export function Badge({ variant = 'neutral', children, className = '', ...props 
 
   return (
     <span
-      className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${variantStyles[variant]} ${className}`}
+      className={cn(
+        'inline-block rounded-full px-3 py-1 text-xs font-semibold',
+        variantStyles[variant],
+        className
+      )}
       {...props}
     >
       {children}
     </span>
   );
 }
-

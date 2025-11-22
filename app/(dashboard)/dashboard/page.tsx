@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { PracticeRole, OrderStatus } from '@prisma/client';
 import { Package, TrendingDown, ShoppingCart, Inbox } from 'lucide-react';
 
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/data-table';
 import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getInventoryService, getOrderService, getSettingsService, getReceivingService } from '@/src/services';
@@ -84,22 +86,18 @@ export default async function DashboardPage() {
 
   return (
     <section className="space-y-8">
-      <header className="space-y-1">
-        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Overview</p>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Dashboard</h1>
-            <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">
-              Quick overview of your stock levels, orders, and recent activity.
-            </p>
-          </div>
-          {canManage && (
+      <PageHeader
+        title="Dashboard"
+        subtitle="Quick overview of your stock levels, orders, and recent activity."
+        meta="Overview"
+        primaryAction={
+          canManage ? (
             <Link href="/orders/new">
               <Button variant="primary">Create Order</Button>
             </Link>
-          )}
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
 
       {/* Needs Attention Widget */}
       {canManage && (
@@ -248,25 +246,17 @@ export default async function DashboardPage() {
           </div>
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
-                  <tr>
-                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                      Date
-                    </th>
-                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                      Supplier
-                    </th>
-                    <th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                      Status
-                    </th>
-                    <th className="px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">
-                      Total
-                    </th>
-                    <th className="px-5 py-3.5"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead><span className="sr-only">Actions</span></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {orders.map((order) => {
                     const total = calculateOrderTotal(order.items || []);
 
@@ -274,16 +264,16 @@ export default async function DashboardPage() {
                     const { name: supplierName, linkId: supplierLinkId } = getOrderSupplierDisplay(order);
 
                     return (
-                      <tr key={order.id} className="transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                        <td className="px-5 py-4 text-slate-700 dark:text-slate-300">
+                      <TableRow key={order.id}>
+                        <TableCell>
                           <div className="flex flex-col gap-0.5">
                             <span className="font-medium">{formatDistanceToNow(order.createdAt, { addSuffix: true })}</span>
                             <span className="text-xs text-slate-500 dark:text-slate-500">
                               {new Date(order.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-                        </td>
-                        <td className="px-5 py-4">
+                        </TableCell>
+                        <TableCell>
                           {supplierLinkId ? (
                             <Link
                               href={`/suppliers#${supplierLinkId}`}
@@ -294,26 +284,26 @@ export default async function DashboardPage() {
                           ) : (
                             <span className="text-slate-600 dark:text-slate-400">{supplierName}</span>
                           )}
-                        </td>
-                        <td className="px-5 py-4">
+                        </TableCell>
+                        <TableCell>
                           <OrderStatusBadge status={order.status} />
-                        </td>
-                        <td className="px-5 py-4 text-right font-semibold text-slate-900 dark:text-slate-200">
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-slate-900 dark:text-slate-200">
                           {total > 0 ? `€${total.toFixed(2)}` : '-'}
-                        </td>
-                        <td className="px-5 py-4 text-right">
+                        </TableCell>
+                        <TableCell className="text-right">
                           <Link
                             href={`/orders/${order.id}`}
                             className="text-sm font-medium text-sky-600 transition hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
                           >
                             View →
                           </Link>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </Card>
         </div>

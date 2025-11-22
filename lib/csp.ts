@@ -20,6 +20,7 @@ type CspDirectiveKey =
   | 'script-src'
   | 'style-src'
   | 'img-src'
+  | 'object-src'
   | 'font-src'
   | 'connect-src'
   | 'frame-ancestors'
@@ -51,11 +52,15 @@ const CSP_DIRECTIVES: Record<CspDirectiveKey, readonly string[]> = {
     // Hash for theme script (prevents FOUC) - see app/layout.tsx
     "'sha256-0lScLMzgnTF/4aEL0Kl3JzVxaxwkLikwLeFx2kRmx3U='",
     // 'strict-dynamic' allows scripts loaded by trusted scripts (CSP Level 3)
-    // Temporarily removed to fix Vercel hang/loading issue if Next.js internal scripts aren't strictly nonced
-    // "'strict-dynamic'",
+    // This is CRITICAL for Next.js 15 App Router to allow hydration chunks to load
+    // without needing a nonce on every single chunk (which Next.js doesn't strictly do for all)
+    "'strict-dynamic'",
     // Fallback for older browsers (ignored by modern browsers when strict-dynamic is present)
     // This is a standard pattern and does NOT weaken security in modern browsers
     "'unsafe-inline'",
+    // Allow Vercel Analytics/Insights if used (safe with strict-dynamic + nonce)
+    // 'https://va.vercel-scripts.com',
+    // 'https://vitals.vercel-insights.com',
   ],
   'style-src': [
     "'self'",
@@ -67,6 +72,7 @@ const CSP_DIRECTIVES: Record<CspDirectiveKey, readonly string[]> = {
     // Example files: app/(dashboard)/dashboard/_components/onboarding-reminder-card.tsx
     "'unsafe-inline'",
   ],
+  'object-src': ["'none'"],
   'img-src': [
     "'self'",
     'data:',
@@ -171,6 +177,7 @@ export function validateCSP(csp: string): { valid: boolean; missing: string[] } 
     'frame-ancestors',
     'base-uri',
     'form-action',
+    'object-src',
   ];
 
   const missing = requiredDirectives.filter(directive => !csp.includes(directive));

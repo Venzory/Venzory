@@ -6,10 +6,8 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import logger from '@/lib/logger';
-import { requireActivePractice } from '@/lib/auth';
-import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
+import { buildRequestContext, requireRole } from '@/src/lib/context/context-builder';
 import { getOrderService } from '@/src/services';
-import { hasRole } from '@/lib/rbac';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const createTemplateSchema = z.object({
@@ -46,42 +44,32 @@ const updateTemplateItemSchema = z.object({
 export async function createTemplateAction(_prevState: unknown, formData: FormData) {
   await verifyCsrfFromHeaders();
   
-  const { session, practiceId } = await requireActivePractice();
-  const ctx = buildRequestContextFromSession(session);
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
-
-  // Parse items from formData (they come as JSON string)
-  const itemsJson = formData.get('items');
-  let items;
-  try {
-    items = itemsJson ? JSON.parse(itemsJson as string) : [];
-  } catch {
-    return { error: 'Invalid items data' } as const;
-  }
-
-  const parsed = createTemplateSchema.safeParse({
-    name: formData.get('name'),
-    description: formData.get('description'),
-    items,
-  });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message || 'Invalid template data' } as const;
-  }
-
-  const { name, description, items: templateItems } = parsed.data;
-
   let template;
   try {
+    const ctx = await buildRequestContext();
+    requireRole(ctx, 'STAFF');
+
+    // Parse items from formData (they come as JSON string)
+    const itemsJson = formData.get('items');
+    let items;
+    try {
+      items = itemsJson ? JSON.parse(itemsJson as string) : [];
+    } catch {
+      return { error: 'Invalid items data' } as const;
+    }
+
+    const parsed = createTemplateSchema.safeParse({
+      name: formData.get('name'),
+      description: formData.get('description') || undefined,
+      items,
+    });
+
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message || 'Invalid template data' } as const;
+    }
+
+    const { name, description, items: templateItems } = parsed.data;
+
     template = await getOrderService().createTemplate(ctx, {
       name,
       description,
@@ -99,92 +87,73 @@ export async function createTemplateAction(_prevState: unknown, formData: FormDa
 export async function updateTemplateAction(formData: FormData) {
   await verifyCsrfFromHeaders();
   
-  const { session, practiceId } = await requireActivePractice();
-  const ctx = buildRequestContextFromSession(session);
+  try {
+    const ctx = await buildRequestContext();
+    requireRole(ctx, 'STAFF');
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    const parsed = updateTemplateSchema.safeParse({
+      templateId: formData.get('templateId'),
+      name: formData.get('name'),
+      description: formData.get('description') || undefined,
+    });
+
+    if (!parsed.success) {
+      throw new Error('Invalid template data');
+    }
+
+    const { templateId, name, description } = parsed.data;
+
+    await getOrderService().updateTemplate(ctx, templateId, {
+      name,
+      description,
+    });
+
+    revalidatePath(`/orders/templates/${templateId}`);
+    revalidatePath('/orders/templates');
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update template';
+    throw new Error(message);
   }
-
-  const parsed = updateTemplateSchema.safeParse({
-    templateId: formData.get('templateId'),
-    name: formData.get('name'),
-    description: formData.get('description'),
-  });
-
-  if (!parsed.success) {
-    throw new Error('Invalid template data');
-  }
-
-  const { templateId, name, description } = parsed.data;
-
-  await getOrderService().updateTemplate(ctx, templateId, {
-    name,
-    description,
-  });
-
-  revalidatePath(`/orders/templates/${templateId}`);
-  revalidatePath('/orders/templates');
 }
 
 export async function deleteTemplateAction(templateId: string) {
   await verifyCsrfFromHeaders();
   
-  const { session, practiceId } = await requireActivePractice();
-  const ctx = buildRequestContextFromSession(session);
+  try {
+    const ctx = await buildRequestContext();
+    requireRole(ctx, 'STAFF');
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    await getOrderService().deleteTemplate(ctx, templateId);
+
+    revalidatePath('/orders/templates');
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete template';
+    throw new Error(message);
   }
-
-  await getOrderService().deleteTemplate(ctx, templateId);
-
-  revalidatePath('/orders/templates');
+  
   redirect('/orders/templates');
 }
 
 export async function addTemplateItemAction(_prevState: unknown, formData: FormData) {
   await verifyCsrfFromHeaders();
   
-  const { session, practiceId } = await requireActivePractice();
-  const ctx = buildRequestContextFromSession(session);
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
-
-  const parsed = addTemplateItemSchema.safeParse({
-    templateId: formData.get('templateId'),
-    itemId: formData.get('itemId'),
-    defaultQuantity: formData.get('defaultQuantity'),
-    practiceSupplierId: formData.get('practiceSupplierId'),
-  });
-
-  if (!parsed.success) {
-    return { error: 'Invalid item data' } as const;
-  }
-
-  const { templateId, itemId, defaultQuantity, practiceSupplierId } = parsed.data;
-
   try {
+    const ctx = await buildRequestContext();
+    requireRole(ctx, 'STAFF');
+
+    const parsed = addTemplateItemSchema.safeParse({
+      templateId: formData.get('templateId'),
+      itemId: formData.get('itemId'),
+      defaultQuantity: formData.get('defaultQuantity'),
+      practiceSupplierId: formData.get('practiceSupplierId'),
+    });
+
+    if (!parsed.success) {
+      return { error: 'Invalid item data' } as const;
+    }
+
+    const { templateId, itemId, defaultQuantity, practiceSupplierId } = parsed.data;
+
     await getOrderService().addTemplateItem(ctx, templateId, {
       itemId,
       defaultQuantity,
@@ -202,58 +171,50 @@ export async function addTemplateItemAction(_prevState: unknown, formData: FormD
 export async function updateTemplateItemAction(formData: FormData) {
   await verifyCsrfFromHeaders();
   
-  const { session, practiceId } = await requireActivePractice();
-  const ctx = buildRequestContextFromSession(session);
+  let templateId;
+  try {
+    const ctx = await buildRequestContext();
+    requireRole(ctx, 'STAFF');
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    const parsed = updateTemplateItemSchema.safeParse({
+      templateItemId: formData.get('templateItemId'),
+      defaultQuantity: formData.get('defaultQuantity'),
+      practiceSupplierId: formData.get('practiceSupplierId'),
+    });
+
+    if (!parsed.success) {
+      throw new Error('Invalid item data');
+    }
+
+    const { templateItemId, defaultQuantity, practiceSupplierId } = parsed.data;
+
+    const result = await getOrderService().updateTemplateItem(ctx, templateItemId, {
+      defaultQuantity,
+      practiceSupplierId,
+    });
+    templateId = result.templateId;
+
+    revalidatePath(`/orders/templates/${templateId}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update item';
+    throw new Error(message);
   }
-
-  const parsed = updateTemplateItemSchema.safeParse({
-    templateItemId: formData.get('templateItemId'),
-    defaultQuantity: formData.get('defaultQuantity'),
-    practiceSupplierId: formData.get('practiceSupplierId'),
-  });
-
-  if (!parsed.success) {
-    throw new Error('Invalid item data');
-  }
-
-  const { templateItemId, defaultQuantity, practiceSupplierId } = parsed.data;
-
-  const result = await getOrderService().updateTemplateItem(ctx, templateItemId, {
-    defaultQuantity,
-    practiceSupplierId,
-  });
-
-  revalidatePath(`/orders/templates/${result.templateId}`);
 }
 
 export async function removeTemplateItemAction(templateItemId: string) {
   await verifyCsrfFromHeaders();
   
-  const { session, practiceId } = await requireActivePractice();
-  const ctx = buildRequestContextFromSession(session);
+  try {
+    const ctx = await buildRequestContext();
+    requireRole(ctx, 'STAFF');
 
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
+    await getOrderService().removeTemplateItem(ctx, templateItemId);
+
+    revalidatePath(`/orders/templates`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to remove item';
+    throw new Error(message);
   }
-
-  await getOrderService().removeTemplateItem(ctx, templateItemId);
-
-  revalidatePath(`/orders/templates`);
 }
 
 export async function createOrdersFromTemplateAction(
@@ -265,24 +226,14 @@ export async function createOrdersFromTemplateAction(
 ) {
   await verifyCsrfFromHeaders();
   
-  const { session, practiceId } = await requireActivePractice();
-  const ctx = buildRequestContextFromSession(session);
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    return { error: 'Insufficient permissions' } as const;
-  }
-
-  if (orderData.length === 0) {
-    return { error: 'No orders to create' } as const;
-  }
-
   try {
+    const ctx = await buildRequestContext();
+    requireRole(ctx, 'STAFF');
+
+    if (orderData.length === 0) {
+      return { error: 'No orders to create' } as const;
+    }
+
     // Map to the format expected by the service
     const mappedOrderData = orderData.map(group => ({
       practiceSupplierId: group.practiceSupplierId,
@@ -310,20 +261,10 @@ export async function createOrdersFromTemplateAction(
 export async function quickCreateOrderFromTemplateAction(templateId: string) {
   await verifyCsrfFromHeaders();
   
-  const { session, practiceId } = await requireActivePractice();
-  const ctx = buildRequestContextFromSession(session);
-
-  if (
-    !hasRole({
-      memberships: session.user.memberships,
-      practiceId,
-      minimumRole: PracticeRole.STAFF,
-    })
-  ) {
-    throw new Error('Insufficient permissions');
-  }
-
   try {
+    const ctx = await buildRequestContext();
+    requireRole(ctx, 'STAFF');
+
     const result = await getOrderService().createOrdersFromTemplateWithDefaults(ctx, templateId);
 
     revalidatePath('/orders');

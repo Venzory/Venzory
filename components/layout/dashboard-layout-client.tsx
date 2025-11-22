@@ -12,6 +12,7 @@ type DashboardLayoutClientProps = {
   userName?: string | null;
   practiceName?: string | null;
   userRole?: PracticeRole | null;
+  isOwner?: boolean;
 };
 
 export function DashboardLayoutClient({
@@ -19,6 +20,7 @@ export function DashboardLayoutClient({
   userName,
   practiceName,
   userRole,
+  isOwner = false,
 }: DashboardLayoutClientProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const normalizedPracticeName =
@@ -29,6 +31,7 @@ export function DashboardLayoutClient({
       <Sidebar
         practiceName={normalizedPracticeName}
         userRole={userRole}
+        isOwner={isOwner}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />

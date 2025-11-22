@@ -3,8 +3,15 @@ import { requireActivePractice } from '@/lib/auth';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getNotificationService } from '@/src/services';
 import { apiHandler } from '@/lib/api-handler';
+import { verifyCsrf } from '@/lib/csrf';
 
-export const POST = apiHandler(async () => {
+export const POST = apiHandler(async (request: Request) => {
+  // Enforce CSRF protection explicitly
+  const isCsrfValid = await verifyCsrf(request);
+  if (!isCsrfValid) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 403 });
+  }
+
   const { session } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 

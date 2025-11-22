@@ -22,6 +22,9 @@ interface DropdownMenuProps {
   children: ReactNode;
 }
 
+/**
+ * Root dropdown component that manages open/closed state
+ */
 export function DropdownMenu({ children }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -37,6 +40,9 @@ interface DropdownMenuTriggerProps {
   className?: string;
 }
 
+/**
+ * Trigger element that toggles the dropdown
+ */
 export function DropdownMenuTrigger({ children, className }: DropdownMenuTriggerProps) {
   const { isOpen, setIsOpen } = useDropdownContext();
 
@@ -53,6 +59,9 @@ interface DropdownMenuContentProps {
   className?: string;
 }
 
+/**
+ * Container for dropdown items
+ */
 export function DropdownMenuContent({ children, align = 'right', className }: DropdownMenuContentProps) {
   const { isOpen, setIsOpen } = useDropdownContext();
   const ref = useRef<HTMLDivElement>(null);
@@ -104,6 +113,9 @@ interface DropdownMenuItemProps {
   disabled?: boolean;
 }
 
+/**
+ * Individual item within a dropdown menu
+ */
 export function DropdownMenuItem({ children, onClick, className, disabled }: DropdownMenuItemProps) {
   const { setIsOpen } = useDropdownContext();
 
@@ -135,7 +147,9 @@ interface DropdownMenuSeparatorProps {
   className?: string;
 }
 
+/**
+ * Visual separator for dropdown items
+ */
 export function DropdownMenuSeparator({ className }: DropdownMenuSeparatorProps) {
   return <div className={cn('my-1 border-t border-border', className)} />;
 }
-

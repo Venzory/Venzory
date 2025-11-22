@@ -51,6 +51,7 @@ const coreSchema = z.object({
   NEXTAUTH_SECRET: secretSchema('NEXTAUTH_SECRET'),
   CSRF_SECRET: secretSchema('CSRF_SECRET'),
   EMAIL_FROM: z.string().email().default('noreply@venzory.com'),
+  PLATFORM_OWNER_EMAIL: z.string().email().optional().or(z.literal('')),
 });
 
 /**
@@ -66,14 +67,14 @@ const productionSchema = z.object({
   NEXTAUTH_URL: z
     .string()
     .url()
-    .refine((url) => url.startsWith('https://'), {
-      message: 'NEXTAUTH_URL must use HTTPS in production',
+    .refine((url) => url.startsWith('https://') || url.startsWith('http://localhost'), {
+      message: 'NEXTAUTH_URL must use HTTPS in production (or http://localhost for local builds)',
     }),
   NEXT_PUBLIC_APP_URL: z
     .string()
     .url()
-    .refine((url) => url.startsWith('https://'), {
-      message: 'NEXT_PUBLIC_APP_URL must use HTTPS in production',
+    .refine((url) => url.startsWith('https://') || url.startsWith('http://localhost'), {
+      message: 'NEXT_PUBLIC_APP_URL must use HTTPS in production (or http://localhost for local builds)',
     }),
   CRON_SECRET: secretSchema('CRON_SECRET'),
 });

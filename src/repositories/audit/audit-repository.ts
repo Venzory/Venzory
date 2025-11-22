@@ -167,5 +167,52 @@ export class AuditRepository extends BaseRepository {
 
     return client.auditLog.count({ where });
   }
+
+  /**
+   * Delete old audit logs
+   */
+  async deleteOldLogs(
+    cutoffDate: Date,
+    limit: number = 1000,
+    options?: RepositoryOptions
+  ): Promise<{ count: number }> {
+    const client = this.getClient(options?.tx);
+
+    // Find IDs first to avoid long-running delete transactions if possible,
+    // or just use deleteMany directly. 
+    // The original cron job logic did findMany then deleteMany.
+    // We can replicate that or just use deleteMany if the batch size is small.
+    // Let's stick to the simple deleteMany for now, but with a limit if Prisma supports it (it doesn't natively in deleteMany without raw query or ID fetch).
+    // Actually, standard Prisma deleteMany doesn't support 'take'. 
+    // So we must find IDs first.
+
+    const logsToDelete = await client.auditLog.findMany({
+      where: {
+        createdAt: {
+          lt: cutoffDate,
+        },
+      },
+      select: {
+        id: true,
+      },
+      take: limit,
+    });
+
+    if (logsToDelete.length === 0) {
+      return { count: 0 };
+    }
+
+    const ids = logsToDelete.map((log) => log.id);
+
+    const result = await client.auditLog.deleteMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+
+    return { count: result.count };
+  }
 }
 

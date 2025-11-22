@@ -61,12 +61,8 @@ export class ReceivingRepository extends BaseRepository {
     const receipts = await client.goodsReceipt.findMany({
       where,
       include: {
-        location: {
-          select: { id: true, name: true, code: true },
-        },
-        order: {
-          select: { id: true, reference: true },
-        },
+        location: true,
+        order: true,
         practiceSupplier: {
           include: {
             globalSupplier: true,
@@ -74,14 +70,10 @@ export class ReceivingRepository extends BaseRepository {
         },
         lines: {
           include: {
-            item: {
-              select: { id: true, name: true, sku: true, unit: true },
-            },
+            item: true,
           },
         },
-        createdBy: {
-          select: { id: true, name: true, email: true },
-        },
+        createdBy: true,
       },
       orderBy: options?.orderBy ?? { createdAt: 'desc' },
       ...this.buildPagination(options?.pagination),
@@ -366,9 +358,7 @@ export class ReceivingRepository extends BaseRepository {
     const line = await client.goodsReceiptLine.findUnique({
       where: { id: lineId },
       include: {
-        receipt: {
-          select: { id: true, practiceId: true, status: true, locationId: true },
-        },
+        receipt: true,
         item: true,
       },
     });

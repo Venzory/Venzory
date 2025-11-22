@@ -51,6 +51,7 @@ export interface GoodsReceiptLine {
   expiryDate: Date | null;
   notes: string | null;
   scannedGtin: string | null;
+  skipped: boolean;
   createdAt: Date;
   item?: Item;
   receipt?: GoodsReceipt;

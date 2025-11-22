@@ -14,7 +14,6 @@ import {
   removeOrderItemAction,
   updateOrderAction,
   deleteOrderAction,
-  addOrderItemInlineAction,
   sendOrderAction,
 } from '../actions';
 import { EditableOrderItem } from './_components/editable-order-item';
@@ -195,7 +194,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Notes & Reference</h2>
           {canEdit ? (
-            <form action={updateOrderAction} className="space-y-4">
+            <form action={async (formData: FormData) => {
+              'use server';
+              await updateOrderAction(formData);
+            }} className="space-y-4">
               <input type="hidden" name="orderId" value={order.id} />
               <div className="space-y-2">
                 <label htmlFor="reference" className="text-sm text-slate-700 dark:text-slate-400">

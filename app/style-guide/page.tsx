@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Package, ChevronRight } from 'lucide-react';
+import { Search, Package, ChevronRight, ShoppingCart } from 'lucide-react';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { StyleSection } from '@/components/style-guide/StyleSection';
 import { ColorGrid } from '@/components/style-guide/ColorGrid';
@@ -17,11 +17,18 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { DataTable } from '@/components/ui/data-table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Pagination } from '@/components/ui/pagination';
 import { useToastContext } from '@/lib/toast';
 
 export default function StyleGuidePage() {
   const { addToast } = useToastContext();
   const [isLoading, setIsLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleLoadingDemo = () => {
     setIsLoading(true);
@@ -281,17 +288,17 @@ export default function StyleGuidePage() {
       >
         <ComponentShowcase
           title="Button Variants"
-          description="Primary, secondary, danger, and ghost button styles."
+          description="Primary, secondary, destructive, and ghost button styles."
           code={`<Button variant="primary">Primary</Button>
 <Button variant="secondary">Secondary</Button>
-<Button variant="danger">Danger</Button>
+<Button variant="destructive">Destructive</Button>
 <Button variant="ghost">Ghost</Button>`}
-          usage="Use primary for main actions, secondary for less prominent actions, danger for destructive operations, and ghost for subtle actions."
+          usage="Use primary for main actions, secondary for less prominent actions, destructive for destructive operations, and ghost for subtle actions."
         >
           <div className="flex flex-wrap gap-3">
             <Button variant="primary">Primary</Button>
             <Button variant="secondary">Secondary</Button>
-            <Button variant="danger">Danger</Button>
+            <Button variant="destructive">Destructive</Button>
             <Button variant="ghost">Ghost</Button>
           </div>
         </ComponentShowcase>
@@ -334,7 +341,7 @@ export default function StyleGuidePage() {
             <div className="flex flex-wrap gap-3">
               <Button variant="primary">Primary</Button>
               <Button variant="secondary">Secondary</Button>
-              <Button variant="danger">Danger</Button>
+              <Button variant="destructive">Destructive</Button>
               <Button variant="ghost">Ghost</Button>
               <Button disabled>Disabled</Button>
             </div>
@@ -408,7 +415,7 @@ export default function StyleGuidePage() {
       {/* Inputs & Form Elements Section */}
       <StyleSection
         title="Inputs & Form Elements"
-        description="Form controls with different states."
+        description="Form controls with different states using Venzory's UI primitives."
       >
         <ComponentShowcase
           title="Text Input"
@@ -444,19 +451,21 @@ export default function StyleGuidePage() {
         <ComponentShowcase
           title="Select"
           description="Standard select dropdown."
-          code={`<select className="w-full rounded-lg border ...">
+          code={`<Select label="Select Option">
   <option>Option 1</option>
-</select>`}
+  <option>Option 2</option>
+</Select>`}
         >
-          <div className="max-w-md">
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
-              Select Option
-            </label>
-            <select className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+          <div className="max-w-md space-y-4">
+            <Select label="Select Option">
               <option>Option 1</option>
               <option>Option 2</option>
               <option>Option 3</option>
-            </select>
+            </Select>
+            <Select label="Select with Error" error="Selection is required">
+              <option value="">Select an option...</option>
+              <option>Option 1</option>
+            </Select>
           </div>
         </ComponentShowcase>
 
@@ -488,16 +497,19 @@ export default function StyleGuidePage() {
         <ComponentShowcase
           title="Textarea"
           description="Multi-line text input."
-          code={`<textarea className="w-full rounded-lg border ..." rows={4} />`}
+          code={`<Textarea label="Description" rows={4} />`}
         >
-          <div className="max-w-md">
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
-              Description
-            </label>
-            <textarea
+          <div className="max-w-md space-y-4">
+            <Textarea
+              label="Description"
               rows={4}
               placeholder="Enter description..."
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+            />
+            <Textarea
+              label="With Error"
+              rows={2}
+              placeholder="Invalid input..."
+              error="This field cannot be empty"
             />
           </div>
         </ComponentShowcase>
@@ -505,30 +517,9 @@ export default function StyleGuidePage() {
 
       {/* Component Library Section */}
       <StyleSection
-        title="Component Library"
-        description="Reusable components used throughout Venzory."
+        title="Data Display"
+        description="Components for displaying data and status."
       >
-        <ComponentShowcase
-          title="PageHeader"
-          description="Standard page header with title, subtitle, and actions."
-          code={`<PageHeader
-  title="Inventory"
-  subtitle="Track stock levels per location"
-  meta="Overview"
-  primaryAction={<Button>Create Order</Button>}
-  secondaryAction={<Button variant="secondary">Export</Button>}
-/>`}
-          usage="Use PageHeader at the top of every page for consistent layout. Supports optional meta text, breadcrumbs, and action buttons."
-        >
-          <PageHeader
-            title="Inventory Management"
-            subtitle="Track stock levels per location and manage inventory adjustments."
-            meta="Overview"
-            primaryAction={<Button variant="primary">Create Order</Button>}
-            secondaryAction={<Button variant="secondary">Export</Button>}
-          />
-        </ComponentShowcase>
-
         <ComponentShowcase
           title="Badge & StatusBadge"
           description="Badges for labels and status indicators."
@@ -555,6 +546,39 @@ export default function StyleGuidePage() {
           </div>
         </ComponentShowcase>
 
+        <ComponentShowcase
+          title="DataTable"
+          description="Responsive table component with hover states."
+          code={`const columns = [
+  { key: 'sku', label: 'SKU' },
+  { key: 'name', label: 'Name' },
+  { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status} /> },
+];
+<DataTable columns={columns} rows={data} />`}
+          usage="Use DataTable for displaying tabular data. Supports custom render functions for complex cells. Wraps in overflow-x-auto for responsive behavior."
+        >
+          <DataTable
+            columns={[
+              { key: 'sku', label: 'SKU' },
+              { key: 'name', label: 'Product Name' },
+              { 
+                key: 'status', 
+                label: 'Status',
+                render: (row) => <StatusBadge status={row.status as any} />
+              },
+              { key: 'qty', label: 'Quantity' },
+            ]}
+            rows={[
+              { sku: 'MED-001', name: 'Surgical Gloves', status: 'received', qty: '500' },
+              { sku: 'MED-002', name: 'Face Masks', status: 'in-progress', qty: '1,200' },
+              { sku: 'MED-003', name: 'Hand Sanitizer', status: 'draft', qty: '75' },
+            ]}
+          />
+        </ComponentShowcase>
+      </StyleSection>
+
+      {/* Navigation Section */}
+      <StyleSection title="Navigation" description="Components for navigation and structure.">
         <ComponentShowcase
           title="Tabs"
           description="Tabbed navigation for content sections."
@@ -592,32 +616,130 @@ export default function StyleGuidePage() {
         </ComponentShowcase>
 
         <ComponentShowcase
-          title="DataTable"
-          description="Responsive table component with hover states."
-          code={`const columns = [
-  { key: 'sku', label: 'SKU' },
-  { key: 'name', label: 'Name' },
-  { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status} /> },
-];
-<DataTable columns={columns} rows={data} />`}
-          usage="Use DataTable for displaying tabular data. Supports custom render functions for complex cells. Wraps in overflow-x-auto for responsive behavior."
+          title="Pagination"
+          description="Pagination control for long lists."
+          code={`<Pagination
+  currentPage={currentPage}
+  totalPages={10}
+  onPageChange={setCurrentPage}
+/>`}
         >
-          <DataTable
-            columns={[
-              { key: 'sku', label: 'SKU' },
-              { key: 'name', label: 'Product Name' },
-              { 
-                key: 'status', 
-                label: 'Status',
-                render: (row) => <StatusBadge status={row.status as any} />
-              },
-              { key: 'qty', label: 'Quantity' },
-            ]}
-            rows={[
-              { sku: 'MED-001', name: 'Surgical Gloves', status: 'received', qty: '500' },
-              { sku: 'MED-002', name: 'Face Masks', status: 'in-progress', qty: '1,200' },
-              { sku: 'MED-003', name: 'Hand Sanitizer', status: 'draft', qty: '75' },
-            ]}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={10}
+            onPageChange={setCurrentPage}
+          />
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="Sidebar Link"
+          description="Navigation link styles from the sidebar."
+          code={`<Link className="flex items-center gap-3 rounded-lg px-3 py-2.5 
+  bg-sidebar-active-bg text-sidebar-active-text border-l-2 border-sidebar-active-border">
+  <Icon /> Label
+</Link>`}
+          usage="Sidebar links use specific color tokens for active/inactive states. Active links have a left border and distinct background."
+        >
+          <div className="space-y-2 rounded-lg border border-border bg-sidebar p-4">
+            <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-text hover:bg-sidebar-hover">
+              <Package className="h-5 w-5" />
+              <span>Inventory (Default)</span>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border-l-2 border-sidebar-active-border bg-sidebar-active-bg px-3 py-2.5 text-sm font-medium text-sidebar-active-text">
+              <Package className="h-5 w-5" />
+              <span>Orders (Active)</span>
+            </div>
+          </div>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="PageHeader"
+          description="Standard page header with title, subtitle, and actions."
+          code={`<PageHeader
+  title="Inventory"
+  subtitle="Track stock levels per location"
+  meta="Overview"
+  primaryAction={<Button>Create Order</Button>}
+  secondaryAction={<Button variant="secondary">Export</Button>}
+/>`}
+          usage="Use PageHeader at the top of every page for consistent layout. Supports optional meta text, breadcrumbs, and action buttons."
+        >
+          <PageHeader
+            title="Inventory Management"
+            subtitle="Track stock levels per location and manage inventory adjustments."
+            meta="Overview"
+            primaryAction={<Button variant="primary">Create Order</Button>}
+            secondaryAction={<Button variant="secondary">Export</Button>}
+          />
+        </ComponentShowcase>
+      </StyleSection>
+
+      {/* Feedback & Overlays Section */}
+      <StyleSection title="Feedback & Overlays" description="Components for user feedback and overlays.">
+         <ComponentShowcase
+          title="Toast Notification"
+          description="Toast notifications for user feedback."
+          code={`const { addToast } = useToastContext();
+addToast('success', 'Operation successful');
+addToast('error', 'An error occurred');`}
+          usage="Use addToast from useToastContext hook to show temporary notifications. Types: success, error, info."
+        >
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={() => addToast('success', 'Success! Operation completed.')}>
+              Show Success
+            </Button>
+            <Button onClick={() => addToast('error', 'Error! Something went wrong.')} variant="destructive">
+              Show Error
+            </Button>
+            <Button onClick={() => addToast('info', 'Info: Here is some information.')} variant="secondary">
+              Show Info
+            </Button>
+          </div>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="Confirm Dialog"
+          description="Modal dialog for confirming actions."
+          code={`<ConfirmDialog
+  isOpen={isOpen}
+  title="Delete Item"
+  message="Are you sure?"
+  variant="danger"
+  onConfirm={handleConfirm}
+  onCancel={() => setIsOpen(false)}
+/>`}
+        >
+          <Button variant="destructive" onClick={() => setIsDialogOpen(true)}>
+            Open Confirm Dialog
+          </Button>
+          <ConfirmDialog
+            isOpen={isDialogOpen}
+            title="Delete Item"
+            message="Are you sure you want to delete this item? This action cannot be undone."
+            variant="danger"
+            onConfirm={() => {
+              setIsDialogOpen(false);
+              addToast('success', 'Item deleted');
+            }}
+            onCancel={() => setIsDialogOpen(false)}
+          />
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="Empty State"
+          description="Placeholder for when no data is available."
+          code={`<EmptyState
+  icon={ShoppingCart}
+  title="No orders found"
+  description="You haven't placed any orders yet."
+  action={<Button>Create Order</Button>}
+/>`}
+        >
+          <EmptyState
+            icon={ShoppingCart}
+            title="No orders found"
+            description="You haven't placed any orders yet. Create a new order to get started."
+            action={<Button variant="primary">Create Order</Button>}
           />
         </ComponentShowcase>
 
@@ -653,48 +775,6 @@ export default function StyleGuidePage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </ComponentShowcase>
-
-        <ComponentShowcase
-          title="Sidebar Link"
-          description="Navigation link styles from the sidebar."
-          code={`<Link className="flex items-center gap-3 rounded-lg px-3 py-2.5 
-  bg-sidebar-active-bg text-sidebar-active-text border-l-2 border-sidebar-active-border">
-  <Icon /> Label
-</Link>`}
-          usage="Sidebar links use specific color tokens for active/inactive states. Active links have a left border and distinct background."
-        >
-          <div className="space-y-2 rounded-lg border border-border bg-sidebar p-4">
-            <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-text hover:bg-sidebar-hover">
-              <Package className="h-5 w-5" />
-              <span>Inventory (Default)</span>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border-l-2 border-sidebar-active-border bg-sidebar-active-bg px-3 py-2.5 text-sm font-medium text-sidebar-active-text">
-              <Package className="h-5 w-5" />
-              <span>Orders (Active)</span>
-            </div>
-          </div>
-        </ComponentShowcase>
-
-        <ComponentShowcase
-          title="Toast Notification"
-          description="Toast notifications for user feedback."
-          code={`const { addToast } = useToastContext();
-addToast('success', 'Operation successful');
-addToast('error', 'An error occurred');`}
-          usage="Use addToast from useToastContext hook to show temporary notifications. Types: success, error, info."
-        >
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={() => addToast('success', 'Success! Operation completed.')}>
-              Show Success
-            </Button>
-            <Button onClick={() => addToast('error', 'Error! Something went wrong.')} variant="danger">
-              Show Error
-            </Button>
-            <Button onClick={() => addToast('info', 'Info: Here is some information.')} variant="secondary">
-              Show Info
-            </Button>
-          </div>
         </ComponentShowcase>
       </StyleSection>
 
@@ -815,4 +895,3 @@ addToast('error', 'An error occurred');`}
     </div>
   );
 }
-

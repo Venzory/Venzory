@@ -96,6 +96,24 @@ See **[GLOBAL_SUPPLIER_MIGRATION.md](./GLOBAL_SUPPLIER_MIGRATION.md)** for compl
 
 ---
 
+## Local Development Setup
+
+For a fast and consistent development experience, we use a local Postgres instance running in Docker.
+
+### One-time Setup
+
+1. Ensure Docker is running.
+2. Run the setup script to provision the `venzory_dev` and `venzory_test` databases:
+   ```bash
+   npm run db:setup:local
+   ```
+3. Update your `.env.local` file to point to the local database (see `.env.example`).
+
+### Environment Variables
+
+- **Development/Test**: Use the local Docker Postgres URL (`postgresql://venzory:venzory@localhost:5432/venzory_dev`).
+- **Staging/Production**: Use the Neon database URL (configured in Vercel/Neon dashboard).
+
 ## Development Commands
 
 ```bash

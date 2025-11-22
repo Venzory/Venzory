@@ -7,14 +7,27 @@ import { inviteAcceptRateLimiter, getClientIp } from '@/lib/rate-limit';
 import { apiHandler } from '@/lib/api-handler';
 import { ValidationError, RateLimitError } from '@/src/domain/errors';
 import logger from '@/lib/logger';
+import { verifyCsrf } from '@/lib/csrf';
 
 const acceptInviteSchema = z.object({
   token: z.string().min(1, 'Token is required'),
   name: z.string().min(1, 'Name is required').max(120),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    ),
 });
 
 export const POST = apiHandler(async (request: Request) => {
+  // Enforce CSRF protection explicitly
+  const isCsrfValid = await verifyCsrf(request);
+  if (!isCsrfValid) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 403 });
+  }
+
   const body = await request.json();
   const parsed = acceptInviteSchema.safeParse(body);
 

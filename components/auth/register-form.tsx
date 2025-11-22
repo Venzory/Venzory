@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff } from 'lucide-react';
+import { fetcher } from '@/lib/fetcher';
+import { ClientApiError } from '@/lib/client-error';
 
 type RegisterFormState = {
   practiceName: string;
@@ -48,24 +50,9 @@ export function RegisterForm() {
 
     startTransition(async () => {
       try {
-        const response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(state),
+        await fetcher.post('/api/auth/register', {
+          body: state,
         });
-
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          
-          // Extract field errors from validation error details
-          if (payload.error?.details && typeof payload.error.details === 'object') {
-            setFieldErrors(payload.error.details);
-          } else {
-            // Generic error message
-            setError(payload.error?.message ?? 'Registration failed.');
-          }
-          return;
-        }
 
         setSuccess('Practice created! Signing you in…');
 
@@ -78,7 +65,15 @@ export function RegisterForm() {
         router.push('/dashboard');
       } catch (err) {
         console.error(err);
-        setError('Something went wrong. Please try again.');
+        
+        if (err instanceof ClientApiError && err.details) {
+          // Extract field errors from validation error details
+          setFieldErrors(err.details);
+        } else if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Something went wrong. Please try again.');
+        }
       }
     });
   };

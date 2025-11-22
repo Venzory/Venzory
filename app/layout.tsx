@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { AppProviders } from './providers';
@@ -30,15 +31,22 @@ const themeScript = `
 })();
 `;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Get the nonce from the middleware-enhanced headers
+  const headersList = await headers();
+  const nonce = headersList.get('x-nonce') || '';
+
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script 
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: themeScript }} 
+        />
       </head>
       <body className={`${plusJakartaSans.className} min-h-full antialiased`}>
         <AppProviders>{children}</AppProviders>

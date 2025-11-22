@@ -11,4 +11,5 @@ export * from './orders';
 export * from './products';
 export * from './receiving';
 export * from './settings';
+export * from './owner';
 

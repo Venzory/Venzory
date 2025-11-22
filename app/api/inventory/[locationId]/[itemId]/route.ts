@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireActivePractice } from '@/lib/auth';
-import { InventoryRepository } from '@/src/repositories/inventory';
+import { getInventoryService } from '@/src/services/inventory';
+import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { apiHandlerContext } from '@/lib/api-handler';
-import { ForbiddenError } from '@/src/domain/errors';
 
 interface RouteParams {
   params: Promise<{
@@ -12,24 +12,21 @@ interface RouteParams {
 }
 
 export const GET = apiHandlerContext(async (request: Request, { params }: RouteParams) => {
-  const { practiceId } = await requireActivePractice();
+  const { session } = await requireActivePractice();
   const { locationId, itemId } = await params;
 
-  // Initialize repository
-  const inventoryRepository = new InventoryRepository();
+  // Build request context for service call
+  const ctx = buildRequestContextFromSession(session);
 
-  // Fetch location inventory with practice validation
-  const inventory = await inventoryRepository.getLocationInventory(
+  // Initialize service
+  const inventoryService = getInventoryService();
+
+  // Fetch location inventory via service (handles logic and validation)
+  const inventory = await inventoryService.getItemInventoryAtLocation(
+    ctx,
     itemId,
-    locationId,
-    practiceId
+    locationId
   );
 
-  return NextResponse.json({
-    quantity: inventory?.quantity ?? 0,
-    reorderPoint: inventory?.reorderPoint ?? null,
-    reorderQuantity: inventory?.reorderQuantity ?? null,
-  });
+  return NextResponse.json(inventory);
 });
-
-

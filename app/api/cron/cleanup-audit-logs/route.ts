@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import { env } from '@/lib/env';
 import logger from '@/lib/logger';
+import { getAuditService } from '@/src/services/audit/audit-service';
 
 export const dynamic = 'force-dynamic';
 
 // Configuration
 const RETENTION_DAYS = 90;
 const BATCH_SIZE = 1000;
-const MAX_ITERATIONS = 50; // Safety limit to prevent timeouts (max 50k records per run)
 
 export async function GET(request: NextRequest) {
   // Auth check
@@ -20,76 +19,28 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
-
     logger.info(
-      { module: 'cron', operation: 'cleanup-audit-logs', cutoffDate },
+      { module: 'cron', operation: 'cleanup-audit-logs', retentionDays: RETENTION_DAYS },
       'Starting audit log cleanup'
     );
 
-    let totalDeleted = 0;
-    let iterations = 0;
-    let hasMore = true;
-
-    while (hasMore && iterations < MAX_ITERATIONS) {
-      iterations++;
-
-      // Find IDs to delete (fetch only IDs for performance)
-      const logsToDelete = await prisma.auditLog.findMany({
-        where: {
-          createdAt: {
-            lt: cutoffDate,
-          },
-        },
-        select: {
-          id: true,
-        },
-        take: BATCH_SIZE,
-      });
-
-      if (logsToDelete.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      const ids = logsToDelete.map((log) => log.id);
-
-      // Delete batch
-      const result = await prisma.auditLog.deleteMany({
-        where: {
-          id: {
-            in: ids,
-          },
-        },
-      });
-
-      totalDeleted += result.count;
-
-      // If we found fewer than batch size, we are likely done
-      if (logsToDelete.length < BATCH_SIZE) {
-        hasMore = false;
-      }
-    }
+    const auditService = getAuditService();
+    const { deleted } = await auditService.cleanupOldLogs(RETENTION_DAYS, BATCH_SIZE);
 
     logger.info(
       {
         module: 'cron',
         operation: 'cleanup-audit-logs',
-        totalDeleted,
-        iterations,
+        totalDeleted: deleted,
         retentionDays: RETENTION_DAYS,
-        completed: !hasMore
       },
       'Completed audit log cleanup'
     );
 
     return NextResponse.json({
       success: true,
-      deleted: totalDeleted,
-      iterations,
+      deleted,
       retentionDays: RETENTION_DAYS,
-      completed: !hasMore // if hit max iterations, this might be false (meaning there is more to delete)
     });
 
   } catch (error) {
@@ -108,4 +59,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

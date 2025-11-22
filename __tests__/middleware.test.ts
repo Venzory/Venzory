@@ -150,10 +150,10 @@ describe('Middleware Security Headers', () => {
       expect(csp).toContain("script-src 'self' 'nonce-test-nonce'");
     });
 
-    // Temporarily removed strict-dynamic requirement to fix Vercel hang
-    // it('should include strict-dynamic in script-src', () => {
-    //   expect(csp).toContain("'strict-dynamic'");
-    // });
+    // strict-dynamic is required for Next.js 15 hydration of chunks
+    it('should include strict-dynamic in script-src', () => {
+      expect(csp).toContain("'strict-dynamic'");
+    });
 
     it('should include nonce in style-src', () => {
       expect(csp).toContain("style-src 'self' 'nonce-test-nonce'");
@@ -246,13 +246,9 @@ describe('Middleware Security Headers', () => {
       expect(csp).not.toContain('frame-ancestors *');
     });
 
-    it('should not have object-src allowing plugins', () => {
+    it('should have object-src set to none', () => {
       const csp = generateCSP({ nonce: 'test' });
-      // object-src should not be present (defaults to default-src 'self')
-      // or should be explicitly set to 'none'
-      if (csp.includes('object-src')) {
-        expect(csp).not.toContain("object-src *");
-      }
+      expect(csp).toContain("object-src 'none'");
     });
   });
 

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import type { PracticeRole } from '@prisma/client';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff } from 'lucide-react';
+import { fetcher } from '@/lib/fetcher';
+import { ClientApiError } from '@/lib/client-error';
 
 type FormState = {
   name: string;
@@ -68,28 +70,22 @@ export function AcceptInviteForm({
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/invites/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await fetcher.post('/api/invites/accept', {
+        body: {
           token,
           name: state.name.trim(),
           password: state.password,
-        }),
+        },
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to accept invitation');
-        setIsSubmitting(false);
-        return;
-      }
 
       // Success - redirect will be handled by the API (auto-login)
       router.push('/dashboard');
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
       setIsSubmitting(false);
     }
   };

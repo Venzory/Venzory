@@ -6,6 +6,9 @@ import logger from '@/lib/logger';
 import { buildRequestContextFromSession } from '@/src/lib/context/context-builder';
 import { getSettingsService } from '@/src/services';
 import { hasRole } from '@/lib/rbac';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Card, CardContent } from '@/components/ui/card';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/data-table';
 import { InviteUserForm } from './_components/invite-user-form';
 import { PracticeSettingsForm } from './_components/practice-settings-form';
 import { RemoveUserButton } from './_components/remove-user-button';
@@ -39,17 +42,17 @@ export default async function SettingsPage() {
 
   if (!activePracticeId) {
     return (
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-white">Settings</h1>
-          <p className="text-sm text-slate-300">
-            Manage your practice settings, users, and preferences.
-          </p>
-        </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
-          <p className="text-sm text-slate-300">No active practice found.</p>
-        </div>
-      </div>
+      <section className="space-y-8">
+        <PageHeader
+          title="Settings"
+          subtitle="Manage your practice settings, users, and preferences."
+        />
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-slate-300">No active practice found.</p>
+          </CardContent>
+        </Card>
+      </section>
     );
   }
 
@@ -103,20 +106,18 @@ export default async function SettingsPage() {
   // If we couldn't load practice at all, show error state
   if (!practice && fetchError) {
     return (
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Settings</h1>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            Manage your practice settings, users, and preferences.
-          </p>
-        </div>
+      <section className="space-y-8">
+        <PageHeader
+          title="Settings"
+          subtitle="Manage your practice settings, users, and preferences."
+        />
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 dark:border-rose-800 dark:bg-rose-900/20">
           <p className="text-sm font-medium text-rose-900 dark:text-rose-200">{fetchError}</p>
           <p className="mt-1 text-sm text-rose-700 dark:text-rose-300">
             Please try refreshing the page or contact support if the problem persists.
           </p>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -125,21 +126,21 @@ export default async function SettingsPage() {
   const pendingInvites = invites;
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Settings</h1>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Manage your practice settings, users, and preferences.
-        </p>
-      </div>
+    <section className="space-y-8">
+      <PageHeader
+        title="Settings"
+        subtitle="Manage your practice settings, users, and preferences."
+      />
 
       {/* Practice Settings Section - Only for admins */}
       {isAdmin && practice && (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Practice Settings</h2>
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-            <PracticeSettingsForm practice={practice} />
-          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <PracticeSettingsForm practice={practice} />
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -152,31 +153,19 @@ export default async function SettingsPage() {
           </span>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+        <Card className="overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-white dark:bg-slate-800/50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Status
-                  </th>
-                  {isAdmin && (
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  {isAdmin && <TableHead>Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {users.map((membership: any) => {
                   // Safe guards for partial membership data
                   const user = membership?.user ?? {};
@@ -188,17 +177,17 @@ export default async function SettingsPage() {
                   const membershipId = membership?.id ?? `unknown-${Math.random()}`;
 
                   return (
-                    <tr key={membershipId} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">
+                    <TableRow key={membershipId}>
+                      <TableCell className="font-medium text-slate-900 dark:text-white">
                         {userName}
                         {userId && userId === session.user.id && (
                           <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">(You)</span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">
+                      </TableCell>
+                      <TableCell className="text-slate-700 dark:text-slate-300">
                         {userEmail}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      </TableCell>
+                      <TableCell>
                         {isAdmin && userId && userId !== session.user.id ? (
                           <UserRoleSelector
                             userId={userId}
@@ -218,8 +207,8 @@ export default async function SettingsPage() {
                             {formatRoleLabel(membershipRole)}
                           </span>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      </TableCell>
+                      <TableCell>
                         <span
                           className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                             membershipStatus === 'ACTIVE'
@@ -231,24 +220,24 @@ export default async function SettingsPage() {
                         >
                           {membershipStatus ? membershipStatus.charAt(0) + membershipStatus.slice(1).toLowerCase() : 'Unknown'}
                         </span>
-                      </td>
+                      </TableCell>
                       {isAdmin && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <TableCell>
                           {userId && userId !== session.user.id && (
                             <RemoveUserButton 
                               userId={userId} 
                               userName={userName !== '-' ? userName : userEmail}
                             />
                           )}
-                        </td>
+                        </TableCell>
                       )}
-                    </tr>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Pending Invites Section - Only for admins */}
@@ -256,29 +245,19 @@ export default async function SettingsPage() {
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Pending Invitations</h2>
 
-          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
+          <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-white dark:bg-slate-800/50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                      Sent
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                      Expires
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Sent</TableHead>
+                    <TableHead>Expires</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {pendingInvites.map((invite: any) => {
                     // Safe guards for partial invite data
                     const inviteId = invite?.id ?? `unknown-${Math.random()}`;
@@ -288,35 +267,35 @@ export default async function SettingsPage() {
                     const expiresAt = invite?.expiresAt;
 
                     return (
-                      <tr key={inviteId} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">
+                      <TableRow key={inviteId}>
+                        <TableCell className="text-slate-700 dark:text-slate-300">
                           {inviteEmail}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        </TableCell>
+                        <TableCell>
                           <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                             {formatRoleLabel(inviteRole)}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
+                        </TableCell>
+                        <TableCell className="text-slate-600 dark:text-slate-400">
                           {createdAt ? new Date(createdAt).toLocaleDateString() : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-400">
+                        </TableCell>
+                        <TableCell className="text-slate-600 dark:text-slate-400">
                           {expiresAt ? new Date(expiresAt).toLocaleDateString() : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        </TableCell>
+                        <TableCell>
                           {inviteId && inviteId.startsWith('unknown-') ? (
                             <span className="text-xs text-slate-400">-</span>
                           ) : (
                             <CancelInviteButton inviteId={inviteId} email={inviteEmail} />
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
@@ -325,20 +304,24 @@ export default async function SettingsPage() {
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Invite User</h2>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-            <InviteUserForm practiceId={activePracticeId} practiceName={practiceName} />
-          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <InviteUserForm practiceId={activePracticeId} practiceName={practiceName} />
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {!isAdmin && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:shadow-none">
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Only administrators can invite new users to the practice.
-          </p>
-        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Only administrators can invite new users to the practice.
+            </p>
+          </CardContent>
+        </Card>
       )}
-    </div>
+    </section>
   );
 }
 

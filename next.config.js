@@ -9,6 +9,13 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
+  webpack: (config) => {
+    config.ignoreWarnings = [
+      { module: /node_modules\/@opentelemetry\/instrumentation/ },
+      { module: /node_modules\/@prisma\/instrumentation/ }
+    ];
+    return config;
+  },
 }
 
 // Only enable Sentry in production to improve dev speed

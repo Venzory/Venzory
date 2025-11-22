@@ -749,6 +749,29 @@ export class AuditService {
       ctx.practiceId
     );
   }
+
+  /**
+   * Cleanup old audit logs
+   * Note: This is a maintenance task and might not have a practiceId context
+   * if running globally. However, for safety, we could require it, but CRON usually runs as system.
+   * We will make RequestContext optional here or allow a 'SYSTEM' role bypass if we had one.
+   * For now, we just accept a retention period.
+   */
+  async cleanupOldLogs(
+    retentionDays: number,
+    batchSize: number = 1000
+  ): Promise<{ deleted: number }> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+    // We don't need transaction here as we want to commit in batches in the caller potentially,
+    // or just single batch here.
+    // The repo handles the batch deletion of IDs found.
+    
+    const result = await this.auditRepository.deleteOldLogs(cutoffDate, batchSize);
+    
+    return { deleted: result.count };
+  }
 }
 
 // Singleton instance

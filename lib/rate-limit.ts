@@ -305,6 +305,15 @@ export function createRateLimiter(config: RateLimitConfig): RateLimiter {
         rateLimitId: config.id,
         type: 'in-memory',
       }, `Edge Runtime detected: Redis rate limiter disabled, falling back to in-memory. For distributed rate limiting in Edge, use a compatible adapter (e.g., @upstash/redis).`);
+      
+      if (isProduction) {
+        logger.warn({
+          module: 'rate-limit',
+          operation: 'createRateLimiter',
+          rateLimitId: config.id,
+          environment: 'production',
+        }, 'CRITICAL: Running in-memory rate limiting in Production on Edge Runtime. Rate limits will not be shared across instances.');
+      }
     }
 
     logger.info({

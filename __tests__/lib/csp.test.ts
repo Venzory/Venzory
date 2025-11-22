@@ -26,12 +26,20 @@ describe('CSP Utility', () => {
         'frame-ancestors',
         'base-uri',
         'form-action',
+        'object-src',
         'upgrade-insecure-requests',
       ];
 
       requiredDirectives.forEach(directive => {
         expect(csp).toContain(directive);
       });
+    });
+
+    it('should include strict-dynamic in script-src', () => {
+      const nonce = 'test-nonce-123';
+      const csp = generateCSP({ nonce });
+
+      expect(csp).toContain("'strict-dynamic'");
     });
 
     it('should include unsafe-inline as fallback for older browsers', () => {
@@ -63,6 +71,13 @@ describe('CSP Utility', () => {
       const csp = generateCSP({ nonce });
 
       expect(csp).toContain("frame-ancestors 'none'");
+    });
+
+    it('should include object-src none', () => {
+      const nonce = 'test-nonce-123';
+      const csp = generateCSP({ nonce });
+
+      expect(csp).toContain("object-src 'none'");
     });
 
     it('should throw error if nonce is empty string', () => {

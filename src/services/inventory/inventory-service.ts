@@ -103,7 +103,30 @@ export class InventoryService {
     return this.inventoryRepository.findItemById(itemId, ctx.practiceId);
   }
 
+  /**
+   * Get inventory details for an item at a specific location
+   */
+  async getItemInventoryAtLocation(
+    ctx: RequestContext,
+    itemId: string,
+    locationId: string
+  ): Promise<{
+    quantity: number;
+    reorderPoint: number | null;
+    reorderQuantity: number | null;
+  }> {
+    const inventory = await this.inventoryRepository.getLocationInventory(
+      itemId,
+      locationId,
+      ctx.practiceId
+    );
 
+    return {
+      quantity: inventory?.quantity ?? 0,
+      reorderPoint: inventory?.reorderPoint ?? null,
+      reorderQuantity: inventory?.reorderQuantity ?? null,
+    };
+  }
 
   /**
    * Delete item

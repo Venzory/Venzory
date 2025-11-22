@@ -7,6 +7,7 @@ import { buildRequestContextFromSession } from '@/src/lib/context/context-builde
 import { getInventoryService } from '@/src/services';
 import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { parseListParams } from '@/lib/url-params';
@@ -137,21 +138,19 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   const hasActiveFilters = Boolean(search || location || supplier || lowStock);
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Inventory</h1>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Track stock levels per location and manage inventory adjustments.
-            </p>
-          </div>
-          {canManage && (
-            <Link href="/orders/new">
-              <Button variant="primary">Create Order</Button>
-            </Link>
-          )}
-        </div>
+    <section className="space-y-8">
+      <div className="space-y-6">
+        <PageHeader
+          title="Inventory"
+          subtitle="Track stock levels per location and manage inventory adjustments."
+          primaryAction={
+            canManage ? (
+              <Link href="/orders/new">
+                <Button variant="primary">Create Order</Button>
+              </Link>
+            ) : undefined
+          }
+        />
 
         <SearchFilters
           initialSearch={search}
@@ -174,7 +173,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
           totalItems={finalTotalCount}
           itemsPerPage={itemsPerPage}
         />
-      </section>
+      </div>
 
       <section className="grid gap-6 lg:grid-cols-[1fr_1fr] mt-8">
         {canManage ? (
@@ -193,7 +192,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
 
         <RecentAdjustments adjustments={adjustments} canManage={canManage} />
       </section>
-    </div>
+    </section>
   );
 }
 

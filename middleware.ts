@@ -3,12 +3,13 @@ import type { NextRequest } from 'next/server';
 
 import { auth } from '@/auth.edge';
 import { checkRouteAccess } from '@/lib/route-guards';
+import { isPlatformOwner } from '@/lib/owner-guard';
 import { generateCSP } from '@/lib/csp';
 import { createSignedCsrfToken, getCsrfTokenFromCookie, parseAndVerifySignedToken } from '@/lib/csrf';
 import { env } from '@/lib/env';
 import logger from '@/lib/logger';
 
-const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog', '/onboarding'];
+const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog', '/onboarding', '/owner'];
 const authRoutes = ['/login', '/register'];
 const publicApiRoutes = ['/api/auth', '/api/health', '/api/invites/accept', '/api/cron'];
 
@@ -162,6 +163,19 @@ export default auth(async (request) => {
 
   // For authenticated users on protected routes, check role-based access
   if (request.auth && isProtected) {
+    // Owner Console Access - Explicit check before any other logic
+    if (pathname.startsWith('/owner')) {
+      if (!isPlatformOwner(request.auth.user.email)) {
+        const accessDeniedUrl = new URL('/access-denied', request.nextUrl.origin);
+        accessDeniedUrl.searchParams.set('from', pathname);
+        const response = NextResponse.redirect(accessDeniedUrl);
+        return await applySecurityHeaders(response, nonce, request);
+      }
+      // Allow owner to proceed without onboarding checks for owner console
+      const response = NextResponse.next();
+      return await applySecurityHeaders(response, nonce, request);
+    }
+
     // Onboarding Enforcement
     const { activePracticeId, memberships } = request.auth.user;
     const activeMembership = memberships.find((m) => m.practiceId === activePracticeId);
