@@ -38,6 +38,11 @@ function getCsrfTokenFromCookie(): string | null {
   const signedToken = cookies['__Host-csrf'] || cookies['csrf-token'];
   
   if (!signedToken) {
+    // If we're in a context where we can't read cookies directly (e.g. HttpOnly),
+    // we might need to rely on the browser to send the cookie automatically.
+    // However, the server expects the token in the header too (Double Submit Cookie).
+    // If the cookie is HttpOnly, we can't read it from JS.
+    // But the pattern used here implies we should be able to read it.
     return null;
   }
   

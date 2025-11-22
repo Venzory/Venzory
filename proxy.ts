@@ -59,7 +59,8 @@ async function setCsrfCookie(response: NextResponse, request: Request): Promise<
     // Set cookie with security attributes
     // In production: __Host-csrf with Secure flag (requires HTTPS)
     // In development: csrf-token without Secure flag (for HTTP compatibility)
-    const cookieValue = `${cookieName}=${encodeURIComponent(signedToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600${isProduction ? '; Secure' : ''}`;
+    // HttpOnly: false (allow JavaScript access for CSRF token extraction)
+    const cookieValue = `${cookieName}=${encodeURIComponent(signedToken)}; Path=/; SameSite=Lax; Max-Age=3600${isProduction ? '; Secure' : ''}`;
     
     response.headers.append('Set-Cookie', cookieValue);
   }
