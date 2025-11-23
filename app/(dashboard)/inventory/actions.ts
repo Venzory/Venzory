@@ -433,7 +433,7 @@ export async function updateStockSettingsAction(_prevState: unknown, formData: F
     });
 
     revalidatePath('/inventory');
-    revalidatePath('/inventory/reorder');
+    revalidatePath('/reorder-suggestions');
     return { success: 'Inventory settings updated' };
   } catch (error) {
     const ctx = await buildRequestContext().catch(() => null);
@@ -450,43 +450,6 @@ export async function updateStockSettingsAction(_prevState: unknown, formData: F
       return { error: error.message };
     }
     return { error: 'An unexpected error occurred' };
-  }
-}
-
-/**
- * Create orders from low stock items
- */
-export async function createOrdersFromLowStockAction(selectedItemIds: string[]) {
-  await verifyCsrfFromHeaders();
-  
-  try {
-    const ctx = await buildRequestContext();
-    const { getOrderService } = await import('@/src/services/orders');
-    const orderService = getOrderService();
-
-    const result = await orderService.createOrdersFromLowStock(ctx, selectedItemIds);
-
-    revalidatePath('/inventory');
-    revalidatePath('/orders');
-    revalidatePath('/dashboard');
-
-    const message =
-      result.orders.length === 1
-        ? `Created 1 draft order for ${result.orders[0].supplierName}`
-        : `Created ${result.orders.length} draft orders for ${result.orders.length} suppliers`;
-
-    return {
-      success: true,
-      message,
-      orders: result.orders,
-      skippedItems: result.skippedItems.length > 0 ? result.skippedItems : undefined,
-    } as const;
-  } catch (error) {
-    logger.error({ error }, 'createOrdersFromLowStockAction failed');
-    if (isDomainError(error)) {
-      return { error: error.message } as const;
-    }
-    return { error: 'Failed to create orders. Please try again.' } as const;
   }
 }
 

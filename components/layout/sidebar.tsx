@@ -56,7 +56,7 @@ const navSections: NavSection[] = [
     title: 'Ordering',
     items: [
       { href: '/orders', label: 'Orders', icon: ShoppingCart },
-      { href: '/inventory/reorder', label: 'Reorder Suggestions', icon: ListPlus, minRole: 'STAFF' },
+      { href: '/reorder-suggestions', label: 'Reorder Suggestions', icon: ListPlus, minRole: 'STAFF' },
     ],
   },
   {
@@ -110,8 +110,8 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
       title: 'Platform',
       items: [
         { href: '/owner', label: 'Owner Console', icon: Shield },
-        { href: '/owner/product-master', label: 'Product Master Data', icon: Package2 },
-        { href: '/owner/supplier-catalog', label: 'Supplier Catalog', icon: BookOpen },
+        { href: '/product-master', label: 'Product Master Data', icon: Package2 },
+        { href: '/global-supplier-catalog', label: 'Global Supplier Catalog', icon: BookOpen },
       ],
     });
   }

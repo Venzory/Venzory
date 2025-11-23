@@ -10,7 +10,7 @@ import { env } from '@/lib/env';
 import logger from '@/lib/logger';
 import { isPracticeOnboardingComplete } from '@/lib/onboarding-status';
 
-const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog', '/onboarding', '/owner'];
+const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog', '/onboarding', '/owner', '/reorder-suggestions', '/product-master', '/global-supplier-catalog', '/supplier-catalog', '/my-items', '/needs-attention'];
 const authRoutes = ['/login', '/register'];
 const publicApiRoutes = ['/api/auth', '/api/health', '/api/invites/accept', '/api/cron'];
 

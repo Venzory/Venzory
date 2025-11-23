@@ -5,7 +5,7 @@ import { ReorderList } from './_components/reorder-list';
 import { hasRole } from '@/lib/rbac';
 import { PracticeRole } from '@prisma/client';
 
-export default async function ReorderPage() {
+export default async function ReorderSuggestionsPage() {
   const { session, practiceId } = await requireActivePractice();
   const ctx = buildRequestContextFromSession(session);
 

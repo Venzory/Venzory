@@ -7,7 +7,7 @@ import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { createOrdersFromLowStockAction } from '../../actions';
+import { createOrdersFromLowStockAction } from '../actions';
 import type { LowStockInfo } from '@/src/domain/models';
 
 interface ReorderListProps {
