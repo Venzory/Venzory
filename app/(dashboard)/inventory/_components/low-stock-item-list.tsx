@@ -274,7 +274,7 @@ export function LowStockItemList({
         <EmptyState
           icon={Package}
           title={hasActiveFilters ? "No items found" : "No items yet"}
-          description={hasActiveFilters ? "Try adjusting your search or filters" : "Add items to your catalog to start tracking inventory levels across your locations."}
+          description={hasActiveFilters ? "Try adjusting your search or filters" : "Add items to My Items to start tracking inventory levels across your locations."}
           action={
             !hasActiveFilters ? (
               <Link 

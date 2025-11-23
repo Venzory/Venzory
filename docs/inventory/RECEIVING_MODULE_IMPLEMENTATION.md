@@ -204,7 +204,7 @@ Successfully implemented a comprehensive **Receiving Module** for Venzory, inclu
 
 **UI Updates:**
 - `components/layout/sidebar.tsx` (modified - added nav items)
-- `middleware.ts` (modified - added route protection)
+- `proxy.ts` (modified - added route protection)
 
 **Documentation:**
 - `docs/RECEIVING_MODULE_IMPLEMENTATION.md` (this file)
@@ -212,7 +212,7 @@ Successfully implemented a comprehensive **Receiving Module** for Venzory, inclu
 ### Modified (3 files)
 - `package.json` - Added html5-qrcode dependency
 - `components/layout/sidebar.tsx` - Added Receiving & Stock Count nav items
-- `middleware.ts` - Added route protection
+- `proxy.ts` - Added route protection
 
 ## Build Status
 

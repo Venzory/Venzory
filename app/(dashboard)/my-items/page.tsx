@@ -128,7 +128,7 @@ export default async function MyCatalogPage({ searchParams }: MyCatalogPageProps
               My Items
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Manage your practice&apos;s product-first catalog — pick preferred suppliers per product and keep ordering fast.
+              Manage your practice&apos;s My Items list — pick preferred suppliers per product and keep ordering fast.
             </p>
           </div>
           <Link href="/supplier-catalog">

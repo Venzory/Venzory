@@ -197,7 +197,7 @@ upgrade-insecure-requests;
 ## Files Modified
 
 ### Security Implementation
-1. `middleware.ts` - Apply headers to all routes, remove x-nonce exposure
+1. `proxy.ts` - Apply headers to all routes, remove x-nonce exposure
 2. `lib/csp.ts` - Document unsafe-inline rationale
 
 ### Type Fixes

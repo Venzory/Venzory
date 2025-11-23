@@ -109,7 +109,7 @@ Test Files  2 passed (2)
 
 ### Files Modified/Created
 
-1. **middleware.ts** - Extended with security header application
+1. **proxy.ts** - Extended with security header application
    - Added `generateNonce()` function using Web Crypto API
    - Added `applySecurityHeaders()` function
    - Applied headers to all response types (normal, redirects)

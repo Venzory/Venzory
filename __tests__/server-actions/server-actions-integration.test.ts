@@ -534,7 +534,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
       const result = await addToCatalogAction({}, formData);
       
       expect(result).toHaveProperty('success');
-      expect(result.success).toBe('Product added to your catalog successfully');
+      expect(result.success).toBe('Product added to My Items successfully');
       expect(result).toHaveProperty('itemId');
     });
   });

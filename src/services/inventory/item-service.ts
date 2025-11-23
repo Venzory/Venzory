@@ -224,7 +224,7 @@ export class ItemService {
 
       if (existingItems.length > 0) {
         throw new BusinessRuleViolationError(
-          'An item for this product already exists in your catalog'
+          'An item for this product already exists in My Items'
         );
       }
 

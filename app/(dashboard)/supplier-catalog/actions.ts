@@ -59,7 +59,7 @@ export async function addToCatalogAction(
     revalidatePath('/inventory');
     
     return { 
-      success: 'Product added to your catalog successfully', 
+      success: 'Product added to My Items successfully', 
       itemId: item.id 
     };
   } catch (error) {

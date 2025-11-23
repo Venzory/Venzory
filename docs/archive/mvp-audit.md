@@ -118,7 +118,7 @@ export function generateCSP(config: CSPConfig): string {
 **Option 2**: Disable CSP entirely in development (less secure but unblocks testing):
 
 ```typescript
-// In middleware.ts, applySecurityHeaders function
+// In proxy.ts, applySecurityHeaders function
 if (isDevelopment) {
   // Skip CSP in development to allow React Refresh
   logger.warn('CSP disabled in development mode');

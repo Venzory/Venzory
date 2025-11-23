@@ -144,11 +144,11 @@ export function CatalogProductList({
         product.inCatalog ? (
           <div className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-medium">
             <CheckCircle2 className="h-3 w-3" />
-            In Catalog
+            In My Items
           </div>
         ) : (
           <span className="inline-flex px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full text-xs font-medium">
-            Available
+            Not in My Items
           </span>
         )
       )
@@ -169,7 +169,7 @@ export function CatalogProductList({
             <Link href={`/my-items?highlight=${product.itemId}`}>
               <Button variant="secondary" size="sm" className="text-xs">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
-                In Items
+                View in My Items
               </Button>
             </Link>
           ) : (
@@ -181,7 +181,7 @@ export function CatalogProductList({
                 trigger={
                   <Button variant="primary" size="sm" className="text-xs">
                     <ShoppingCart className="h-3 w-3 mr-1" />
-                    Add
+                    Add to My Items
                   </Button>
                 }
               />

@@ -8,7 +8,7 @@ This PR implements comprehensive security headers and a strict Content Security 
 
 ### 🔒 Security Implementation
 
-#### 1. Middleware Enhancement (`middleware.ts`)
+#### 1. Middleware Enhancement (`proxy.ts`)
 - Added `generateNonce()` function using Web Crypto API for cryptographically secure nonce generation (128 bits entropy)
 - Added `applySecurityHeaders()` function to apply all security headers to responses
 - Applied headers to all response types: normal responses, redirects, and access denied pages
@@ -127,7 +127,7 @@ Test Files  2 passed (2)
 
 ## Files Modified
 
-- 📝 `middleware.ts` - Added security headers
+- 📝 `proxy.ts` - Added security headers
 - 📝 `package.json` - Added test scripts
 - 📝 `README.md` - Added security documentation
 

@@ -426,7 +426,7 @@ describe('ItemService', () => {
           globalSupplierId: 'gs-123',
           name: 'Test Item',
         })
-      ).rejects.toThrow('An item for this product already exists in your catalog');
+      ).rejects.toThrow('An item for this product already exists in My Items');
     });
   });
 

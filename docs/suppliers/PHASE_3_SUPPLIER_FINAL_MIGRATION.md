@@ -23,13 +23,15 @@ Added `practiceSupplierId` columns to the remaining tables:
 
 Ran `scripts/backfill-practice-supplier-final.ts` to populate all `practiceSupplierId` fields:
 
-- **SupplierCatalog**: 53 entries updated
+- **SupplierItem** (formerly SupplierCatalog): 53 entries updated
 - **OrderTemplateItem**: 13 entries updated  
 - **GoodsReceipt**: 8 entries updated (1 skipped - no supplier)
 - **Item**: 0 entries (already migrated in Phase 2)
-- **SupplierItem**: 0 entries (already migrated in Phase 2)
+- **PracticeSupplierItem**: 0 entries (already migrated in Phase 2)
 
 All validation checks passed ✓
+
+**Note**: The legacy `SupplierCatalog` table was migrated to `SupplierItem` in the GS1 backbone migration and subsequently dropped in the cleanup migration.
 
 ### Phase 3.3: Code Migration (🚧 In Progress)
 
@@ -83,12 +85,12 @@ SELECT COUNT(*) FROM "Item"
 WHERE "defaultSupplierId" IS NOT NULL 
 AND "defaultPracticeSupplierId" IS NULL;
 
--- SupplierItems with no practiceSupplierId: 0
+-- SupplierItems (global catalog) - all should have globalSupplierId
 SELECT COUNT(*) FROM "SupplierItem" 
-WHERE "practiceSupplierId" IS NULL;
+WHERE "globalSupplierId" IS NULL;
 
--- SupplierCatalogs with no practiceSupplierId: 0
-SELECT COUNT(*) FROM "SupplierCatalog" 
+-- PracticeSupplierItems (practice-specific) - all should have practiceSupplierId
+SELECT COUNT(*) FROM "PracticeSupplierItem" 
 WHERE "practiceSupplierId" IS NULL;
 
 -- OrderTemplateItems with supplierId but no practiceSupplierId: 0
@@ -101,6 +103,8 @@ SELECT COUNT(*) FROM "GoodsReceipt"
 WHERE "supplierId" IS NOT NULL 
 AND "practiceSupplierId" IS NULL;
 ```
+
+**Note**: The legacy `SupplierCatalog` table no longer exists. It was replaced by `SupplierItem` (global catalog) and dropped in migration `20251123170800_cleanup_legacy_tables`.
 
 ---
 

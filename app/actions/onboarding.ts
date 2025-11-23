@@ -11,18 +11,12 @@ import { buildRequestContextFromSession } from '@/src/lib/context/context-builde
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import logger from '@/lib/logger';
 import { isDomainError } from '@/src/domain/errors';
+import {
+  practiceDetailsSchema,
+  type PracticeDetailsInput,
+} from '@/lib/onboarding-validation';
 
 // Schemas
-const updatePracticeSchema = z.object({
-  name: z.string().min(1, 'Practice name is required'),
-  street: z.string().optional(),
-  city: z.string().optional(),
-  postalCode: z.string().optional(),
-  country: z.string().optional(),
-  contactEmail: z.string().email().optional().or(z.literal('')),
-  contactPhone: z.string().optional(),
-});
-
 const createLocationSchema = z.object({
   name: z.string().min(1, 'Location name is required'),
   description: z.string().optional(),
@@ -49,18 +43,24 @@ async function getAuthenticatedContext() {
 /**
  * Update practice details
  */
-export async function updatePracticeDetails(data: z.infer<typeof updatePracticeSchema>) {
+export async function updatePracticeDetails(data: PracticeDetailsInput) {
   await verifyCsrfFromHeaders();
   
   try {
     const ctx = await getAuthenticatedContext();
-    const parsed = updatePracticeSchema.safeParse(data);
+    const parsed = practiceDetailsSchema.safeParse(data);
 
     if (!parsed.success) {
       return { success: false, error: 'Invalid data provided' };
     }
 
-    await getSettingsService().updatePracticeSettings(ctx, parsed.data);
+    const { houseNumber, street, ...rest } = parsed.data;
+    const combinedStreet = `${street} ${houseNumber}`.trim();
+
+    await getSettingsService().updatePracticeSettings(ctx, {
+      ...rest,
+      street: combinedStreet,
+    });
     
     return { success: true };
   } catch (error) {

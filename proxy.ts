@@ -162,7 +162,8 @@ export default auth(async (request) => {
   // If user is not authenticated and trying to access protected routes, redirect to login
   if (!request.auth && isProtected) {
     const signInUrl = new URL('/login', request.nextUrl.origin);
-    signInUrl.searchParams.set('callbackUrl', request.nextUrl.href);
+    const relativePath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+    signInUrl.searchParams.set('callbackUrl', relativePath);
     const response = NextResponse.redirect(signInUrl);
     return await applySecurityHeaders(response, nonce, request);
   }

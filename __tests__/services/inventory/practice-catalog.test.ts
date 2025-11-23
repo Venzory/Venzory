@@ -247,7 +247,7 @@ describe('Practice Catalog', () => {
 
       // Mock ItemService to throw the expected error
       itemService.addItemFromCatalog.mockRejectedValue(
-        new BusinessRuleViolationError('An item for this product already exists in your catalog')
+        new BusinessRuleViolationError('An item for this product already exists in My Items')
       );
 
       await expect(
@@ -264,7 +264,7 @@ describe('Practice Catalog', () => {
           practiceSupplierId,
           name: 'Test Item',
         })
-      ).rejects.toThrow('An item for this product already exists in your catalog');
+      ).rejects.toThrow('An item for this product already exists in My Items');
     });
 
     it('should require STAFF role', async () => {

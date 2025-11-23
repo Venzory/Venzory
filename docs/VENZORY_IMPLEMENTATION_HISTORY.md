@@ -88,7 +88,7 @@ Implemented production-grade security headers and Content Security Policy (CSP) 
 ### What Was Implemented
 
 #### 1. Middleware Enhancement
-**File:** `middleware.ts`
+**File:** `proxy.ts`
 
 - Added `generateNonce()` using Web Crypto API (128 bits entropy)
 - Added `applySecurityHeaders()` function

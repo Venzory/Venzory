@@ -94,7 +94,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
             {existingItem && (
               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-sm">
                 <Package className="h-4 w-4" />
-                In Your Catalog
+                In My Items
               </div>
             )}
           </div>
@@ -107,7 +107,7 @@ export default async function ProductDetailPage({ params, searchParams }: Produc
                 offers={offers as any}
                 trigger={
                   <Button variant="primary">
-                    Add to My Catalog
+                    Add to My Items
                   </Button>
                 }
               />

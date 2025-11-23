@@ -23,7 +23,7 @@ The project entered a broken state after multiple parallel translation/i18n expe
 - **`i18n.ts`** - i18n configuration file that referenced missing message files
 
 ### Modified Files
-- **`middleware.ts`** - Simplified to remove next-intl middleware integration
+- **`proxy.ts`** - Simplified to remove next-intl middleware integration
   - Removed locale detection and routing logic
   - Kept only authentication checks
   - Redirects now go to `/login` and `/dashboard` instead of `/nl/login` and `/nl/dashboard`
@@ -115,7 +115,7 @@ The application is now in a stable state. When ready to re-implement i18n:
 - `docs/i18n-reset-summary.md`
 
 **Modified:**
-- `middleware.ts` (simplified auth-only version)
+- `proxy.ts` (simplified auth-only version)
 - `app/(dashboard)/settings/page.tsx` (already existed, kept as-is)
 - `auth.ts` (added type casts)
 - `tsconfig.json` (updated target to ES2018)

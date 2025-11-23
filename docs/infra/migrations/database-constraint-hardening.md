@@ -199,8 +199,8 @@ ALTER TABLE "Order" DROP CONSTRAINT IF EXISTS "check_partially_received_has_rece
 ALTER TABLE "GoodsReceipt" DROP CONSTRAINT IF EXISTS "check_confirmed_has_receivedAt";
 ALTER TABLE "SupplierItem" DROP CONSTRAINT IF EXISTS "check_unitPrice_non_negative";
 ALTER TABLE "SupplierItem" DROP CONSTRAINT IF EXISTS "check_minOrderQty_positive";
-ALTER TABLE "SupplierCatalog" DROP CONSTRAINT IF EXISTS "check_unitPrice_non_negative";
-ALTER TABLE "SupplierCatalog" DROP CONSTRAINT IF EXISTS "check_minOrderQty_positive";
+ALTER TABLE "PracticeSupplierItem" DROP CONSTRAINT IF EXISTS "check_unitPrice_non_negative";
+ALTER TABLE "PracticeSupplierItem" DROP CONSTRAINT IF EXISTS "check_minOrderQty_positive";
 ```
 
 ### Rollback onDelete Policies

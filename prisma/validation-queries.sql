@@ -152,23 +152,23 @@ ORDER BY oi."unitPrice" ASC;
 SELECT 
     'SupplierItem Negative Price' as issue_type,
     si.id,
-    si."supplierId",
-    si."itemId",
+    si."globalSupplierId",
+    si."productId",
     si."unitPrice"
 FROM "SupplierItem" si
 WHERE si."unitPrice" IS NOT NULL AND si."unitPrice" < 0
 ORDER BY si."unitPrice" ASC;
 
--- Find SupplierCatalog with negative prices
+-- Find PracticeSupplierItems with negative prices
 SELECT 
-    'SupplierCatalog Negative Price' as issue_type,
-    sc.id,
-    sc."supplierId",
-    sc."productId",
-    sc."unitPrice"
-FROM "SupplierCatalog" sc
-WHERE sc."unitPrice" IS NOT NULL AND sc."unitPrice" < 0
-ORDER BY sc."unitPrice" ASC;
+    'PracticeSupplierItem Negative Price' as issue_type,
+    psi.id,
+    psi."practiceSupplierId",
+    psi."itemId",
+    psi."unitPrice"
+FROM "PracticeSupplierItem" psi
+WHERE psi."unitPrice" IS NOT NULL AND psi."unitPrice" < 0
+ORDER BY psi."unitPrice" ASC;
 
 -- =============================================================================
 -- P2: INVALID REORDER SETTINGS
@@ -210,23 +210,23 @@ ORDER BY li."reorderQuantity" ASC;
 SELECT 
     'SupplierItem Invalid MinOrderQty' as issue_type,
     si.id,
-    si."supplierId",
-    si."itemId",
+    si."globalSupplierId",
+    si."productId",
     si."minOrderQty"
 FROM "SupplierItem" si
 WHERE si."minOrderQty" IS NOT NULL AND si."minOrderQty" <= 0
 ORDER BY si."minOrderQty" ASC;
 
--- Find SupplierCatalog with invalid minOrderQty
+-- Find PracticeSupplierItems with invalid minOrderQty
 SELECT 
-    'SupplierCatalog Invalid MinOrderQty' as issue_type,
-    sc.id,
-    sc."supplierId",
-    sc."productId",
-    sc."minOrderQty"
-FROM "SupplierCatalog" sc
-WHERE sc."minOrderQty" IS NOT NULL AND sc."minOrderQty" <= 0
-ORDER BY sc."minOrderQty" ASC;
+    'PracticeSupplierItem Invalid MinOrderQty' as issue_type,
+    psi.id,
+    psi."practiceSupplierId",
+    psi."itemId",
+    psi."minOrderQty"
+FROM "PracticeSupplierItem" psi
+WHERE psi."minOrderQty" IS NOT NULL AND psi."minOrderQty" <= 0
+ORDER BY psi."minOrderQty" ASC;
 
 -- =============================================================================
 -- P2: ORPHANED REFERENCES (will be handled by onDelete policies)
@@ -414,7 +414,7 @@ SELECT
     'Negative Prices' as check_name,
     (SELECT COUNT(*) FROM "OrderItem" WHERE "unitPrice" < 0) +
     (SELECT COUNT(*) FROM "SupplierItem" WHERE "unitPrice" < 0) +
-    (SELECT COUNT(*) FROM "SupplierCatalog" WHERE "unitPrice" < 0) as violation_count
+    (SELECT COUNT(*) FROM "PracticeSupplierItem" WHERE "unitPrice" < 0) as violation_count
 
 ORDER BY violation_count DESC;
 

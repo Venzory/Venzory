@@ -78,7 +78,7 @@ export function AddToCatalogDialog({
         <div className="flex items-start justify-between p-6 border-b border-slate-200 dark:border-slate-700">
           <div>
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-              Add to My Catalog
+              Add to My Items
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
               {productName}
@@ -235,7 +235,7 @@ function SubmitButton() {
 
   return (
     <Button type="submit" variant="primary" disabled={pending}>
-      {pending ? 'Adding...' : 'Add to Catalog'}
+      {pending ? 'Adding...' : 'Add to My Items'}
     </Button>
   );
 }
