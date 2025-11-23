@@ -142,7 +142,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </p>
         </div>
 
-        {(product.supplierCatalogs?.length || 0) === 0 ? (
+        {(product.supplierItems?.length || 0) === 0 ? (
           <div className="p-8 text-center text-sm text-slate-600 dark:text-slate-400">
             <p className="font-medium text-slate-900 dark:text-slate-200">No supplier offers yet</p>
             <p className="mt-2">
@@ -179,7 +179,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {product.supplierCatalogs?.map((catalog: any) => {
+                {product.supplierItems?.map((catalog: any) => {
                   const unitPrice = decimalToNumber(catalog.unitPrice);
 
                   return (

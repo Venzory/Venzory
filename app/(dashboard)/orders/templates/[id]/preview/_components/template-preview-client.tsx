@@ -17,7 +17,7 @@ interface TemplateItem {
     sku: string | null;
     unit: string | null;
     defaultPracticeSupplierId: string | null;
-    supplierItems: { practiceSupplierId: string | null; unitPrice: any }[];
+    practiceSupplierItems: { practiceSupplierId: string | null; unitPrice: any }[];
   };
 }
 
@@ -39,7 +39,7 @@ interface Item {
   sku: string | null;
   unit: string | null;
   defaultPracticeSupplierId: string | null;
-  supplierItems: { practiceSupplierId: string | null; unitPrice: any }[];
+  practiceSupplierItems: { practiceSupplierId: string | null; unitPrice: any }[];
 }
 
 interface TemplatePreviewClientProps {
@@ -77,7 +77,7 @@ export function TemplatePreviewClient({
     }
 
     // Get unit price from supplier items
-    const supplierItem = templateItem.item.supplierItems.find(
+    const supplierItem = templateItem.item.practiceSupplierItems.find(
       (si) => si.practiceSupplierId === practiceSupplierId
     );
     const unitPrice = decimalToNumber(supplierItem?.unitPrice);
@@ -152,7 +152,7 @@ export function TemplatePreviewClient({
     }
 
     // Get unit price from supplier items
-    const supplierItem = item.supplierItems.find((si) => si.practiceSupplierId === practiceSupplierId);
+    const supplierItem = item.practiceSupplierItems.find((si) => si.practiceSupplierId === practiceSupplierId);
     const unitPrice = decimalToNumber(supplierItem?.unitPrice);
 
     setSupplierGroups((prev) => {
@@ -421,7 +421,7 @@ export function TemplatePreviewClient({
                         .filter(
                           (item) =>
                             // Match items by supplier items OR default supplier
-                            (item.supplierItems.some((si) => si.practiceSupplierId === practiceSupplierId) ||
+                            (item.practiceSupplierItems.some((si) => si.practiceSupplierId === practiceSupplierId) ||
                               item.defaultPracticeSupplierId === practiceSupplierId) &&
                             !items.some((oi) => oi.itemId === item.id)
                         )

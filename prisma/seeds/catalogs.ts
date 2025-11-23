@@ -121,11 +121,11 @@ export async function seedCatalogs(prisma: PrismaClient, practice: Practice) {
       .slice(0, numSuppliers);
 
     for (const ps of availableSuppliers) {
-      // Catalog Entry
-      await prisma.supplierCatalog.create({
+      // Catalog Entry (Global Supplier Item)
+      await prisma.supplierItem.create({
         data: {
           productId: product.id,
-          practiceSupplierId: ps.id,
+          globalSupplierId: ps.globalSupplierId,
           supplierSku: `SUP-${ps.id.slice(0, 4)}-${product.gtin?.slice(-6)}`,
           unitPrice: randomPrice(5, 150),
           currency: 'EUR',
@@ -134,8 +134,8 @@ export async function seedCatalogs(prisma: PrismaClient, practice: Practice) {
         },
       });
 
-      // Supplier Item (Practice Link)
-      const si = await prisma.supplierItem.create({
+      // Supplier Item (Practice Link - PracticeSupplierItem)
+      const si = await prisma.practiceSupplierItem.create({
         data: {
           itemId: item.id,
           practiceSupplierId: ps.id,

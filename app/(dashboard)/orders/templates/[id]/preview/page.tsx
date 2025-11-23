@@ -62,7 +62,7 @@ export default async function TemplatePreviewPage({ params }: TemplatePreviewPag
     sku: item.sku,
     unit: item.unit,
     defaultPracticeSupplierId: item.defaultPracticeSupplierId,
-    supplierItems: item.supplierItems?.map((si: any) => ({
+    practiceSupplierItems: item.practiceSupplierItems?.map((si: any) => ({
       practiceSupplierId: si.practiceSupplierId,
       unitPrice: si.unitPrice,
     })) || [],

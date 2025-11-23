@@ -73,8 +73,8 @@ beforeEach(() => {
     configurable: true,
     value: {
       assign: assignSpy,
-    },
-  } as Location);
+    } as unknown as Location,
+  });
 });
 
 afterEach(() => {

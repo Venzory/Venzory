@@ -308,7 +308,7 @@ export class ProductService {
       await this.productRepository.findProductById(input.productId, { tx });
 
       // Upsert catalog entry
-      const catalog = await this.productRepository.upsertSupplierCatalog(
+      const catalog = await this.productRepository.upsertSupplierItem(
         input,
         { tx }
       );

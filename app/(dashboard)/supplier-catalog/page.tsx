@@ -47,7 +47,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const productService = getProductService();
   const { products, totalCount } = await productService.findProductsForPractice(ctx, {
     search,
-    practiceSupplierId: supplier,
   }, {
     page: canSortServerSide ? currentPage : 1,
     limit: canSortServerSide ? itemsPerPage : 10000, // Fetch all if client-side sorting needed

@@ -60,14 +60,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const availableItems = allItems
     .filter((item) => {
       // Check if item is related to this supplier
-      const hasSupplierItem = item.supplierItems?.some((si: any) => si.practiceSupplierId === order.practiceSupplierId);
+      const hasSupplierItem = item.practiceSupplierItems?.some((si: any) => si.practiceSupplierId === order.practiceSupplierId);
       const hasDefaultSupplier = item.defaultPracticeSupplierId === order.practiceSupplierId;
       return hasSupplierItem || hasDefaultSupplier;
     })
     .filter((item) => !(order.items || []).some((oi: any) => oi.itemId === item.id))
     .map((item) => ({
       ...item,
-      supplierItems: (item.supplierItems || []).map((si: any) => ({
+      practiceSupplierItems: (item.practiceSupplierItems || []).map((si: any) => ({
         practiceSupplierId: si.practiceSupplierId,
         unitPrice: decimalToNumber(si.unitPrice),
       })),

@@ -344,9 +344,12 @@ describe('ItemService', () => {
       });
       mockInventoryRepo.upsertSupplierItem.mockResolvedValue({
         id: 'si-1',
-        supplierId,
         itemId: 'item-1',
         practiceSupplierId,
+        supplierSku: 'CAT-SKU',
+        unitPrice: 20.00,
+        currency: 'EUR',
+        minOrderQty: 5,
       });
       mockInventoryRepo.findItemById.mockResolvedValue({
         id: 'item-1',
@@ -354,30 +357,33 @@ describe('ItemService', () => {
         productId: product.id,
         name: 'Catalog Item',
         defaultPracticeSupplierId: practiceSupplierId,
-        supplierItems: [{
+        practiceSupplierItems: [{
           id: 'si-1',
+          itemId: 'item-1',
           practiceSupplierId,
+          supplierSku: null,
           unitPrice: 20.00,
+          currency: null,
+          minOrderQty: null,
         }],
       });
 
       const result = await itemService.addItemFromCatalog(ctx, {
         productId: product.id,
-        practiceSupplierId,
+        globalSupplierId: supplierId,
         name: 'Catalog Item',
       });
 
       expect(result.id).toBe('item-1');
       expect(result.defaultPracticeSupplierId).toBe(practiceSupplierId);
       expect(mockInventoryRepo.upsertSupplierItem).toHaveBeenCalledWith(
-        supplierId,
+        practiceSupplierId,
         'item-1',
         expect.objectContaining({
           supplierSku: 'CAT-SKU',
           unitPrice: 20.00,
           currency: 'EUR',
           minOrderQty: 5,
-          practiceSupplierId,
         }),
         expect.any(Object)
       );
@@ -394,7 +400,7 @@ describe('ItemService', () => {
       await expect(
         itemService.addItemFromCatalog(ctx, {
           productId: product.id,
-          practiceSupplierId,
+          globalSupplierId: 'gs-123',
           name: 'Test Item',
         })
       ).rejects.toThrow('This product is not available from the selected supplier');
@@ -417,7 +423,7 @@ describe('ItemService', () => {
       await expect(
         itemService.addItemFromCatalog(ctx, {
           productId: product.id,
-          practiceSupplierId: 'ps-123',
+          globalSupplierId: 'gs-123',
           name: 'Test Item',
         })
       ).rejects.toThrow('An item for this product already exists in your catalog');

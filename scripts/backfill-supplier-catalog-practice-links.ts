@@ -1,4 +1,4 @@
-// Script to ensure SupplierCatalog entries are linked correctly via PracticeSupplier
+// Script to ensure SupplierItem entries are linked correctly via GlobalSupplier
 // Run with: npx tsx scripts/backfill-supplier-catalog-practice-links.ts
 
 import { PrismaClient } from '@prisma/client';
@@ -6,28 +6,28 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🚀 Starting SupplierCatalog backfill...');
+  console.log('🚀 Starting SupplierItem backfill...');
 
   try {
-    // In the new schema, SupplierCatalog links to PracticeSupplier
+    // In the new schema, SupplierItem links to GlobalSupplier
     // We can verify integrity
     
-    const catalogEntries = await prisma.supplierCatalog.findMany({
+    const catalogEntries = await prisma.supplierItem.findMany({
       include: {
-        practiceSupplier: true,
+        globalSupplier: true,
         product: true,
       },
     });
 
-    console.log(`ℹ️ Found ${catalogEntries.length} catalog entries.`);
+    console.log(`ℹ️ Found ${catalogEntries.length} supplier items.`);
     
     // Check for any orphans (should be enforced by FKs but good to verify)
-    const orphans = catalogEntries.filter(entry => !entry.practiceSupplier);
+    const orphans = catalogEntries.filter(entry => !entry.globalSupplier);
     
     if (orphans.length > 0) {
-        console.warn(`⚠️ Found ${orphans.length} orphaned catalog entries.`);
+        console.warn(`⚠️ Found ${orphans.length} orphaned supplier items.`);
     } else {
-        console.log('✅ All catalog entries are correctly linked.');
+        console.log('✅ All supplier items are correctly linked.');
     }
 
   } catch (error) {

@@ -93,8 +93,8 @@ describe('Order Templates - Supplier Integration Tests', () => {
     });
     testItemId = item.id;
 
-    // Create SupplierItem pricing
-    await prisma.supplierItem.create({
+    // Create PracticeSupplierItem pricing
+    await prisma.practiceSupplierItem.create({
       data: {
         practiceSupplierId: testPracticeSupplierId,
         itemId: testItemId,
@@ -125,7 +125,7 @@ describe('Order Templates - Supplier Integration Tests', () => {
     // Cleanup
     await prisma.orderTemplate.deleteMany({ where: { practiceId: testPracticeId } });
     await prisma.order.deleteMany({ where: { practiceId: testPracticeId } });
-    await prisma.supplierItem.deleteMany({ where: { itemId: testItemId } });
+    await prisma.practiceSupplierItem.deleteMany({ where: { itemId: testItemId } });
     await prisma.item.deleteMany({ where: { practiceId: testPracticeId } });
     await prisma.product.deleteMany({ where: { id: testProductId } });
     await prisma.practiceSupplier.deleteMany({ where: { practiceId: testPracticeId } });

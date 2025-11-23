@@ -91,6 +91,18 @@ describe('Auth Flows - Integration Tests', () => {
       return token?.token; // Pass token to next test if needed, but state is better
     });
 
+    it('should return same response for unknown email without creating token', async () => {
+      const email = 'non-existent-user@example.com';
+
+      const result = await authService.requestPasswordReset(email);
+      expect(result.message).toBeDefined();
+
+      const tokens = await prisma.passwordResetToken.findMany({
+        where: { user: { email } },
+      });
+      expect(tokens.length).toBe(0);
+    });
+
     it('should reset password with valid token', async () => {
       const email = 'auth-test-admin@example.com';
       const tokenRecord = await prisma.passwordResetToken.findFirst({

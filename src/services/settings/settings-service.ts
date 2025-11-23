@@ -4,11 +4,11 @@
  */
 
 import { UserRepository } from '@/src/repositories/users';
-import { PracticeSupplierRepository } from '@/src/repositories/suppliers';
+import { PracticeSupplierRepository, getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { InventoryRepository } from '@/src/repositories/inventory';
 import { OrderRepository } from '@/src/repositories/orders';
 import { LocationRepository } from '@/src/repositories/locations';
-import { AuditService } from '../audit/audit-service';
+import { AuditService, getAuditService } from '../audit/audit-service';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import { requireRole } from '@/src/lib/context/context-builder';
 import { withTransaction } from '@/src/repositories/base';
@@ -21,6 +21,7 @@ import { validateStringLength } from '@/src/domain/validators';
 import { getAuthService } from '../auth';
 import type { PracticeRole, UserInvite } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export interface UpdatePracticeSettingsInput {
   name: string;
@@ -364,6 +365,16 @@ export class SettingsService {
         { onboardingStatus: status },
         tx
       );
+
+      logger.info(
+        {
+          action: 'onboarding-status',
+          status,
+          practiceId: ctx.practiceId,
+          userId: ctx.userId,
+        },
+        'Practice onboarding status changed',
+      );
     });
   }
 
@@ -420,8 +431,6 @@ let settingsServiceInstance: SettingsService | null = null;
 
 export function getSettingsService(): SettingsService {
   if (!settingsServiceInstance) {
-    const { getAuditService } = require('../audit/audit-service');
-    const { getPracticeSupplierRepository } = require('@/src/repositories/suppliers');
     settingsServiceInstance = new SettingsService(
       new UserRepository(),
       getPracticeSupplierRepository(),

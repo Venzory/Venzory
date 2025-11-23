@@ -10,7 +10,7 @@ import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 
 const addToCatalogSchema = z.object({
   productId: z.string().min(1),
-  practiceSupplierId: z.string().min(1),
+  globalSupplierId: z.string().min(1),
   name: z.string().min(1).max(255),
   sku: z.string().max(64).optional().nullable(),
   unit: z.string().max(32).optional().nullable(),
@@ -31,7 +31,7 @@ export async function addToCatalogAction(
 
     const parsed = addToCatalogSchema.safeParse({
       productId: formData.get('productId'),
-      practiceSupplierId: formData.get('practiceSupplierId'),
+      globalSupplierId: formData.get('globalSupplierId'),
       name: formData.get('name'),
       sku: formData.get('sku') || null,
       unit: formData.get('unit') || null,
@@ -42,12 +42,12 @@ export async function addToCatalogAction(
       return { error: 'Invalid input fields' };
     }
 
-    const { productId, practiceSupplierId, name, sku, unit, description } = parsed.data;
+    const { productId, globalSupplierId, name, sku, unit, description } = parsed.data;
 
     // Create item from catalog
     const item = await getItemService().addItemFromCatalog(ctx, {
       productId,
-      practiceSupplierId,
+      globalSupplierId,
       name,
       sku,
       unit,

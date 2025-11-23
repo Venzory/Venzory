@@ -73,7 +73,7 @@ export default async function InventoryPage({ searchParams }: InventoryPageProps
   // Transform items to convert Prisma Decimal to number for client component serialization
   const transformedItems = items.map(item => ({
     ...item,
-    supplierItems: item.supplierItems?.map(si => ({
+    practiceSupplierItems: item.practiceSupplierItems?.map(si => ({
       ...si,
       unitPrice: si.unitPrice ? Number(si.unitPrice) : null,
     })) || [],

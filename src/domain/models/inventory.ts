@@ -13,6 +13,7 @@ import type { PracticeSupplier, PracticeSupplierWithRelations } from './supplier
 export interface Item extends BaseEntity {
   practiceId: string;
   productId: string;
+  supplierItemId?: string | null; // Link to Global Supplier Item
   defaultPracticeSupplierId: string | null;
   name: string;
   sku: string | null;
@@ -27,7 +28,7 @@ export interface ItemWithRelations extends Item {
   product?: Product;
   defaultPracticeSupplier?: PracticeSupplierWithRelations | null;
   inventory?: LocationInventory[];
-  supplierItems?: SupplierItem[];
+  practiceSupplierItems?: PracticeSupplierItem[];
 }
 
 /**
@@ -79,9 +80,9 @@ export interface InventoryTransfer extends BaseEntity {
 }
 
 /**
- * Supplier item pricing and details
+ * Practice Supplier item pricing and details (formerly SupplierItem)
  */
-export interface SupplierItem extends BaseEntity {
+export interface PracticeSupplierItem extends BaseEntity {
   practiceSupplierId: string;
   itemId: string;
   supplierSku: string | null;
@@ -90,7 +91,7 @@ export interface SupplierItem extends BaseEntity {
   minOrderQty: number | null;
 }
 
-export interface UpsertSupplierItemInput {
+export interface UpsertPracticeSupplierItemInput {
   supplierSku?: string | null;
   unitPrice?: number | null;
   currency?: string | null;
@@ -109,6 +110,7 @@ export interface CreateItemInput {
   description?: string | null;
   unit?: string | null;
   defaultPracticeSupplierId?: string | null;
+  supplierItemId?: string | null;
 }
 
 /**

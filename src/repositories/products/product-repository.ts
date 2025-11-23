@@ -377,7 +377,7 @@ export class ProductRepository extends BaseRepository {
   /**
    * Upsert supplier catalog entry (SupplierItem)
    */
-  async upsertSupplierCatalog(
+  async upsertSupplierItem(
     input: UpsertSupplierItemInput,
     options?: RepositoryOptions
   ): Promise<SupplierItem> {
@@ -432,7 +432,7 @@ export class ProductRepository extends BaseRepository {
     const product = await this.findOrCreateProduct(productData, { tx: options?.tx });
 
     // Upsert catalog entry
-    const catalog = await this.upsertSupplierCatalog(
+    const catalog = await this.upsertSupplierItem(
       {
         globalSupplierId,
         productId: product.id,

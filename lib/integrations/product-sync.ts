@@ -25,7 +25,7 @@ import { ProductRepository } from '@/src/repositories/products';
 import { ProductData, CatalogEntry, SupplierDataFeed, ImportResult } from './types';
 import { lookupGtin, isValidGtin, enrichProductWithGs1Data } from './gs1-lookup';
 import logger from '@/lib/logger';
-import type { CreateProductInput, UpsertSupplierCatalogInput } from '@/src/domain/models';
+import type { CreateProductInput, UpsertSupplierItemInput } from '@/src/domain/models';
 
 // Initialize repository instance
 const productRepository = new ProductRepository();
@@ -108,12 +108,12 @@ export async function findOrCreateProduct(productData: ProductData): Promise<str
  * @returns SupplierCatalog ID
  */
 export async function syncSupplierCatalog(
-  practiceSupplierId: string,
+  globalSupplierId: string,
   productId: string,
   catalogData: CatalogEntry
 ): Promise<string> {
-  const upsertInput: UpsertSupplierCatalogInput = {
-    practiceSupplierId,
+  const upsertInput: UpsertSupplierItemInput = {
+    globalSupplierId,
     productId,
     supplierSku: catalogData.supplierSku,
     unitPrice: catalogData.unitPrice,
@@ -124,7 +124,7 @@ export async function syncSupplierCatalog(
     isActive: catalogData.isActive ?? true,
   };
   
-  const catalog = await productRepository.upsertSupplierCatalog(upsertInput);
+  const catalog = await productRepository.upsertSupplierItem(upsertInput);
   
   return catalog.id;
 }

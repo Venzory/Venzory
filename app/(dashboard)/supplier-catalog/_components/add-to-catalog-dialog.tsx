@@ -11,17 +11,14 @@ import { formatCurrency } from '@/lib/utils';
 
 interface SupplierOffer {
   id: string;
-  practiceSupplierId: string;
+  globalSupplierId: string;
   supplierSku: string | null;
   unitPrice: number | null;
   currency: string | null;
   minOrderQty: number | null;
-  practiceSupplier: {
+  globalSupplier: {
     id: string;
-    customLabel: string | null;
-    globalSupplier: {
-      name: string;
-    };
+    name: string;
   };
 }
 
@@ -42,7 +39,7 @@ export function AddToCatalogDialog({
 }: AddToCatalogDialogProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const [selectedSupplier, setSelectedSupplier] = useState(offers[0]?.practiceSupplierId || '');
+  const [selectedSupplier, setSelectedSupplier] = useState(offers[0]?.globalSupplierId || '');
   const [state, formAction] = useFormState(addToCatalogAction, null);
 
   // Close dialog on success
@@ -66,7 +63,7 @@ export function AddToCatalogDialog({
     return null;
   }
 
-  const selectedOffer = offers.find(o => o.practiceSupplierId === selectedSupplier);
+  const selectedOffer = offers.find(o => o.globalSupplierId === selectedSupplier);
 
   return (
     <div 
@@ -98,7 +95,7 @@ export function AddToCatalogDialog({
         {/* Form */}
         <form action={formAction} className="p-6 space-y-5">
           <input type="hidden" name="productId" value={productId} />
-          <input type="hidden" name="practiceSupplierId" value={selectedSupplier} />
+          <input type="hidden" name="globalSupplierId" value={selectedSupplier} />
 
           {/* Error Message */}
           {state?.error && (
@@ -118,7 +115,7 @@ export function AddToCatalogDialog({
                 <label
                   key={offer.id}
                   className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition ${
-                    selectedSupplier === offer.practiceSupplierId
+                    selectedSupplier === offer.globalSupplierId
                       ? 'border-brand bg-brand/5'
                       : 'border-slate-300 dark:border-slate-600 hover:border-slate-400'
                   }`}
@@ -126,14 +123,14 @@ export function AddToCatalogDialog({
                   <input
                     type="radio"
                     name="supplier"
-                    value={offer.practiceSupplierId}
-                    checked={selectedSupplier === offer.practiceSupplierId}
-                    onChange={() => setSelectedSupplier(offer.practiceSupplierId)}
+                    value={offer.globalSupplierId}
+                    checked={selectedSupplier === offer.globalSupplierId}
+                    onChange={() => setSelectedSupplier(offer.globalSupplierId)}
                     className="h-4 w-4 text-brand focus:ring-brand"
                   />
                   <div className="flex-1">
                     <div className="font-medium text-slate-900 dark:text-white">
-                      {offer.practiceSupplier.customLabel || offer.practiceSupplier.globalSupplier.name}
+                      {offer.globalSupplier.name}
                     </div>
                     <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
                       {offer.unitPrice !== null && (

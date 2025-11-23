@@ -51,7 +51,7 @@ export default async function NewOrderPage({ searchParams }: NewOrderPageProps) 
     sku: item.sku,
     unit: item.unit,
     defaultPracticeSupplierId: item.defaultPracticeSupplierId,
-    supplierItems: item.supplierItems?.map((si: any) => ({
+    practiceSupplierItems: item.practiceSupplierItems?.map((si: any) => ({
       practiceSupplierId: si.practiceSupplierId,
       unitPrice: decimalToNumber(si.unitPrice),
     })) || [],

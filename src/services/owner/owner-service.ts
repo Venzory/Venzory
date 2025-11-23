@@ -63,7 +63,7 @@ export class OwnerService {
     ] = await Promise.all([
       prisma.product.count(),
       prisma.globalSupplier.count(),
-      prisma.supplierCatalog.count(),
+      prisma.supplierItem.count(),
       prisma.item.count(),
       prisma.practice.findMany({
         select: {

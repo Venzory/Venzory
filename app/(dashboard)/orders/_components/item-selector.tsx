@@ -10,7 +10,7 @@ export interface ItemForSelection {
   sku: string | null;
   unit: string | null;
   defaultPracticeSupplierId?: string | null;
-  supplierItems: Array<{
+  practiceSupplierItems: Array<{
     practiceSupplierId?: string | null;
     unitPrice: any;
   }>;
@@ -45,7 +45,7 @@ export function ItemSelector({
     .filter((item) => {
       // Filter by supplier if one is specified
       const matchesSupplier = !practiceSupplierId ||
-        item.supplierItems.some((si) => si.practiceSupplierId === practiceSupplierId) ||
+        item.practiceSupplierItems.some((si) => si.practiceSupplierId === practiceSupplierId) ||
         item.defaultPracticeSupplierId === practiceSupplierId;
       
       // Filter out already selected items
@@ -63,7 +63,7 @@ export function ItemSelector({
 
   // Get unit price for an item from supplier
   const getUnitPrice = (item: ItemForSelection): number => {
-    const supplierItem = item.supplierItems.find((si) => si.practiceSupplierId === practiceSupplierId);
+    const supplierItem = item.practiceSupplierItems.find((si) => si.practiceSupplierId === practiceSupplierId);
     if (supplierItem?.unitPrice) {
       return decimalToNumber(supplierItem.unitPrice) || 0;
     }

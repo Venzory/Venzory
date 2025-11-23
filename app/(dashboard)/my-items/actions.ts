@@ -7,7 +7,7 @@ import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import { isDomainError } from '@/src/domain/errors';
 import logger from '@/lib/logger';
-import { getInventoryService } from '@/src/services';
+import { getInventoryService, getItemService } from '@/src/services';
 
 /**
  * Create orders from catalog items (selected items)
@@ -64,8 +64,8 @@ export async function setDefaultSupplierAction(
       return { error: 'Invalid supplier selection.' };
     }
 
-    const inventoryService = getInventoryService();
-    await inventoryService.updateItem(ctx, parsed.data.itemId, {
+    const itemService = getItemService();
+    await itemService.updateItem(ctx, parsed.data.itemId, {
       defaultPracticeSupplierId: parsed.data.practiceSupplierId,
     });
 

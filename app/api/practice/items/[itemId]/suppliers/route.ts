@@ -6,9 +6,9 @@ import { getProductService } from '@/src/services';
 import { isDomainError } from '@/src/domain/errors';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     itemId: string;
-  };
+  }>;
 }
 
 export async function GET(_request: Request, { params }: RouteParams) {
@@ -16,11 +16,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const { session } = await requireActivePractice();
     const ctx = buildRequestContextFromSession(session);
 
-    if (!params.itemId) {
+    const { itemId } = await params;
+    if (!itemId) {
       return NextResponse.json({ error: 'Item ID is required' }, { status: 400 });
     }
 
-    const data = await getProductService().getSupplierOptionsForItem(ctx, params.itemId);
+    const data = await getProductService().getSupplierOptionsForItem(ctx, itemId);
     return NextResponse.json(data);
   } catch (error) {
     if (isDomainError(error)) {

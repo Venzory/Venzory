@@ -15,8 +15,8 @@ export async function cleanDatabase(prisma: PrismaClient) {
   await prisma.orderTemplate.deleteMany();
   await prisma.stockAdjustment.deleteMany();
   await prisma.locationInventory.deleteMany();
+  await prisma.practiceSupplierItem.deleteMany();
   await prisma.supplierItem.deleteMany();
-  await prisma.supplierCatalog.deleteMany();
   await prisma.item.deleteMany();
   await prisma.location.deleteMany();
   await prisma.practiceSupplier.deleteMany();

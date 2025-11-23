@@ -747,7 +747,7 @@ export class OrderService {
                     globalSupplier: true,
                   },
                 },
-                supplierItems: {
+                practiceSupplierItems: {
                   select: {
                     practiceSupplierId: true,
                     unitPrice: true,

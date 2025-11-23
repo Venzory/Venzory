@@ -154,13 +154,13 @@ export class ItemService {
 
   /**
    * Add item from catalog (Phase 2: Catalog management)
-   * Creates an Item from a Product that exists in the practice's SupplierCatalog
+   * Creates an Item from a Product that exists in the global SupplierItem
    */
   async addItemFromCatalog(
     ctx: RequestContext,
     input: {
       productId: string;
-      practiceSupplierId: string;
+      globalSupplierId: string;
       name: string;
       sku?: string | null;
       unit?: string | null;
@@ -180,9 +180,9 @@ export class ItemService {
       // Verify product exists
       await this.productRepository.findProductById(input.productId, { tx });
 
-      // Verify the product is available from this practice supplier
-      const catalogEntry = await this.productRepository.findCatalogByPracticeSupplierProduct(
-        input.practiceSupplierId,
+      // Verify the product is available from this global supplier
+      const catalogEntry = await this.productRepository.findSupplierCatalog(
+        input.globalSupplierId,
         input.productId,
         { tx }
       );
@@ -191,6 +191,28 @@ export class ItemService {
         throw new BusinessRuleViolationError(
           'This product is not available from the selected supplier'
         );
+      }
+
+      // Find if we have a practice supplier linked to this global supplier
+      const practiceSupplier = await tx.practiceSupplier.findUnique({
+        where: {
+          practiceId_globalSupplierId: {
+            practiceId: ctx.practiceId,
+            globalSupplierId: input.globalSupplierId
+          }
+        }
+      });
+
+      if (!practiceSupplier) {
+         throw new BusinessRuleViolationError(
+           'You are not linked to this supplier'
+         );
+      }
+
+      if (practiceSupplier.isBlocked) {
+         throw new BusinessRuleViolationError(
+           'Cannot add items from a blocked supplier'
+         );
       }
 
       // Check if item already exists for this product in the practice
@@ -206,13 +228,6 @@ export class ItemService {
         );
       }
 
-      // Get PracticeSupplier to resolve legacy supplierId
-      const practiceSupplier = await this.practiceSupplierRepository.findPracticeSupplierById(
-        input.practiceSupplierId,
-        ctx.practiceId,
-        { tx }
-      );
-
       // Create item
       const item = await this.inventoryRepository.createItem(
         {
@@ -222,14 +237,15 @@ export class ItemService {
           sku: input.sku ?? null,
           unit: input.unit ?? null,
           description: input.description ?? null,
-          defaultPracticeSupplierId: input.practiceSupplierId,
+          defaultPracticeSupplierId: practiceSupplier.id,
+          supplierItemId: catalogEntry.id // Link to global supplier item
         },
         { tx }
       );
 
-      // Create SupplierItem with pricing from catalog
+      // Create PracticeSupplierItem with pricing from catalog (snapshot)
       await this.inventoryRepository.upsertSupplierItem(
-        input.practiceSupplierId,
+        practiceSupplier.id,
         item.id,
         {
           supplierSku: catalogEntry.supplierSku ?? null,
@@ -422,8 +438,8 @@ export class ItemService {
         { tx }
       );
 
-      // Find and delete the SupplierItem
-      const supplierItem = await tx.supplierItem.findUnique({
+      // Find and delete the PracticeSupplierItem
+      const supplierItem = await tx.practiceSupplierItem.findUnique({
         where: {
           practiceSupplierId_itemId: {
             practiceSupplierId,
@@ -433,7 +449,7 @@ export class ItemService {
       });
 
       if (supplierItem) {
-        await tx.supplierItem.delete({
+        await tx.practiceSupplierItem.delete({
           where: {
             practiceSupplierId_itemId: {
               practiceSupplierId,

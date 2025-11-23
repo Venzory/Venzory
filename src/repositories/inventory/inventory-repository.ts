@@ -12,7 +12,7 @@ import {
   LocationInventory,
   StockAdjustment,
   InventoryTransfer,
-  SupplierItem,
+  PracticeSupplierItem,
   CreateItemInput,
   UpdateItemInput,
   StockAdjustmentInput,
@@ -76,7 +76,7 @@ export class InventoryRepository extends BaseRepository {
             globalSupplier: true,
           },
         },
-        supplierItems: {
+        practiceSupplierItems: {
           select: {
             id: true,
             practiceSupplierId: true,
@@ -162,7 +162,7 @@ export class InventoryRepository extends BaseRepository {
             globalSupplier: true,
           },
         },
-        supplierItems: {
+        practiceSupplierItems: {
           select: {
             id: true,
             practiceSupplierId: true,
@@ -229,6 +229,7 @@ export class InventoryRepository extends BaseRepository {
         description: input.description ?? null,
         unit: input.unit ?? null,
         defaultPracticeSupplierId: input.defaultPracticeSupplierId ?? null,
+        supplierItemId: input.supplierItemId ?? null,
       },
     });
 
@@ -662,7 +663,7 @@ export class InventoryRepository extends BaseRepository {
   }
 
   /**
-   * Get or create supplier item pricing
+   * Get or create practice supplier item pricing
    */
   async upsertSupplierItem(
     practiceSupplierId: string,
@@ -674,10 +675,10 @@ export class InventoryRepository extends BaseRepository {
       minOrderQty?: number | null;
     },
     options?: RepositoryOptions
-  ): Promise<SupplierItem> {
+  ): Promise<PracticeSupplierItem> {
     const client = this.getClient(options?.tx);
 
-    const supplierItem = await client.supplierItem.upsert({
+    const supplierItem = await client.practiceSupplierItem.upsert({
       where: {
         practiceSupplierId_itemId: { practiceSupplierId, itemId },
       },
@@ -697,7 +698,7 @@ export class InventoryRepository extends BaseRepository {
       },
     });
 
-    return supplierItem as SupplierItem;
+    return supplierItem as PracticeSupplierItem;
   }
 
   /**
@@ -707,10 +708,10 @@ export class InventoryRepository extends BaseRepository {
     itemId: string,
     practiceSupplierId: string,
     options?: FindOptions
-  ): Promise<SupplierItem | null> {
+  ): Promise<PracticeSupplierItem | null> {
     const client = this.getClient(options?.tx);
 
-    const supplierItem = await client.supplierItem.findFirst({
+    const supplierItem = await client.practiceSupplierItem.findFirst({
       where: {
         itemId,
         practiceSupplierId,
@@ -718,7 +719,7 @@ export class InventoryRepository extends BaseRepository {
       include: options?.include ?? undefined,
     });
 
-    return supplierItem as SupplierItem | null;
+    return supplierItem as PracticeSupplierItem | null;
   }
 
   /**
@@ -730,7 +731,7 @@ export class InventoryRepository extends BaseRepository {
   ): Promise<void> {
     const client = this.getClient(options?.tx);
 
-    await client.supplierItem.delete({
+    await client.practiceSupplierItem.delete({
       where: { id: supplierItemId },
     });
   }
@@ -744,7 +745,7 @@ export class InventoryRepository extends BaseRepository {
   ): Promise<void> {
     const client = this.getClient(options?.tx);
 
-    await client.supplierItem.deleteMany({
+    await client.practiceSupplierItem.deleteMany({
       where: { itemId },
     });
   }
@@ -755,15 +756,15 @@ export class InventoryRepository extends BaseRepository {
   async findSupplierItems(
     practiceSupplierId: string,
     options?: FindOptions
-  ): Promise<SupplierItem[]> {
+  ): Promise<PracticeSupplierItem[]> {
     const client = this.getClient(options?.tx);
 
-    const supplierItems = await client.supplierItem.findMany({
+    const supplierItems = await client.practiceSupplierItem.findMany({
       where: { practiceSupplierId },
       include: options?.include ?? undefined,
     });
 
-    return supplierItems as SupplierItem[];
+    return supplierItems as PracticeSupplierItem[];
   }
 
   /**
@@ -805,7 +806,7 @@ export class InventoryRepository extends BaseRepository {
             globalSupplier: true,
           },
         },
-        supplierItems: {
+        practiceSupplierItems: {
           select: {
             id: true,
             practiceSupplierId: true,

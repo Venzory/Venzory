@@ -1,4 +1,4 @@
-import { PrismaClient, Practice, User, Item, PracticeSupplier, SupplierItem, Location, OrderStatus, GoodsReceiptStatus } from '@prisma/client';
+import { PrismaClient, Practice, User, Item, PracticeSupplier, PracticeSupplierItem, Location, OrderStatus, GoodsReceiptStatus } from '@prisma/client';
 import { randomInt, randomPrice, daysAgo } from './utils';
 
 export async function seedOrders(
@@ -7,7 +7,7 @@ export async function seedOrders(
   users: { admin: User; staff: User },
   items: Item[],
   practiceSuppliers: PracticeSupplier[],
-  supplierItems: SupplierItem[],
+  supplierItems: PracticeSupplierItem[],
   locations: Location[]
 ) {
   console.log('📦 Creating orders and receipts...');
