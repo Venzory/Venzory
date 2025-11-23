@@ -1,15 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 
 import { StepPracticeDetails } from './step-practice-details';
 import { StepFirstLocation } from './step-first-location';
 import { StepInviteTeam } from './step-invite-team';
 import { OnboardingProgress } from './onboarding-progress';
-import { completeOnboarding, skipOnboarding } from '@/app/actions/onboarding';
-import { useToast } from '@/hooks/use-toast';
+import { useOnboardingCompletion } from '@/hooks/use-onboarding-completion';
 
 type Step = 'details' | 'location' | 'team';
 
@@ -21,12 +19,8 @@ interface OnboardingWizardProps {
 }
 
 export function OnboardingWizard({ initialPracticeName = '', initialEmail = '' }: OnboardingWizardProps) {
-  const router = useRouter();
-  const { toast } = useToast();
-  const { update: updateSession } = useSession();
-  
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [isCompleting, setIsCompleting] = useState(false);
+  const { handleComplete, handleSkip, isCompleting } = useOnboardingCompletion();
 
   const currentStep = STEPS[currentStepIndex];
 
@@ -41,60 +35,6 @@ export function OnboardingWizard({ initialPracticeName = '', initialEmail = '' }
   const prevStep = () => {
     if (currentStepIndex > 0) {
       setCurrentStepIndex((prev) => prev - 1);
-    }
-  };
-
-  const handleComplete = async () => {
-    setIsCompleting(true);
-    try {
-      const result = await completeOnboarding();
-      if (result.success) {
-        // Clear local onboarding state to prevent conflicts with dashboard tour
-        localStorage.removeItem('venzory-onboarding-state');
-        
-        toast({
-          title: "You're all set!",
-          description: "Welcome to your dashboard.",
-        });
-        await updateSession(); // Refresh session to reflect onboarding status
-        router.push('/dashboard');
-      } else {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to complete onboarding',
-          variant: 'destructive',
-        });
-        setIsCompleting(false);
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Something went wrong',
-        variant: 'destructive',
-      });
-      setIsCompleting(false);
-    }
-  };
-
-  const handleSkip = async () => {
-    setIsCompleting(true);
-    try {
-      const result = await skipOnboarding();
-      if (result.success) {
-        // Clear local onboarding state to prevent conflicts with dashboard tour
-        localStorage.removeItem('venzory-onboarding-state');
-
-        toast({
-            title: "Setup skipped",
-            description: "You can finish setting up later.",
-        });
-        await updateSession();
-        router.push('/dashboard');
-      } else {
-        setIsCompleting(false);
-      }
-    } catch (error) {
-      setIsCompleting(false);
     }
   };
 

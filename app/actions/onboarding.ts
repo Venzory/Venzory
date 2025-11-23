@@ -159,7 +159,16 @@ export async function completeOnboarding() {
     await getSettingsService().updateOnboardingStatus(ctx, 'complete');
     
     // Revalidate everything to ensure middleware and UI update
-    revalidatePath('/', 'layout'); 
+    revalidatePath('/', 'layout');
+    revalidatePath('/dashboard');
+    logger.info(
+      {
+        userId: ctx.userId,
+        practiceId: ctx.practiceId,
+        action: 'complete',
+      },
+      'Onboarding status updated',
+    );
     
     return { success: true };
   } catch (error) {
@@ -181,6 +190,14 @@ export async function skipOnboarding() {
     // Must revalidate paths that use this status
     revalidatePath('/', 'layout');
     revalidatePath('/dashboard');
+    logger.info(
+      {
+        userId: ctx.userId,
+        practiceId: ctx.practiceId,
+        action: 'skip',
+      },
+      'Onboarding status updated',
+    );
     
     return { success: true };
   } catch (error) {

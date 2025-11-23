@@ -8,6 +8,7 @@ import { generateCSP } from '@/lib/csp';
 import { createSignedCsrfToken, getCsrfTokenFromCookie, parseAndVerifySignedToken } from '@/lib/csrf';
 import { env } from '@/lib/env';
 import logger from '@/lib/logger';
+import { isPracticeOnboardingComplete } from '@/lib/onboarding-status';
 
 const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog', '/onboarding', '/owner'];
 const authRoutes = ['/login', '/register'];
@@ -184,21 +185,40 @@ export default auth(async (request) => {
     // Onboarding Enforcement
     const { activePracticeId, memberships } = request.auth.user;
     const activeMembership = memberships.find((m) => m.practiceId === activePracticeId);
+    const practiceIdForLog = activePracticeId ?? activeMembership?.practiceId ?? null;
     const practice = activeMembership?.practice;
     const isOnboardingPage = pathname.startsWith('/onboarding');
 
     if (practice) {
-      const isOnboardingComplete = !!practice.onboardingCompletedAt || !!practice.onboardingSkippedAt;
+      const onboardingComplete = isPracticeOnboardingComplete(practice);
 
       // Redirect to onboarding if not complete and trying to access other protected routes
-      if (!isOnboardingComplete && !isOnboardingPage) {
+      if (!onboardingComplete && !isOnboardingPage) {
+        logger.debug(
+          {
+            userId: request.auth?.user?.id,
+            practiceId: practiceIdForLog,
+            pathname,
+            reason: 'onboarding-incomplete',
+          },
+          'Redirecting to onboarding',
+        );
         const onboardingUrl = new URL('/onboarding', request.nextUrl.origin);
         const response = NextResponse.redirect(onboardingUrl);
         return await applySecurityHeaders(response, nonce, request);
       }
 
       // Redirect to dashboard if complete and trying to access onboarding
-      if (isOnboardingComplete && isOnboardingPage) {
+      if (onboardingComplete && isOnboardingPage) {
+        logger.debug(
+          {
+            userId: request.auth?.user?.id,
+            practiceId: practiceIdForLog,
+            pathname,
+            reason: 'onboarding-complete',
+          },
+          'Redirecting to dashboard',
+        );
         const dashboardUrl = new URL('/dashboard', request.nextUrl.origin);
         const response = NextResponse.redirect(dashboardUrl);
         return await applySecurityHeaders(response, nonce, request);
@@ -207,6 +227,14 @@ export default auth(async (request) => {
       // No active practice context - redirect to onboarding if not already there
       // This handles users who have no practice yet (newly registered without practice, or invited but invalid state)
       if (!isOnboardingPage) {
+        logger.debug(
+          {
+            userId: request.auth?.user?.id,
+            pathname,
+            reason: 'no-active-practice',
+          },
+          'Redirecting to onboarding',
+        );
         const onboardingUrl = new URL('/onboarding', request.nextUrl.origin);
         const response = NextResponse.redirect(onboardingUrl);
         return await applySecurityHeaders(response, nonce, request);

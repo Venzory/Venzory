@@ -1,6 +1,10 @@
+'use client';
+
 import Link from 'next/link';
 import { CheckCircle2, Circle, ArrowRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useOnboardingCompletion } from '@/hooks/use-onboarding-completion';
 
 interface SetupChecklistProps {
   onboardingStatus: {
@@ -17,6 +21,7 @@ interface SetupChecklistProps {
 }
 
 export function SetupChecklist({ onboardingStatus, progress }: SetupChecklistProps) {
+  const { handleComplete, handleSkip, isCompleting } = useOnboardingCompletion();
   // Logic:
   // Show if skipped (status.onboardingSkippedAt)
   // OR if completed (status.onboardingCompletedAt) BUT missing key operational data
@@ -75,11 +80,14 @@ export function SetupChecklist({ onboardingStatus, progress }: SetupChecklistPro
   const totalCount = items.length;
   const percent = Math.round((completedCount / totalCount) * 100);
 
+  const showCompleteAction = !isCompleted;
+  const showSkipAction = !isSkipped;
+
   return (
     <div className="mb-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
       <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-1 items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                {isSkipped ? <AlertCircle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
             </div>
@@ -101,6 +109,29 @@ export function SetupChecklist({ onboardingStatus, progress }: SetupChecklistPro
                 />
              </div>
           </div>
+          {(showCompleteAction || showSkipAction) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {showCompleteAction && (
+                <Button
+                  size="sm"
+                  onClick={handleComplete}
+                  disabled={isCompleting}
+                >
+                  {isCompleting ? 'Finishing...' : 'Mark setup complete'}
+                </Button>
+              )}
+              {showSkipAction && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleSkip}
+                  disabled={isCompleting}
+                >
+                  {isCompleting ? 'Skipping...' : 'Skip for now'}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
       
