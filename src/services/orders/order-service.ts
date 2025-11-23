@@ -604,6 +604,106 @@ export class OrderService {
   }
 
   /**
+   * Create or reuse a draft order for a single catalog item.
+   * Prefers the item's defaultPracticeSupplier and defaults quantity to 1.
+   */
+  async quickOrderForItem(
+    ctx: RequestContext,
+    itemId: string
+  ): Promise<
+    | { status: 'NO_DEFAULT_SUPPLIER' }
+    | { status: 'SUCCESS'; orderId: string; createdNew: boolean }
+  > {
+    requireRole(ctx, 'STAFF');
+
+    return withTransaction(async (tx) => {
+      const items = await this.inventoryRepository.findItems(
+        ctx.practiceId,
+        { itemIds: [itemId] },
+        { tx }
+      );
+
+      const item = items[0];
+      if (!item) {
+        throw new NotFoundError('Item', itemId);
+      }
+
+      if (!item.defaultPracticeSupplier) {
+        return { status: 'NO_DEFAULT_SUPPLIER' };
+      }
+
+      const practiceSupplierId = item.defaultPracticeSupplier.id;
+      const supplierItems =
+        (item as any).practiceSupplierItems ?? (item as any).supplierItems ?? [];
+      const matchingSupplierItem = supplierItems.find(
+        (si: any) => si.practiceSupplierId === practiceSupplierId
+      );
+      const unitPrice = decimalToNumber(matchingSupplierItem?.unitPrice);
+      const quantity = 1;
+
+      const existingOrders = await this.orderRepository.findOrders(
+        ctx.practiceId,
+        { practiceSupplierId, status: 'DRAFT' },
+        {
+          tx,
+          orderBy: { createdAt: 'desc' },
+          pagination: { limit: 1 },
+        }
+      );
+
+      const existingOrder = existingOrders[0];
+
+      if (existingOrder) {
+        const alreadyInOrder = existingOrder.items?.some(
+          (orderItem) => orderItem.itemId === itemId
+        );
+
+        if (!alreadyInOrder) {
+          await this.orderRepository.addOrderItem(
+            existingOrder.id,
+            ctx.practiceId,
+            {
+              itemId,
+              quantity,
+              unitPrice: unitPrice ?? undefined,
+            },
+            { tx }
+          );
+        }
+
+        return {
+          status: 'SUCCESS',
+          orderId: existingOrder.id,
+          createdNew: false,
+        };
+      }
+
+      const order = await this.orderRepository.createOrder(
+        ctx.userId,
+        {
+          practiceId: ctx.practiceId,
+          practiceSupplierId,
+          notes: 'Created via My Items quick order',
+          items: [
+            {
+              itemId,
+              quantity,
+              unitPrice: unitPrice ?? undefined,
+            },
+          ],
+        },
+        { tx }
+      );
+
+      return {
+        status: 'SUCCESS',
+        orderId: order.id,
+        createdNew: true,
+      };
+    });
+  }
+
+  /**
    * Create orders from catalog items
    * Creates draft orders for selected items with quantity 1, grouped by supplier
    */

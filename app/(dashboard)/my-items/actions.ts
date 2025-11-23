@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { buildRequestContext } from '@/src/lib/context/context-builder';
@@ -43,6 +44,38 @@ export async function createOrdersFromCatalogAction(selectedItemIds: string[]) {
       return { error: error.message } as const;
     }
     return { error: 'Failed to create orders. Please try again.' } as const;
+  }
+}
+
+/**
+ * Quick order a single catalog item.
+ * Resolves supplier + order server-side and redirects to the order detail.
+ */
+export async function quickOrderFromItemAction(itemId: string) {
+  await verifyCsrfFromHeaders();
+
+  try {
+    const ctx = await buildRequestContext();
+    const { getOrderService } = await import('@/src/services/orders');
+    const orderService = getOrderService();
+
+    const result = await orderService.quickOrderForItem(ctx, itemId);
+
+    if (result.status === 'NO_DEFAULT_SUPPLIER') {
+      redirect(`/orders/new?item=${itemId}`);
+    }
+
+    revalidatePath('/my-items');
+    revalidatePath('/orders');
+    revalidatePath('/dashboard');
+
+    redirect(`/orders/${result.orderId}`);
+  } catch (error) {
+    logger.error({ error, itemId }, 'quickOrderFromItemAction failed');
+    if (isDomainError(error)) {
+      throw new Error(error.message);
+    }
+    throw error;
   }
 }
 

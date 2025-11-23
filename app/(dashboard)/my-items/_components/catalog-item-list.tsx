@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
 import { toast } from '@/lib/toast';
-import { createOrdersFromCatalogAction } from '../actions';
+import { createOrdersFromCatalogAction, quickOrderFromItemAction } from '../actions';
 import { DeleteItemButton } from './delete-item-button';
 import { DataTable } from '@/components/ui/data-table';
 import { ItemSupplierPanel } from './item-supplier-panel';
@@ -239,11 +239,14 @@ export function CatalogItemList({
                 
                 {canManage && (
                     <>
-                        <Link href={`/orders/new?item=${item.id}`}>
-                            <Button variant="secondary" size="sm" className="text-xs">
-                                Order
-                            </Button>
-                        </Link>
+                    <form
+                      action={quickOrderFromItemAction.bind(null, item.id)}
+                      className="inline-flex"
+                    >
+                      <Button variant="secondary" size="sm" className="text-xs" type="submit">
+                        Order
+                      </Button>
+                    </form>
                         <DeleteItemButton itemId={item.id} itemName={item.name} />
                     </>
                 )}
@@ -274,8 +277,8 @@ export function CatalogItemList({
       <Card className="p-8">
         <EmptyState
           icon={Package}
-          title="Your catalog is empty"
-          description="Browse products from your suppliers and add them to your catalog to get started."
+          title="My Items is empty"
+          description="Browse products from your suppliers and add them to My Items to get started."
           action={
             <Link href="/supplier-catalog">
               <Button variant="primary">Browse Supplier Catalog</Button>
@@ -292,7 +295,7 @@ export function CatalogItemList({
       <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
         <div>
           <span>
-            {totalItems} {totalItems === 1 ? 'item' : 'items'} in your catalog
+            {totalItems} {totalItems === 1 ? 'item' : 'items'} in My Items
           </span>
           {totalItems > itemsPerPage && (
             <span className="ml-2">
