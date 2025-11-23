@@ -7,13 +7,14 @@ import { Prisma } from '@prisma/client';
 import { BaseRepository, type FindOptions, type RepositoryOptions } from '../base';
 import {
   Product,
-  SupplierCatalog,
+  SupplierItem,
   CreateProductInput,
   UpdateProductInput,
-  UpsertSupplierCatalogInput,
+  UpsertSupplierItemInput,
   ProductFilters,
   ProductSyncData,
   CatalogSyncData,
+  SupplierItemFilters,
 } from '@/src/domain/models';
 import { NotFoundError } from '@/src/domain/errors';
 
@@ -46,37 +47,31 @@ export class ProductRepository extends BaseRepository {
       where.gs1VerificationStatus = filters.gs1VerificationStatus;
     }
 
-    // Filter by supplier (products linked via SupplierCatalog)
-    if (filters?.practiceSupplierId) {
-      where.supplierCatalogs = {
+    // Filter by supplier (products linked via SupplierItem)
+    if (filters?.globalSupplierId) {
+      where.supplierItems = {
         some: {
-          practiceSupplierId: filters.practiceSupplierId,
+          globalSupplierId: filters.globalSupplierId,
           isActive: true,
         },
       };
     }
 
-    // Filter by practice supplier (Phase 2)
-    if (filters?.practiceSupplierId) {
-      where.supplierCatalogs = {
-        some: {
-          practiceSupplierId: filters.practiceSupplierId,
-          isActive: true,
-        },
-      };
-    }
-
-    // Filter by practice (products available to practice via their PracticeSuppliers)
+    // Filter by practice
     if (filters?.practiceId) {
-      where.supplierCatalogs = {
-        some: {
-          practiceSupplier: {
-            practiceId: filters.practiceId,
-            isBlocked: false,
-          },
-          isActive: true,
-        },
-      };
+       where.supplierItems = {
+         some: {
+           globalSupplier: {
+             practiceLinks: {
+               some: {
+                 practiceId: filters.practiceId,
+                 isBlocked: false
+               }
+             }
+           },
+           isActive: true
+         }
+       }
     }
 
     const products = await client.product.findMany({
@@ -117,37 +112,31 @@ export class ProductRepository extends BaseRepository {
       where.gs1VerificationStatus = filters.gs1VerificationStatus;
     }
 
-    // Filter by supplier (products linked via SupplierCatalog)
-    if (filters?.practiceSupplierId) {
-      where.supplierCatalogs = {
+    // Filter by supplier (products linked via SupplierItem)
+    if (filters?.globalSupplierId) {
+      where.supplierItems = {
         some: {
-          practiceSupplierId: filters.practiceSupplierId,
+          globalSupplierId: filters.globalSupplierId,
           isActive: true,
         },
       };
     }
 
-    // Filter by practice supplier (Phase 2)
-    if (filters?.practiceSupplierId) {
-      where.supplierCatalogs = {
-        some: {
-          practiceSupplierId: filters.practiceSupplierId,
-          isActive: true,
-        },
-      };
-    }
-
-    // Filter by practice (products available to practice via their PracticeSuppliers)
+    // Filter by practice
     if (filters?.practiceId) {
-      where.supplierCatalogs = {
-        some: {
-          practiceSupplier: {
-            practiceId: filters.practiceId,
-            isBlocked: false,
-          },
-          isActive: true,
-        },
-      };
+       where.supplierItems = {
+         some: {
+           globalSupplier: {
+             practiceLinks: {
+               some: {
+                 practiceId: filters.practiceId,
+                 isBlocked: false
+               }
+             }
+           },
+           isActive: true
+         }
+       }
     }
 
     return client.product.count({ where });
@@ -267,41 +256,41 @@ export class ProductRepository extends BaseRepository {
   }
 
   /**
-   * Find supplier catalog entry
+   * Find supplier catalog entry (SupplierItem)
    */
   async findSupplierCatalog(
-    practiceSupplierId: string,
+    globalSupplierId: string,
     productId: string,
     options?: FindOptions
-  ): Promise<SupplierCatalog | null> {
+  ): Promise<SupplierItem | null> {
     const client = this.getClient(options?.tx);
 
-    const catalog = await client.supplierCatalog.findUnique({
+    const catalog = await client.supplierItem.findUnique({
       where: {
-        practiceSupplierId_productId: { practiceSupplierId, productId },
+        globalSupplierId_productId: { globalSupplierId, productId },
       },
       include: options?.include ?? undefined,
     });
 
-    return catalog as SupplierCatalog | null;
+    return catalog as SupplierItem | null;
   }
 
   /**
-   * Find all catalog entries for a practice supplier
+   * Find all catalog entries for a supplier
    */
   async findSupplierCatalogs(
-    practiceSupplierId: string,
+    globalSupplierId: string,
     activeOnly: boolean = true,
     options?: FindOptions
-  ): Promise<SupplierCatalog[]> {
+  ): Promise<SupplierItem[]> {
     const client = this.getClient(options?.tx);
 
-    const where: Prisma.SupplierCatalogWhereInput = { practiceSupplierId };
+    const where: Prisma.SupplierItemWhereInput = { globalSupplierId };
     if (activeOnly) {
       where.isActive = true;
     }
 
-    const catalogs = await client.supplierCatalog.findMany({
+    const catalogs = await client.supplierItem.findMany({
       where,
       include: {
         product: true,
@@ -309,27 +298,100 @@ export class ProductRepository extends BaseRepository {
       orderBy: { product: { name: 'asc' } },
     });
 
-    return catalogs as SupplierCatalog[];
+    return catalogs as SupplierItem[];
   }
 
   /**
-   * Upsert supplier catalog entry
+   * Find supplier items with filters (owner/global view)
    */
-  async upsertSupplierCatalog(
-    input: UpsertSupplierCatalogInput,
-    options?: RepositoryOptions
-  ): Promise<SupplierCatalog> {
+  async findSupplierItems(
+    filters?: SupplierItemFilters,
+    options?: FindOptions
+  ): Promise<SupplierItem[]> {
     const client = this.getClient(options?.tx);
 
-    const catalog = await client.supplierCatalog.upsert({
+    const where = this.buildSupplierItemWhere(filters);
+
+    const supplierItems = await client.supplierItem.findMany({
+      where,
+      include:
+        options?.include ??
+        ({
+          product: true,
+          globalSupplier: true,
+        } as Prisma.SupplierItemInclude),
+      orderBy:
+        options?.orderBy ??
+        [
+          { globalSupplier: { name: 'asc' } },
+          { product: { name: 'asc' } },
+        ],
+      ...this.buildPagination(options?.pagination),
+    });
+
+    return supplierItems as SupplierItem[];
+  }
+
+  /**
+   * Count supplier items with filters
+   */
+  async countSupplierItems(filters?: SupplierItemFilters, options?: FindOptions): Promise<number> {
+    const client = this.getClient(options?.tx);
+    const where = this.buildSupplierItemWhere(filters);
+    return client.supplierItem.count({ where });
+  }
+
+  /**
+   * Find supplier items for a specific product
+   */
+  async findSupplierItemsByProductId(
+    productId: string,
+    activeOnly: boolean = true,
+    options?: FindOptions
+  ): Promise<SupplierItem[]> {
+    const client = this.getClient(options?.tx);
+
+    const supplierItems = await client.supplierItem.findMany({
       where: {
-        practiceSupplierId_productId: {
-          practiceSupplierId: input.practiceSupplierId,
+        productId,
+        ...(activeOnly ? { isActive: true } : {}),
+      },
+      include:
+        options?.include ??
+        ({
+          globalSupplier: true,
+          product: true,
+        } as Prisma.SupplierItemInclude),
+      orderBy:
+        options?.orderBy ??
+        [
+          { isActive: 'desc' },
+          { unitPrice: 'asc' },
+          { globalSupplier: { name: 'asc' } },
+        ],
+    });
+
+    return supplierItems as SupplierItem[];
+  }
+
+  /**
+   * Upsert supplier catalog entry (SupplierItem)
+   */
+  async upsertSupplierCatalog(
+    input: UpsertSupplierItemInput,
+    options?: RepositoryOptions
+  ): Promise<SupplierItem> {
+    const client = this.getClient(options?.tx);
+
+    const catalog = await client.supplierItem.upsert({
+      where: {
+        globalSupplierId_productId: {
+          globalSupplierId: input.globalSupplierId,
           productId: input.productId,
         },
       },
       create: {
-        practiceSupplierId: input.practiceSupplierId,
+        globalSupplierId: input.globalSupplierId,
         productId: input.productId,
         supplierSku: input.supplierSku ?? null,
         unitPrice: input.unitPrice ?? null,
@@ -352,18 +414,18 @@ export class ProductRepository extends BaseRepository {
       },
     });
 
-    return catalog as SupplierCatalog;
+    return catalog as SupplierItem;
   }
 
   /**
    * Sync supplier feed (find/create product + upsert catalog)
    */
   async syncSupplierFeed(
-    practiceSupplierId: string,
+    globalSupplierId: string,
     productData: ProductSyncData,
     catalogData: CatalogSyncData,
     options?: RepositoryOptions
-  ): Promise<{ product: Product; catalog: SupplierCatalog }> {
+  ): Promise<{ product: Product; catalog: SupplierItem }> {
     const client = this.getClient(options?.tx);
 
     // Find or create product
@@ -372,7 +434,7 @@ export class ProductRepository extends BaseRepository {
     // Upsert catalog entry
     const catalog = await this.upsertSupplierCatalog(
       {
-        practiceSupplierId,
+        globalSupplierId,
         productId: product.id,
         supplierSku: catalogData.supplierSku ?? null,
         unitPrice: catalogData.unitPrice ?? null,
@@ -392,7 +454,7 @@ export class ProductRepository extends BaseRepository {
    * Batch sync multiple supplier feeds
    */
   async batchSyncSupplierFeeds(
-    practiceSupplierId: string,
+    globalSupplierId: string,
     feeds: Array<{ product: ProductSyncData; catalog: CatalogSyncData }>,
     options?: RepositoryOptions
   ): Promise<{ productsProcessed: number; catalogsUpdated: number; errors: string[] }> {
@@ -402,7 +464,7 @@ export class ProductRepository extends BaseRepository {
 
     for (const feed of feeds) {
       try {
-        await this.syncSupplierFeed(practiceSupplierId, feed.product, feed.catalog, options);
+        await this.syncSupplierFeed(globalSupplierId, feed.product, feed.catalog, options);
         productsProcessed++;
         catalogsUpdated++;
       } catch (error) {
@@ -458,102 +520,117 @@ export class ProductRepository extends BaseRepository {
     practiceSupplierId: string,
     activeOnly: boolean = true,
     options?: FindOptions
-  ): Promise<SupplierCatalog[]> {
+  ): Promise<SupplierItem[]> {
     const client = this.getClient(options?.tx);
+    
+    // First get the GlobalSupplierId from the PracticeSupplier
+    const practiceSupplier = await client.practiceSupplier.findUnique({
+      where: { id: practiceSupplierId },
+      select: { globalSupplierId: true }
+    });
+    
+    if (!practiceSupplier) return [];
 
-    const where: Prisma.SupplierCatalogWhereInput = { practiceSupplierId };
+    const where: Prisma.SupplierItemWhereInput = { 
+      globalSupplierId: practiceSupplier.globalSupplierId 
+    };
+    
     if (activeOnly) {
       where.isActive = true;
     }
 
-    const catalogs = await client.supplierCatalog.findMany({
+    const catalogs = await client.supplierItem.findMany({
       where,
       include: {
         product: true,
-        practiceSupplier: {
-          include: {
-            globalSupplier: true,
-          },
-        },
+        globalSupplier: true
       },
       orderBy: { product: { name: 'asc' } },
     });
 
-    return catalogs as SupplierCatalog[];
+    return catalogs as SupplierItem[];
   }
 
   /**
    * Find catalog entries for a product, filtered by practice (Phase 2)
-   * Returns all supplier offers for this product from the practice's linked suppliers
    */
   async findCatalogsByProductForPractice(
     productId: string,
     practiceId: string,
     options?: FindOptions
-  ): Promise<SupplierCatalog[]> {
+  ): Promise<SupplierItem[]> {
     const client = this.getClient(options?.tx);
 
-    const catalogs = await client.supplierCatalog.findMany({
+    const catalogs = await client.supplierItem.findMany({
       where: {
         productId,
-        practiceSupplier: {
-          practiceId,
-          isBlocked: false,
+        globalSupplier: {
+          practiceLinks: {
+             some: {
+               practiceId,
+               isBlocked: false
+             }
+          }
         },
         isActive: true,
       },
       include: {
         product: true,
-        practiceSupplier: {
-          include: {
-            globalSupplier: true,
-          },
-        },
+        globalSupplier: {
+           include: {
+             practiceLinks: {
+               where: { practiceId }
+             }
+           }
+        }
       },
-      orderBy: { unitPrice: 'asc' }, // Order by price, lowest first
+      orderBy: { unitPrice: 'asc' }, 
     });
 
-    return catalogs as SupplierCatalog[];
+    return catalogs as SupplierItem[];
   }
 
   /**
    * Find catalog entries for multiple products, filtered by practice (Phase 2)
-   * Batch version to avoid N+1 queries
-   * Returns all supplier offers for these products from the practice's linked suppliers
    */
   async findCatalogsByProductsForPractice(
     productIds: string[],
     practiceId: string,
     options?: FindOptions
-  ): Promise<SupplierCatalog[]> {
+  ): Promise<SupplierItem[]> {
     const client = this.getClient(options?.tx);
 
-    // Return empty array if no product IDs provided
     if (!productIds || productIds.length === 0) {
       return [];
     }
 
-    const catalogs = await client.supplierCatalog.findMany({
+    const catalogs = await client.supplierItem.findMany({
       where: {
         productId: { in: productIds },
-        practiceSupplier: {
-          practiceId,
-          isBlocked: false,
+        globalSupplier: {
+          practiceLinks: {
+             some: {
+               practiceId,
+               isBlocked: false
+             }
+          }
         },
         isActive: true,
       },
       include: {
         product: true,
-        practiceSupplier: {
-          include: {
-            globalSupplier: true,
-          },
-        },
+        globalSupplier: {
+           include: {
+             practiceLinks: {
+               where: { practiceId }
+             }
+           }
+        }
       },
-      orderBy: { unitPrice: 'asc' }, // Order by price, lowest first
+      orderBy: { unitPrice: 'asc' }, 
     });
 
-    return catalogs as SupplierCatalog[];
+    return catalogs as SupplierItem[];
   }
 
   /**
@@ -563,18 +640,28 @@ export class ProductRepository extends BaseRepository {
     practiceSupplierId: string,
     productId: string,
     options?: FindOptions
-  ): Promise<SupplierCatalog | null> {
+  ): Promise<SupplierItem | null> {
     const client = this.getClient(options?.tx);
+    
+    // Get Global Supplier ID first
+    const practiceSupplier = await client.practiceSupplier.findUnique({
+      where: { id: practiceSupplierId },
+      select: { globalSupplierId: true }
+    });
+    
+    if (!practiceSupplier) return null;
 
-    const catalog = await client.supplierCatalog.findFirst({
+    const catalog = await client.supplierItem.findUnique({
       where: {
-        practiceSupplierId,
-        productId,
+        globalSupplierId_productId: {
+          globalSupplierId: practiceSupplier.globalSupplierId,
+          productId
+        }
       },
       include: options?.include ?? undefined,
     });
 
-    return catalog as SupplierCatalog | null;
+    return catalog as SupplierItem | null;
   }
 
   /**
@@ -599,6 +686,65 @@ export class ProductRepository extends BaseRepository {
     });
 
     return products as Product[];
+  }
+
+  /**
+   * Build reusable where clause for supplier item queries
+   */
+  private buildSupplierItemWhere(
+    filters?: SupplierItemFilters
+  ): Prisma.SupplierItemWhereInput {
+    const where: Prisma.SupplierItemWhereInput = {};
+
+    if (!filters) {
+      return where;
+    }
+
+    if (filters.globalSupplierId) {
+      where.globalSupplierId = filters.globalSupplierId;
+    }
+
+    if (filters.productId) {
+      where.productId = filters.productId;
+    }
+
+    if (filters.isActive !== undefined) {
+      where.isActive = filters.isActive;
+    }
+
+    const andClauses: Prisma.SupplierItemWhereInput[] = [];
+
+    if (filters.practiceId) {
+      andClauses.push({
+        globalSupplier: {
+          practiceLinks: {
+            some: {
+              practiceId: filters.practiceId,
+              isBlocked: false,
+            },
+          },
+        },
+      });
+    }
+
+    if (filters.search && filters.search.trim()) {
+      const term = filters.search.trim();
+      andClauses.push({
+        OR: [
+          { supplierSku: { contains: term, mode: 'insensitive' } },
+          { product: { name: { contains: term, mode: 'insensitive' } } },
+          { product: { brand: { contains: term, mode: 'insensitive' } } },
+          { product: { gtin: { contains: term } } },
+          { globalSupplier: { name: { contains: term, mode: 'insensitive' } } },
+        ],
+      });
+    }
+
+    if (andClauses.length > 0) {
+      where.AND = andClauses;
+    }
+
+    return where;
   }
 }
 

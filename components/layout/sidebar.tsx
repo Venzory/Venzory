@@ -111,6 +111,7 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
       items: [
         { href: '/owner', label: 'Owner Console', icon: Shield },
         { href: '/owner/product-master', label: 'Product Master Data', icon: Package2 },
+        { href: '/owner/supplier-catalog', label: 'Supplier Catalog', icon: BookOpen },
       ],
     });
   }

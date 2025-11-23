@@ -13,6 +13,7 @@ import { toast } from '@/lib/toast';
 import { createOrdersFromCatalogAction } from '../actions';
 import { DeleteItemButton } from './delete-item-button';
 import { DataTable } from '@/components/ui/data-table';
+import { ItemSupplierPanel } from './item-supplier-panel';
 
 interface ItemWithStockInfo {
   id: string;
@@ -166,13 +167,26 @@ export function CatalogItemList({
         header: 'Default Supplier',
         enableSorting: true,
         cell: (item: ItemWithStockInfo) => (
-            item.defaultPracticeSupplier ? (
-                <span className="text-slate-700 dark:text-slate-300">
-                    {item.defaultPracticeSupplier.customLabel || item.defaultPracticeSupplier.globalSupplier.name}
-                </span>
-            ) : (
-                <span className="text-slate-500 dark:text-slate-400 italic">No default</span>
-            )
+            <div className="flex flex-col gap-2">
+                {item.defaultPracticeSupplier ? (
+                    <span className="text-slate-700 dark:text-slate-300">
+                        {item.defaultPracticeSupplier.customLabel || item.defaultPracticeSupplier.globalSupplier.name}
+                    </span>
+                ) : (
+                    <span className="text-slate-500 dark:text-slate-400 italic">No preferred supplier</span>
+                )}
+                {canManage && (
+                    <ItemSupplierPanel
+                        itemId={item.id}
+                        itemName={item.name}
+                        trigger={
+                            <Button variant="ghost" size="sm" className="w-fit text-xs">
+                                Manage Suppliers
+                            </Button>
+                        }
+                    />
+                )}
+            </div>
         )
     },
     {

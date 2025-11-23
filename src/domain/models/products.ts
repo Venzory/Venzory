@@ -22,14 +22,15 @@ export interface Product extends BaseEntity {
   gs1Data: Record<string, any> | null;
   // Optional relations
   items?: any[];
-  supplierCatalogs?: SupplierCatalog[];
+  supplierItems?: SupplierItem[];
 }
 
 /**
- * Supplier catalog entry linking supplier to product
+ * Global Supplier Item (formerly SupplierCatalog)
+ * Link between Global Supplier and Global Product
  */
-export interface SupplierCatalog extends BaseEntity {
-  practiceSupplierId: string;
+export interface SupplierItem extends BaseEntity {
+  globalSupplierId: string;
   productId: string;
   supplierSku: string | null;
   unitPrice: number | null;
@@ -42,10 +43,10 @@ export interface SupplierCatalog extends BaseEntity {
 }
 
 /**
- * Supplier catalog with related entities
+ * Supplier item with related entities
  */
-export interface SupplierCatalogWithRelations extends SupplierCatalog {
-  practiceSupplier?: any; // PracticeSupplier
+export interface SupplierItemWithRelations extends SupplierItem {
+  globalSupplier?: any; // GlobalSupplier
   product?: Product;
 }
 
@@ -75,10 +76,10 @@ export interface UpdateProductInput {
 }
 
 /**
- * Input type for creating/updating supplier catalog
+ * Input type for creating/updating supplier item (global)
  */
-export interface UpsertSupplierCatalogInput {
-  practiceSupplierId: string;
+export interface UpsertSupplierItemInput {
+  globalSupplierId: string;
   productId: string;
   supplierSku?: string | null;
   unitPrice?: number | null;
@@ -96,8 +97,19 @@ export interface ProductFilters {
   search?: string;
   isGs1Product?: boolean;
   gs1VerificationStatus?: Gs1VerificationStatus;
-  practiceSupplierId?: string; // Filter by PracticeSupplier
+  globalSupplierId?: string; // Filter by GlobalSupplier
   practiceId?: string; // Filter products available to a specific practice
+}
+
+/**
+ * Supplier item query filters
+ */
+export interface SupplierItemFilters {
+  search?: string;
+  globalSupplierId?: string;
+  productId?: string;
+  practiceId?: string;
+  isActive?: boolean;
 }
 
 /**

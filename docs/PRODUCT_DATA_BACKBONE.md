@@ -71,61 +71,73 @@ model Product {
 
 ---
 
-### Layer 2: Supplier Catalog (Per-Supplier, Linked to Master)
+### Layer 2: Supplier Items (Global Catalog, Linked to Master)
 
-**Purpose**: Links suppliers to canonical products with supplier-specific terms.
+**Purpose**: Maintains the global supplier catalog where each `SupplierItem` row represents one supplier offering one canonical product.
 
 **Key Characteristics**:
-- Each **supplier** can offer the **same Product** with different pricing
-- Enables multiple suppliers selling identical products (by GTIN)
-- Supplier-specific SKU, pricing, and ordering terms
-- Integration metadata (API endpoints, EDI settings, OCI params)
+- Each **GlobalSupplier** can offer the **same Product** with different pricing
+- Single unique row per `(globalSupplierId, productId)` pair
+- Stores supplier SKU, pricing, and ordering constraints
+- Contains integration metadata (API, EDI, OCI, CSV)
+- Practice-specific overrides happen one layer down via `PracticeSupplierItem`
 
 **Data Includes**:
-- Link to Product (canonical)
-- Link to Supplier (via PracticeSupplier)
-- Supplier's own SKU for this product
-- Unit price and currency
-- Minimum order quantity
-- Integration type (MANUAL, API, EDI, OCI, CSV)
-- Integration configuration (JSON)
-- Active/inactive flag
+- Link to Product (canonical / GS1)
+- Link to GlobalSupplier (platform-level supplier identity)
+- Supplier SKU, unit price, currency, min order quantity
+- Integration type + configuration blob
+- Active/inactive flag + sync timestamps
 
-**Models**: `SupplierCatalog`, `GlobalSupplier`, `PracticeSupplier`
+**Models**: `SupplierItem`, `GlobalSupplier`, `PracticeSupplier`, `PracticeSupplierItem`
 
 ```prisma
-model SupplierCatalog {
-  id                 String          @id @default(cuid())
-  practiceSupplierId String          // Links to PracticeSupplier
-  productId          String          // Links to Product (Layer 1)
+model SupplierItem {
+  id               String          @id @default(cuid())
+  globalSupplierId String
+  productId        String
+  supplierSku      String?
+  unitPrice        Decimal?
+  currency         String?         @default("EUR")
+  minOrderQty      Int?            @default(1)
+  integrationType  IntegrationType @default(MANUAL)
+  integrationConfig Json?
+  lastSyncAt       DateTime?
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([globalSupplierId, productId])
+}
+
+// Practice-level overrides (optional)
+model PracticeSupplierItem {
+  id                 String   @id @default(cuid())
+  practiceSupplierId String
+  itemId             String
   supplierSku        String?
   unitPrice          Decimal?
-  currency           String?         @default("EUR")
-  minOrderQty        Int?            @default(1)
-  integrationType    IntegrationType @default(MANUAL)
-  integrationConfig  Json?
-  lastSyncAt         DateTime?
-  isActive           Boolean         @default(true)
-  // ... timestamps
-  
-  @@unique([practiceSupplierId, productId]) // One entry per supplier-product pair
+  currency           String?  @default("EUR")
+  minOrderQty        Int?     @default(1)
+
+  @@unique([practiceSupplierId, itemId])
 }
 ```
 
 **Supplier Hierarchy**:
 
 ```
-GlobalSupplier (platform-wide)
+GlobalSupplier (platform-wide identity)
     ↓
-PracticeSupplier (practice-specific link)
-    ↓
-SupplierCatalog (product offerings)
+SupplierItem (global catalog row)
+    ↓                    ↘
+PracticeSupplier (practice links)  → PracticeSupplierItem (optional overrides)
 ```
 
 **Protection**:
-- Unique constraint on (practiceSupplierId, productId) prevents duplicate catalog entries
-- CASCADE delete when supplier removed
-- Can only be populated via owner-managed bulk imports or future supplier portal
+- Global unique constraint on `(globalSupplierId, productId)` prevents duplicate global catalog rows
+- Practice overrides remain scoped to a practice via `PracticeSupplierItem`
+- Owner/admin tooling is the single write path for `SupplierItem` (bulk imports, GS1 matching)
 
 ---
 
@@ -202,9 +214,9 @@ model Item {
    - Create/update GlobalSupplier records
    - Manage platform-wide supplier information
 
-3. **Supplier Catalogs**:
-   - Populate SupplierCatalog via bulk imports
-   - Update supplier pricing and terms
+3. **Supplier Items (Global Catalog)**:
+   - Populate `SupplierItem` via bulk imports / GS1 matching
+   - Update supplier pricing and terms globally
    - Configure integrations (EDI, API, OCI)
 
 **Implementation**:
@@ -258,7 +270,7 @@ model Item {
    - Block specific suppliers
    - Set supplier account numbers and notes
 
-3. **Inventory Operations**:
+3. **Inventory Operations & Supplier Preferences**:
    - Stock adjustments
    - Transfers between locations
    - Receiving goods
@@ -268,7 +280,7 @@ model Item {
 1. **Import Raw Product Data**:
    - Cannot create Products directly
    - Cannot modify Product master data
-   - Cannot create SupplierCatalog entries
+   - Cannot create or edit global SupplierItem rows
 
 2. **Access Other Practices**:
    - Strict practice-level isolation
@@ -303,28 +315,31 @@ model Item {
 └─────────────────────────────────────────────────────────────────┘
                                ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                   LAYER 2: SUPPLIER CATALOG                     │
+│              LAYER 2: GLOBAL SUPPLIER ITEMS                     │
 │                                                                 │
 │  ┌─────────────────────────┐      ┌──────────────────────────┐ │
-│  │ GlobalSupplier          │      │ PracticeSupplier        │ │
-│  │ - id (PK)              │      │ - id (PK)               │ │
-│  │ - name (UNIQUE)        │──┐   │ - practiceId (FK)       │ │
-│  │ - email                │  └──→│ - globalSupplierId (FK) │ │
-│  │ - phone                │      │ - accountNumber         │ │
-│  └─────────────────────────┘      │ - customLabel           │ │
-│                                   │ - isPreferred           │ │
+│  │ GlobalSupplier          │      │ SupplierItem             │ │
+│  │ - id (PK)               │──┐   │ - id (PK)               │ │
+│  │ - name (UNIQUE)         │  └──→│ - globalSupplierId (FK) │ │
+│  │ - integration settings  │      │ - productId (FK)        │ │
+│  │ - contact info          │      │ - supplierSku           │ │
+│  └─────────────────────────┘      │ - unitPrice / currency  │ │
+│                                   │ - minOrderQty           │ │
+│                                   │ - integrationType       │ │
+│                                   │ - isActive              │ │
 │                                   └──────────────────────────┘ │
-│                                            ↓                    │
-│                              ┌──────────────────────────────┐  │
-│                              │ SupplierCatalog              │  │
-│                              │ - id (PK)                    │  │
-│                              │ - practiceSupplierId (FK)    │  │
-│                              │ - productId (FK)             │  │
-│                              │ - supplierSku                │  │
-│                              │ - unitPrice                  │  │
-│                              │ - minOrderQty                │  │
-│                              │ - integrationType            │  │
-│                              └──────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+                               ↓
+┌─────────────────────────────────────────────────────────────────┐
+│        LAYER 2B: PRACTICE SUPPLIER LINKS (OPTIONAL)             │
+│                                                                 │
+│  ┌──────────────────────────┐     ┌──────────────────────────┐ │
+│  │ PracticeSupplier         │     │ PracticeSupplierItem     │ │
+│  │ - practiceId (FK)        │     │ - practiceSupplierId (FK)│ │
+│  │ - globalSupplierId (FK)  │     │ - itemId (FK)            │ │
+│  │ - accountNumber/notes    │     │ - pricing overrides      │ │
+│  │ - preferred / blocked    │     │ - supplier SKU override  │ │
+│  └──────────────────────────┘     └──────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                                ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -368,13 +383,17 @@ model Item {
 Item.productId → Product.id (onDelete: RESTRICT)
 // Cannot delete Product if any practice has Items for it
 
-// Layer 2 → Layer 1 (CASCADE - catalog follows product)
-SupplierCatalog.productId → Product.id (onDelete: CASCADE)
-// Deleting Product removes all supplier catalog entries
+// Layer 2 → Layer 1 (CASCADE - global catalog follows product)
+SupplierItem.productId → Product.id (onDelete: CASCADE)
+// Deleting Product removes all SupplierItem rows
 
 // Layer 2 → Supplier (CASCADE - catalog follows supplier)
-SupplierCatalog.practiceSupplierId → PracticeSupplier.id (onDelete: CASCADE)
-// Deleting PracticeSupplier removes all catalog entries
+SupplierItem.globalSupplierId → GlobalSupplier.id (onDelete: CASCADE)
+// Deleting GlobalSupplier removes their catalog rows
+
+// Practice overrides → Practice & Items
+PracticeSupplierItem.practiceSupplierId → PracticeSupplier.id (onDelete: CASCADE)
+PracticeSupplierItem.itemId → Item.id (onDelete: CASCADE)
 
 // Layer 3 → Practice (CASCADE - items follow practice)
 Item.practiceId → Practice.id (onDelete: CASCADE)
@@ -391,15 +410,12 @@ LocationInventory.itemId → Item.id (onDelete: CASCADE)
 
 **Current Gaps**:
 
-1. **SupplierCatalog per Practice vs Global**:
-   - Current: `SupplierCatalog` links to `PracticeSupplier` (practice-specific)
-   - Gap: Same supplier might have same catalog for all practices
-   - Consideration: Could normalize to GlobalSupplier-level catalog, but practice-specific pricing is common in healthcare
+1. **Practice Override Coverage**:
+   - Global catalog lives in `SupplierItem`, but not every practice needs overrides.
+   - Reporting and ordering logic must gracefully merge `SupplierItem` (global) with optional `PracticeSupplierItem` rows.
 
-2. **SupplierItem Duplication**:
-   - `SupplierItem` allows practice-specific pricing overrides
-   - Some data overlap with `SupplierCatalog`
-   - Rationale: Practices need ability to negotiate custom pricing per supplier
+2. **Supplier Change Visibility**:
+   - Owner tooling now edits `SupplierItem` rows directly; we need consistent audit signals and notifications to practices when pricing changes materially.
 
 3. **Product Variants**:
    - No formal variant model (e.g., same product in different sizes)
@@ -435,7 +451,7 @@ LocationInventory.itemId → Item.id (onDelete: CASCADE)
 
 4. System creates:
    - GlobalSupplier: "MedSupply Ltd"
-   - SupplierCatalog linking to Product prod_xyz123
+   - SupplierItem linking that supplier to Product prod_xyz123 (global catalog row)
 
 Result: Product and catalog ready for all practices
 ```
@@ -445,7 +461,7 @@ Result: Product and catalog ready for all practices
 ### Example 2: Practice Adds Item to Inventory
 
 ```
-1. Practice "Clinic A" user browses available supplier catalogs
+1. Practice "Clinic A" user browses the supplier catalog (SupplierItems filtered to their linked suppliers)
    - Sees "MedSupply Ltd" offers "Paracetamol 500mg"
 
 2. User clicks "Add to Inventory"
@@ -487,7 +503,7 @@ Result: Practice can now order, receive, and track stock
    orderId: "order_123"
    itemId: "item_abc456" (Paracetamol)
    quantity: 100
-   unitPrice: 12.50 (from SupplierCatalog)
+   unitPrice: 12.50 (from SupplierItem / optional PracticeSupplierItem override)
 
 3. Sends Order (DRAFT → SENT)
 
@@ -514,11 +530,11 @@ Result: Inventory updated, audit trail complete
 
 ### 1. Supplier Portal
 
-**Goal**: Allow suppliers to maintain their own catalogs without owner intervention.
+**Goal**: Allow suppliers to maintain their own global catalog rows (`SupplierItem`) without owner intervention.
 
 **Features**:
 - Supplier login/authentication
-- View/edit their SupplierCatalog entries
+- View/edit their SupplierItem entries
 - Update pricing, SKUs, availability
 - Upload product images and documents
 - View which practices are ordering their products (anonymized)
@@ -538,11 +554,11 @@ Result: Inventory updated, audit trail complete
 
 3. Permission Guards:
    - Supplier can only see/edit their own GlobalSupplier
-   - Can only modify SupplierCatalog for their supplierId
+   - Can only modify SupplierItem rows for their supplierId
    - No access to practice-specific data
 
 4. Audit Trail:
-   - Log all supplier catalog changes
+   - Log all SupplierItem changes
    - Owner can review/approve changes (optional)
 ```
 
@@ -626,7 +642,7 @@ async function enrichProduct(productId: string) {
 **Implementation**:
 
 ```typescript
-// Integration config in SupplierCatalog.integrationConfig
+// Integration config in SupplierItem.integrationConfig
 {
   "type": "API",
   "endpoint": "https://api.supplier.com/v1/catalog",
@@ -636,8 +652,8 @@ async function enrichProduct(productId: string) {
 }
 
 // Background job
-async function syncSupplierCatalog(catalogId: string) {
-  const catalog = await getSupplierCatalog(catalogId);
+async function syncSupplierItem(catalogId: string) {
+  const catalog = await getSupplierItem(catalogId);
   
   if (catalog.integrationType === 'API') {
     const response = await fetch(catalog.integrationConfig.endpoint, {
@@ -652,7 +668,7 @@ async function syncSupplierCatalog(catalogId: string) {
       
       if (product) {
         // Update catalog entry
-        await updateSupplierCatalog(catalogId, {
+        await updateSupplierItem(catalogId, {
           supplierSku: supplierProduct.sku,
           unitPrice: supplierProduct.price,
           minOrderQty: supplierProduct.minQty,
@@ -753,23 +769,23 @@ model PracticeCatalogSubscription {
 
 ---
 
-### Why SupplierCatalog Links to PracticeSupplier Not GlobalSupplier?
+### Why SupplierItem is Global with Practice Overrides?
 
-**Decision**: SupplierCatalog has FK to PracticeSupplier, not directly to GlobalSupplier.
+**Decision**: Keep `SupplierItem` global (per supplier + product) and layer `PracticeSupplierItem` only when a practice negotiates different pricing.
 
 **Rationale**:
-1. **Practice-Specific Pricing**: Suppliers often have different prices per customer
-2. **Negotiated Terms**: Allows per-practice contract terms
-3. **Catalog Visibility**: Practice only sees catalogs for suppliers they have relationship with
+1. **Consistency**: Every supplier offer maps back to a single GTIN/Product row.
+2. **Portal Friendly**: Suppliers edit one dataset that benefits all practices.
+3. **Override Flexibility**: Practices can still capture contract-specific price breaks without forking the master catalog.
 
-**Alternative Considered**: GlobalSupplier-level catalog with practice-specific overrides.
-- Rejected: More complexity, healthcare pricing is very customer-specific
+**Alternative Considered**: Practice-bound catalog rows only.
+- Rejected: duplicates data across practices and breaks GS1 alignment.
 
 ---
 
 ### Why Can't Practices Import Products?
 
-**Decision**: Only owner can create Products and SupplierCatalog entries.
+**Decision**: Only owner can create Products and SupplierItem entries.
 
 **Rationale**:
 1. **Data Quality**: Prevents duplicate products with slight name variations
@@ -806,10 +822,11 @@ model PracticeCatalogSubscription {
 
 **Mental Model**:
 ```
-Product (shared, immutable) 
-  → SupplierCatalog (per-supplier pricing) 
-    → Item (per-practice inventory)
-      → LocationInventory (stock per location)
+Product (shared, immutable / GS1) 
+  → SupplierItem (global supplier offer) 
+    → PracticeSupplier + PracticeSupplierItem (optional overrides)
+      → Item (practice inventory) 
+        → LocationInventory (stock per location)
 ```
 
 **Key Rules**:
