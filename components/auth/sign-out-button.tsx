@@ -2,6 +2,7 @@
 
 import { useTransition } from 'react';
 import { signOut } from 'next-auth/react';
+import { getPathOnCurrentOrigin } from '@/lib/current-origin';
 
 interface SignOutButtonProps {
   label?: string;
@@ -13,7 +14,8 @@ export function SignOutButton({ label = 'Sign out', className }: SignOutButtonPr
 
   const handleClick = () => {
     startTransition(() => {
-      void signOut({ callbackUrl: '/login' });
+      const callbackUrl = getPathOnCurrentOrigin('/login');
+      void signOut({ callbackUrl });
     });
   };
 

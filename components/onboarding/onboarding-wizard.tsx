@@ -8,6 +8,7 @@ import { StepFirstLocation } from './step-first-location';
 import { StepInviteTeam } from './step-invite-team';
 import { OnboardingProgress } from './onboarding-progress';
 import { useOnboardingCompletion } from '@/hooks/use-onboarding-completion';
+import { getPathOnCurrentOrigin } from '@/lib/current-origin';
 
 type Step = 'details' | 'location' | 'team';
 
@@ -85,7 +86,10 @@ export function OnboardingWizard({ initialPracticeName = '', initialEmail = '' }
         <div>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: '/login' })}
+            onClick={() => {
+              const callbackUrl = getPathOnCurrentOrigin('/login');
+              void signOut({ callbackUrl });
+            }}
             className="text-xs text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
           >
             Wrong account? Log out

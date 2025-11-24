@@ -3,10 +3,12 @@
 import { signOut } from 'next-auth/react';
 import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getPathOnCurrentOrigin } from '@/lib/current-origin';
 
 export function OnboardingHeader() {
   const handleLogout = () => {
-    signOut({ callbackUrl: '/login' });
+    const callbackUrl = getPathOnCurrentOrigin('/login');
+    void signOut({ callbackUrl });
   };
 
   return (
