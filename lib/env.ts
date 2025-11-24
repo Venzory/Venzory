@@ -55,6 +55,13 @@ const coreSchema = z.object({
 });
 
 /**
+ * Public/edge-safe environment values
+ */
+const publicSchema = z.object({
+  NEXT_PUBLIC_PLATFORM_OWNER_EMAIL: z.string().email().optional().or(z.literal('')),
+});
+
+/**
  * Production-specific validation schema
  */
 const productionSchema = z.object({
@@ -117,6 +124,7 @@ const envSchema = z
     ...developmentSchema.shape,
     ...sentrySchema.shape,
     ...runtimeSchema.shape,
+    ...publicSchema.shape,
   })
   .superRefine((data, ctx) => {
     const isProduction = data.NODE_ENV === 'production';

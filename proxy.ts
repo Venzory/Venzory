@@ -172,7 +172,10 @@ export default auth(async (request) => {
   if (request.auth && isProtected) {
     // Owner Console Access - Explicit check before any other logic
     if (pathname.startsWith('/owner')) {
-      if (!isPlatformOwner(request.auth.user.email)) {
+      const ownerEmail = request.auth.user.email;
+      const ownerCheck = isPlatformOwner(ownerEmail);
+
+      if (!ownerCheck) {
         const accessDeniedUrl = new URL('/access-denied', request.nextUrl.origin);
         accessDeniedUrl.searchParams.set('from', pathname);
         const response = NextResponse.redirect(accessDeniedUrl);

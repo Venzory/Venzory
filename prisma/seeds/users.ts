@@ -8,8 +8,8 @@ export async function seedUsers(prisma: PrismaClient) {
   // Create Practice
   const practice = await prisma.practice.create({
     data: {
-      name: 'Demo Veterinary Clinic',
-      slug: 'demo-vet-clinic',
+      name: 'Demo Medical Practice',
+      slug: 'demo-medical-practice',
       street: 'Dierenweg 12',
       city: 'Amsterdam',
       postalCode: '1015 XY',

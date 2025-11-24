@@ -81,7 +81,7 @@ export async function seedCatalogs(prisma: PrismaClient, practice: Practice) {
           name: p.name,
           gtin: p.gtin,
           brand: 'VetSupply',
-          description: `${p.category} - High-quality ${p.name.toLowerCase()} for veterinary use`,
+          description: `${p.category} - High-quality ${p.name.toLowerCase()} for use in medical practices`,
           isGs1Product: true,
         },
       })
