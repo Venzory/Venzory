@@ -9,6 +9,8 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
+  // Enable React Compiler for automatic memoization (Next.js 16+)
+  reactCompiler: true,
   // Enable Turbopack by default in Next.js 16, explicitly clearing this check
   turbopack: {},
   serverExternalPackages: ['pino', 'pino-pretty'],
