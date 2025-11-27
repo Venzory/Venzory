@@ -14,3 +14,6 @@ export * from './locations';
 export * from './stock-count';
 export * from './suppliers';
 
+// GS1 Foundation (Phase 1)
+export * from './gdsn';
+

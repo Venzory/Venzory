@@ -58,6 +58,72 @@ enum IntegrationType {
   CSV
 }
 
+// ============================================
+// GS1 FOUNDATION ENUMS (Phase 1)
+// ============================================
+
+enum PackagingLevel {
+  EACH
+  INNER_PACK
+  CASE
+  PALLET
+}
+
+enum MediaType {
+  PRODUCT_IMAGE
+  MARKETING_IMAGE
+  PLANOGRAM
+  VIDEO
+  THREE_D_MODEL
+}
+
+enum DocumentType {
+  IFU // Instructions for Use
+  SDS // Safety Data Sheet
+  CE_DECLARATION // CE Declaration of Conformity
+  FDA_510K // FDA 510(k) clearance
+  TECHNICAL_FILE // Technical documentation
+  LABEL_ARTWORK // Product labeling
+  CLINICAL_DATA // Clinical evaluation
+  RISK_ANALYSIS // Risk management
+  OTHER
+}
+
+enum RegulatoryAuthority {
+  EU_MDR // EU Medical Device Regulation
+  EU_IVDR // EU In Vitro Diagnostic Regulation
+  FDA // US FDA
+  TGA // Australia TGA
+  HEALTH_CANADA
+  PMDA // Japan
+  NMPA // China
+  OTHER
+}
+
+enum ComplianceStatus {
+  UNKNOWN
+  PENDING
+  COMPLIANT
+  NON_COMPLIANT
+  EXEMPT
+  EXPIRED
+}
+
+enum MatchMethod {
+  MANUAL // Human verified
+  EXACT_GTIN // Direct GTIN match
+  FUZZY_NAME // AI/fuzzy name matching
+  BARCODE_SCAN // Scanned barcode
+  SUPPLIER_MAPPED // Supplier provided mapping
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -159,26 +225,71 @@ model Location {
   @@index([practiceId])
 }
 
+// ============================================
+// PRODUCT (GS1 Manufacturer Master - Enhanced)
+// ============================================
 // Canonical product data (GS1-driven, shared across all practices)
-// This represents the "universal" product information
+// This represents the "universal" product information from manufacturers
 model Product {
-  id                    String                @id @default(cuid())
-  gtin                  String?               @unique // Global Trade Item Number (nullable for non-GS1 products)
-  brand                 String?
-  name                  String
-  description           String?
+  id   String  @id @default(cuid())
+  gtin String? @unique // Global Trade Item Number (nullable for non-GS1 products)
+
+  // Basic identifiers
+  brand            String?
+  name             String
+  description      String?
+  shortDescription String? // Brief description for listings
+
+  // GS1 Core Attributes (Phase 1)
+  manufacturerGln         String? // GLN of manufacturer
+  manufacturerName        String? // Manufacturer company name
+  tradeItemClassification String? // GPC code (Global Product Classification)
+  targetMarket            String[] // Country codes (ISO 3166-1 alpha-2)
+
+  // Medical Device Specific (MDR/IVDR)
+  isRegulatedDevice Boolean @default(false)
+  deviceRiskClass   String? // Class I, IIa, IIb, III
+  udiDi             String? // UDI Device Identifier
+  gudidDatabaseId   String? // FDA GUDID reference
+  eudamedId         String? // EU EUDAMED ID
+  gmdnCode          String? // Global Medical Device Nomenclature
+
+  // Physical attributes
+  netContentValue Decimal? @db.Decimal(12, 4)
+  netContentUom   String? // Unit of measure (e.g., "ml", "g", "each")
+  grossWeight     Decimal? @db.Decimal(12, 4)
+  grossWeightUom  String? // Weight unit (e.g., "kg", "g")
+
+  // GS1 Verification
   isGs1Product          Boolean               @default(false)
   gs1VerificationStatus Gs1VerificationStatus @default(UNVERIFIED)
   gs1VerifiedAt         DateTime?
-  gs1Data               Json? // Raw GS1 API response for reference
-  createdAt             DateTime              @default(now())
-  updatedAt             DateTime              @updatedAt
+  gs1SyncedAt           DateTime? // Last GDSN sync timestamp
+  gs1Data               Json? // Raw GS1/GDSN API response for reference
 
-  items            Item[]
-  supplierItems    SupplierItem[]
+  // Version tracking for change detection
+  version Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Existing relations
+  items         Item[]
+  supplierItems SupplierItem[]
+
+  // GS1 Foundation relations (Phase 1)
+  packaging    ProductPackaging[]
+  media        ProductMedia[]
+  documents    ProductDocument[]
+  regulatory   ProductRegulatory[]
+  logistics    ProductLogistics?
+  qualityScore ProductQualityScore?
 
   @@index([gtin])
   @@index([isGs1Product])
+  @@index([manufacturerGln])
+  @@index([gs1VerificationStatus])
+  @@index([udiDi])
 }
 
 model GlobalSupplier {
@@ -187,7 +298,7 @@ model GlobalSupplier {
   email     String?
   phone     String?
   website   String?
-  notes     String?  // General supplier notes
+  notes     String? // General supplier notes
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -198,29 +309,29 @@ model GlobalSupplier {
 }
 
 model PracticeSupplier {
-  id               String   @id @default(cuid())
+  id               String @id @default(cuid())
   practiceId       String
   globalSupplierId String
-  
-  // Practice-specific fields
-  accountNumber    String?  // Practice's account/customer number at this supplier
-  customLabel      String?  // Practice-specific display name override
-  orderingNotes    String?  // Practice-specific ordering/delivery notes
-  isPreferred      Boolean  @default(false)
-  isBlocked        Boolean  @default(false)
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
 
-  practice            Practice       @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  globalSupplier      GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
-  
+  // Practice-specific fields
+  accountNumber String? // Practice's account/customer number at this supplier
+  customLabel   String? // Practice-specific display name override
+  orderingNotes String? // Practice-specific ordering/delivery notes
+  isPreferred   Boolean @default(false)
+  isBlocked     Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  practice       Practice       @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
+
   // Reverse relations
-  orders             Order[]
+  orders                Order[]
   practiceSupplierItems PracticeSupplierItem[]
-  defaultItems       Item[]
-  orderTemplateItems OrderTemplateItem[]
-  goodsReceipts      GoodsReceipt[]
+  defaultItems          Item[]
+  orderTemplateItems    OrderTemplateItem[]
+  goodsReceipts         GoodsReceipt[]
 
   @@unique([practiceId, globalSupplierId])
   @@index([practiceId])
@@ -229,30 +340,55 @@ model PracticeSupplier {
 
 // Legacy Supplier model removed - migration complete
 
+// ============================================
+// SUPPLIER ITEM (Enhanced with Matching - Phase 1)
+// ============================================
 // Global Supplier Item - what a supplier sells (Global catalog)
+// Links a GlobalSupplier to a Product with commercial terms
 model SupplierItem {
-  id                 String          @id @default(cuid())
-  globalSupplierId   String
-  productId          String
-  supplierSku        String? // Supplier's own SKU for this product
-  unitPrice          Decimal?        @db.Decimal(12, 2)
-  currency           String?         @default("EUR")
-  minOrderQty        Int?            @default(1)
-  integrationType    IntegrationType @default(MANUAL)
-  integrationConfig  Json? // Store API endpoints, EDI settings, OCI params, etc.
-  lastSyncAt         DateTime? // Last time this catalog entry was synced
-  isActive           Boolean         @default(true)
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  id               String @id @default(cuid())
+  globalSupplierId String
+  productId        String
 
-  globalSupplier     GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
-  product            Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  items              Item[]
+  // Supplier's data
+  supplierSku         String? // Supplier's own SKU for this product
+  supplierName        String? // Supplier's product name (may differ from GS1)
+  supplierDescription String? // Supplier's description
+
+  // Pricing
+  unitPrice   Decimal? @db.Decimal(12, 2)
+  currency    String?  @default("EUR")
+  minOrderQty Int?     @default(1)
+
+  // Stock (from supplier catalog)
+  stockLevel   Int? // Current stock level at supplier
+  leadTimeDays Int? // Typical lead time in days
+
+  // Match quality (Phase 1 - GTIN matching)
+  matchMethod     MatchMethod @default(MANUAL)
+  matchConfidence Decimal?    @db.Decimal(5, 4) // 0.0000 - 1.0000
+  matchedAt       DateTime? // When the match was made
+  matchedBy       String? // User ID or "system" for automatic matches
+
+  // Integration
+  integrationType   IntegrationType @default(MANUAL)
+  integrationConfig Json? // Store API endpoints, EDI settings, OCI params, etc.
+  lastSyncAt        DateTime? // Last time this catalog entry was synced
+  isActive          Boolean         @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
+  product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  items          Item[]
 
   @@unique([globalSupplierId, productId])
   @@index([globalSupplierId])
   @@index([productId])
   @@index([isActive])
+  @@index([supplierSku])
+  @@index([matchMethod])
 }
 
 // Practice-specific view of a Product
@@ -270,10 +406,10 @@ model Item {
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
-  practice                Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  product                 Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
-  supplierItem            SupplierItem?       @relation(fields: [supplierItemId], references: [id], onDelete: SetNull)
-  defaultPracticeSupplier PracticeSupplier?   @relation(fields: [defaultPracticeSupplierId], references: [id], onDelete: SetNull)
+  practice                Practice               @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  product                 Product                @relation(fields: [productId], references: [id], onDelete: Restrict)
+  supplierItem            SupplierItem?          @relation(fields: [supplierItemId], references: [id], onDelete: SetNull)
+  defaultPracticeSupplier PracticeSupplier?      @relation(fields: [defaultPracticeSupplierId], references: [id], onDelete: SetNull)
   inventory               LocationInventory[]
   practiceSupplierItems   PracticeSupplierItem[]
   orderItems              OrderItem[]
@@ -341,9 +477,9 @@ model Order {
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
-  practice         Practice         @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  practice         Practice          @relation(fields: [practiceId], references: [id], onDelete: Cascade)
   practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
-  createdBy        User?            @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy        User?             @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   items            OrderItem[]
   goodsReceipts    GoodsReceipt[]
 
@@ -413,10 +549,10 @@ model StockAdjustment {
   createdById String?
   createdAt   DateTime @default(now())
 
-  item      Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  location  Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  practice  Practice  @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  location  Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  practice  Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([practiceId])
   @@index([itemId])
@@ -434,11 +570,11 @@ model InventoryTransfer {
   createdById    String?
   createdAt      DateTime @default(now())
 
-  practice     Practice  @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  item         Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  fromLocation Location  @relation("TransferFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
-  toLocation   Location  @relation("TransferToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
-  createdBy    User?     @relation("TransferCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  practice     Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  item         Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  fromLocation Location @relation("TransferFromLocation", fields: [fromLocationId], references: [id], onDelete: Restrict)
+  toLocation   Location @relation("TransferToLocation", fields: [toLocationId], references: [id], onDelete: Restrict)
+  createdBy    User?    @relation("TransferCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([practiceId])
   @@index([itemId])
@@ -664,9 +800,9 @@ enum JobStatus {
 
 model EmailJob {
   id          String    @id @default(cuid())
-  type        String    // e.g., "ORDER_CONFIRMATION"
+  type        String // e.g., "ORDER_CONFIRMATION"
   recipient   String
-  payload     Json      // Stores all data needed to send the email
+  payload     Json // Stores all data needed to send the email
   status      JobStatus @default(PENDING)
   attempts    Int       @default(0)
   lastError   String?
@@ -676,4 +812,257 @@ model EmailJob {
 
   @@index([status])
   @@index([createdAt])
+}
+
+// ============================================
+// GS1 FOUNDATION MODELS (Phase 1)
+// ============================================
+
+// ============================================
+// PACKAGING HIERARCHY
+// ============================================
+// Represents the packaging hierarchy for a product (each, inner pack, case, pallet)
+// Each level may have its own GTIN
+model ProductPackaging {
+  id        String @id @default(cuid())
+  productId String
+
+  // Packaging level
+  level PackagingLevel // EACH, INNER_PACK, CASE, PALLET
+  gtin  String? // GTIN at this packaging level
+
+  // Hierarchy
+  parentId   String? // Parent packaging level
+  childCount Int? // Items contained at this level
+
+  // Dimensions
+  height       Decimal? @db.Decimal(10, 3)
+  width        Decimal? @db.Decimal(10, 3)
+  depth        Decimal? @db.Decimal(10, 3)
+  dimensionUom String?  @default("cm")
+  grossWeight  Decimal? @db.Decimal(10, 3)
+  weightUom    String?  @default("kg")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product  Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  parent   ProductPackaging?  @relation("PackagingHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children ProductPackaging[] @relation("PackagingHierarchy")
+
+  @@index([productId])
+  @@index([gtin])
+  @@index([level])
+}
+
+// ============================================
+// MEDIA ASSETS
+// ============================================
+// Images and visual assets associated with a product
+model ProductMedia {
+  id        String @id @default(cuid())
+  productId String
+
+  type     MediaType // PRODUCT_IMAGE, MARKETING_IMAGE, etc.
+  url      String // Source URL
+  filename String?
+  mimeType String?
+  fileSize Int? // Size in bytes
+
+  // Image specifics
+  width     Int?
+  height    Int?
+  isPrimary Boolean @default(false)
+  angle     String? // front, back, left, right, etc.
+
+  // GS1 Digital Link (if applicable)
+  gs1DigitalLink String?
+
+  // Storage (for downloaded assets)
+  storageProvider String? @default("local") // local, s3, cloudinary
+  storageKey      String? // Path or key in storage system
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([type])
+  @@index([isPrimary])
+}
+
+// ============================================
+// DOCUMENTS (IFU, SDS, CE, etc.)
+// ============================================
+// Documents such as Instructions for Use, Safety Data Sheets, CE declarations
+model ProductDocument {
+  id        String @id @default(cuid())
+  productId String
+
+  type     DocumentType
+  title    String
+  language String       @default("en") // ISO 639-1 code
+
+  // File info
+  url      String // Source URL
+  filename String?
+  mimeType String?
+  fileSize Int? // Size in bytes
+
+  // Validity
+  effectiveDate  DateTime?
+  expirationDate DateTime?
+  version        String? // Document version
+
+  // Storage (for downloaded documents)
+  storageProvider String? @default("local")
+  storageKey      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([type])
+  @@index([language])
+}
+
+// ============================================
+// REGULATORY DATA
+// ============================================
+// Regulatory compliance and certification information for medical devices
+model ProductRegulatory {
+  id        String @id @default(cuid())
+  productId String
+
+  // Regulatory body
+  authority RegulatoryAuthority // EU_MDR, FDA, TGA, etc.
+  region    String? // EU, US, AU, etc.
+
+  // Compliance status
+  status ComplianceStatus @default(UNKNOWN)
+
+  // Identifiers
+  certificateNumber String?
+  registrationId    String?
+
+  // UDI Components
+  udiDi         String? // Device Identifier
+  udiPi         String? // Production Identifier template
+  issuingAgency String? // GS1, HIBCC, ICCBBA
+
+  // Validity
+  issuedDate     DateTime?
+  expirationDate DateTime?
+
+  // Notified body (EU)
+  notifiedBodyId   String?
+  notifiedBodyName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([authority])
+  @@index([udiDi])
+  @@index([status])
+}
+
+// ============================================
+// LOGISTICS / TRADE ITEM
+// ============================================
+// Storage, handling, and customs information for a product
+model ProductLogistics {
+  id        String @id @default(cuid())
+  productId String @unique
+
+  // Storage conditions
+  storageTemp     String? // Temperature range (e.g., "2-8°C")
+  storageHumidity String? // Humidity requirements
+  isHazardous     Boolean @default(false)
+  hazardClass     String? // UN hazard class
+
+  // Shelf life
+  shelfLifeDays   Int?
+  useByDateFormat String? // Format pattern for expiry dates
+
+  // Country of origin
+  countryOfOrigin String? // ISO 3166-1 alpha-2
+
+  // Customs
+  hsCode             String? // Harmonized System code
+  customsDescription String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// DATA QUALITY TRACKING
+// ============================================
+// Calculated score indicating data completeness and quality
+model ProductQualityScore {
+  id        String @id @default(cuid())
+  productId String @unique
+
+  // Overall score (0-100)
+  overallScore Int @default(0)
+
+  // Component scores (0-100 each)
+  basicDataScore  Int @default(0) // Name, brand, description
+  gs1DataScore    Int @default(0) // GS1 verification
+  mediaScore      Int @default(0) // Images present
+  documentScore   Int @default(0) // IFU/SDS present
+  regulatoryScore Int @default(0) // UDI/compliance
+  packagingScore  Int @default(0) // Hierarchy complete
+
+  // Issues
+  missingFields String[] // List of missing required fields
+  warnings      String[] // Non-critical issues
+
+  calculatedAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([overallScore])
+}
+
+// ============================================
+// GDSN SUBSCRIPTION MANAGEMENT
+// ============================================
+// Manages subscriptions to receive product data from GDSN
+model GdsnSubscription {
+  id String @id @default(cuid())
+
+  dataPoolId     String // e.g., "1WorldSync", "Syndigo", "GS1GO"
+  subscriptionId String @unique // ID from data pool provider
+
+  // Target (our receiving identity)
+  targetGln String // Our receiving GLN
+
+  // Source (what we're subscribing to)
+  sourceGln    String? // Publisher GLN (or null for registry-wide)
+  gpcCategory  String? // GPC code filter
+  targetMarket String? // Country code filter
+
+  // Status
+  status          SubscriptionStatus @default(PENDING)
+  activatedAt     DateTime?
+  lastCinReceived DateTime? // Last Change In Notification
+
+  // Metadata
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([targetGln])
+  @@index([status])
+  @@index([dataPoolId])
 }
