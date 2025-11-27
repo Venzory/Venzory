@@ -10,10 +10,12 @@ import { z } from 'zod';
 
 import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getProductService } from '@/src/services/products';
+import { getProductEnrichmentService, type EnrichmentResult } from '@/src/services/products/product-enrichment-service';
 import { isDomainError, ForbiddenError } from '@/src/domain/errors';
-import { enrichProductWithGs1Data, isValidGtin } from '@/lib/integrations';
+import { isValidGtin } from '@/lib/integrations';
 import { verifyCsrfFromHeaders } from '@/lib/server-action-csrf';
 import { isPlatformOwner } from '@/lib/owner-guard';
+import logger from '@/lib/logger';
 
 const productService = getProductService();
 
@@ -96,8 +98,14 @@ export async function createProductAction(_prevState: unknown, formData: FormDat
 
     // Attempt GS1 enrichment in background if GTIN provided
     if (gtin) {
-      enrichProductWithGs1Data(product.id).catch((err) => {
-        console.error(`[Product Actions] GS1 enrichment failed for ${product.id}:`, err);
+      const enrichmentService = getProductEnrichmentService();
+      enrichmentService.enrichFromGdsn(product.id).catch((err) => {
+        logger.error({
+          module: 'ProductActions',
+          operation: 'createProductAction',
+          productId: product.id,
+          error: err instanceof Error ? err.message : String(err),
+        }, 'GS1 enrichment failed');
       });
     }
 
@@ -161,7 +169,7 @@ export async function updateProductAction(_prevState: unknown, formData: FormDat
   }
 }
 
-export async function triggerGs1LookupAction(productId: string) {
+export async function triggerGs1LookupAction(productId: string): Promise<EnrichmentResult> {
   await verifyCsrfFromHeaders();
   
   try {
@@ -173,16 +181,35 @@ export async function triggerGs1LookupAction(productId: string) {
         throw new ForbiddenError('Only the platform owner can trigger GS1 lookup.');
     }
 
-    // Trigger GS1 lookup via service
-    await productService.triggerGs1Lookup(ctx, productId);
+    logger.info({
+      module: 'ProductActions',
+      operation: 'triggerGs1LookupAction',
+      productId,
+    }, 'Triggering GS1 enrichment');
 
-    // Perform actual lookup (in background, but we'll do it synchronously for now)
-    await enrichProductWithGs1Data(productId);
+    // Perform enrichment using the ProductEnrichmentService
+    const enrichmentService = getProductEnrichmentService();
+    const result = await enrichmentService.enrichFromGdsn(productId);
+
+    logger.info({
+      module: 'ProductActions',
+      operation: 'triggerGs1LookupAction',
+      productId,
+      success: result.success,
+      enrichedFields: result.enrichedFields.length,
+    }, 'GS1 enrichment completed');
 
     revalidatePath('/owner/product-master');
     revalidatePath(`/owner/product-master/${productId}`);
+    
+    return result;
   } catch (error) {
-    console.error('[Product Actions] Error triggering GS1 lookup:', error);
+    logger.error({
+      module: 'ProductActions',
+      operation: 'triggerGs1LookupAction',
+      productId,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'GS1 enrichment failed');
     
     if (isDomainError(error)) {
       throw new Error(error.message);

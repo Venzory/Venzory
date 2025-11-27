@@ -6,11 +6,6 @@ import { useConfirm } from '@/hooks/use-confirm';
 import { toast } from '@/lib/toast';
 import { deleteProductAction, triggerGs1LookupAction } from '../../actions';
 
-interface ProductActionsProps {
-  productId: string;
-  hasGtin: boolean;
-}
-
 export function ProductDeleteButton({ productId }: { productId: string }) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -59,8 +54,38 @@ export function Gs1RefreshButton({ productId }: { productId: string }) {
   const handleRefresh = async () => {
     setIsLoading(true);
     try {
-      await triggerGs1LookupAction(productId);
-      toast.success('GS1 data refresh triggered');
+      const result = await triggerGs1LookupAction(productId);
+      
+      if (result.success) {
+        // Show detailed success message
+        const enrichedCount = result.enrichedFields.length;
+        toast.success(
+          `GS1 enrichment completed! ${enrichedCount} field${enrichedCount !== 1 ? 's' : ''} updated.`
+        );
+        
+        // Show warnings if any
+        if (result.warnings.length > 0) {
+          result.warnings.forEach(warning => {
+            toast.info(warning);
+          });
+        }
+      } else {
+        // Show warnings/errors for unsuccessful enrichment
+        if (result.warnings.length > 0) {
+          result.warnings.forEach(warning => {
+            toast.info(warning);
+          });
+        }
+        if (result.errors.length > 0) {
+          result.errors.forEach(err => {
+            toast.error(err);
+          });
+        }
+        if (result.warnings.length === 0 && result.errors.length === 0) {
+          toast.info('Product could not be enriched from GS1');
+        }
+      }
+      
       router.refresh();
     } catch (error) {
       console.error('Failed to refresh GS1 data:', error);
@@ -74,9 +99,19 @@ export function Gs1RefreshButton({ productId }: { productId: string }) {
     <button
       onClick={handleRefresh}
       disabled={isLoading}
-      className="rounded-lg border border-sky-600 px-4 py-2 text-sm font-semibold text-sky-600 transition hover:bg-sky-50 disabled:opacity-50 dark:border-sky-500 dark:text-sky-400 dark:hover:bg-sky-900/20"
+      className="inline-flex items-center gap-2 rounded-lg border border-sky-600 px-4 py-2 text-sm font-semibold text-sky-600 transition hover:bg-sky-50 disabled:opacity-50 dark:border-sky-500 dark:text-sky-400 dark:hover:bg-sky-900/20"
     >
-      {isLoading ? 'Refreshing...' : 'Refresh GS1 Data'}
+      {isLoading ? (
+        <>
+          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          Enriching...
+        </>
+      ) : (
+        'Enrich from GS1'
+      )}
     </button>
   );
 }

@@ -1,25 +1,25 @@
 /**
  * GS1 Lookup Service
  * 
- * Placeholder implementation for GS1 product data lookups.
- * This module will later connect to real GS1 APIs (e.g., GS1 Cloud, Verified by GS1).
- * 
- * For now, it provides a structure ready for integration without making external calls.
+ * Provides GS1 product data lookups via the GDSN service.
+ * Currently uses a mock client for development; will connect to real
+ * data pool providers (1WorldSync, Syndigo, GS1 GO) in production.
  */
 
 import { Gs1VerificationStatus } from '@prisma/client';
-import { Gs1LookupResponse } from './types';
+import { Gs1LookupResponse, type JsonValue } from './types';
 import { ProductRepository } from '@/src/repositories/products';
+import { getGdsnService } from '@/src/services/gdsn';
 import logger from '@/lib/logger';
 
 // Initialize repository instance
 const productRepository = new ProductRepository();
 
 /**
- * Look up product information from GS1 registry
+ * Look up product information from GS1/GDSN registry
  * 
- * PLACEHOLDER: Returns mock data for now
- * TODO: Connect to real GS1 API when credentials are available
+ * Uses the GDSN service which currently connects to mock client,
+ * returning realistic sample data for testing.
  * 
  * @param gtin - Global Trade Item Number (barcode)
  * @returns GS1 product data if found, null if not found
@@ -27,38 +27,72 @@ const productRepository = new ProductRepository();
 export async function lookupGtin(gtin: string): Promise<Gs1LookupResponse | null> {
   // Validate GTIN format (basic check - should be 8, 12, 13, or 14 digits)
   if (!isValidGtin(gtin)) {
+    logger.warn({
+      module: 'gs1-lookup',
+      operation: 'lookupGtin',
+      gtin,
+    }, 'Invalid GTIN format');
     return null;
   }
 
-  // PLACEHOLDER: In production, this would call the actual GS1 API
-  // Example: const response = await fetch(`https://api.gs1.org/products/${gtin}`, { ... });
-  
-  // For now, return null indicating not found
-  // This allows the system to create non-GS1 products
   logger.debug({
     module: 'gs1-lookup',
     operation: 'lookupGtin',
     gtin,
-  }, 'Placeholder lookup for GTIN (no real API call)');
+  }, 'Looking up GTIN via GDSN service');
   
-  return null;
-  
-  // When real GS1 API is connected, return something like:
-  /*
-  return {
-    found: true,
-    gtin: gtin,
-    brand: 'Example Brand',
-    name: 'Example Product Name',
-    description: 'Product description from GS1',
-    images: ['https://example.com/image.jpg'],
-    netContent: '500g',
-    manufacturer: 'Example Manufacturer',
-    verificationStatus: Gs1VerificationStatus.VERIFIED,
-    verifiedAt: new Date(),
-    rawData: apiResponse,
-  };
-  */
+  try {
+    const gdsnService = getGdsnService();
+    const result = await gdsnService.lookupByGtin(gtin);
+    
+    if (!result.found || !result.data) {
+      logger.info({
+        module: 'gs1-lookup',
+        operation: 'lookupGtin',
+        gtin,
+        found: false,
+      }, 'GTIN not found in GDSN');
+      return null;
+    }
+    
+    const gdsnData = result.data;
+    
+    logger.info({
+      module: 'gs1-lookup',
+      operation: 'lookupGtin',
+      gtin,
+      found: true,
+      brand: gdsnData.brandName,
+    }, 'GTIN found in GDSN');
+    
+    // Map GDSN data to Gs1LookupResponse format
+    // Convert null values to undefined to match the interface
+    return {
+      found: true,
+      gtin: gdsnData.gtin,
+      brand: gdsnData.brandName ?? undefined,
+      name: gdsnData.tradeItemDescription,
+      description: gdsnData.shortDescription ?? undefined,
+      images: gdsnData.digitalAssets
+        ?.filter(a => a.type === 'PRODUCT_IMAGE')
+        .map(a => a.url) ?? [],
+      netContent: gdsnData.netContentValue 
+        ? `${gdsnData.netContentValue} ${gdsnData.netContentUom || ''}`.trim()
+        : undefined,
+      manufacturer: gdsnData.manufacturerName ?? undefined,
+      verificationStatus: Gs1VerificationStatus.VERIFIED,
+      verifiedAt: new Date(),
+      rawData: gdsnData.raw as Record<string, JsonValue>,
+    };
+  } catch (error) {
+    logger.error({
+      module: 'gs1-lookup',
+      operation: 'lookupGtin',
+      gtin,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Error looking up GTIN');
+    return null;
+  }
 }
 
 /**
