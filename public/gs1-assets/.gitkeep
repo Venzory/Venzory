@@ -1,0 +1,3 @@
+# This directory stores downloaded GS1 media and document assets
+# Files are served statically via Next.js from /gs1-assets/*
+

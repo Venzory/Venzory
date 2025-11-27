@@ -63,9 +63,9 @@ export function InviteUserForm({ practiceId, practiceName }: InviteUserFormProps
             defaultValue={PracticeRole.STAFF}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
           >
-            <option value={PracticeRole.VIEWER}>Viewer - Read-only access</option>
-            <option value={PracticeRole.STAFF}>Staff - Standard access</option>
-            <option value={PracticeRole.ADMIN}>Admin - Full access</option>
+            <option value={PracticeRole.STAFF}>Staff - Day-to-day operations</option>
+            <option value={PracticeRole.MANAGER}>Manager - Team lead access</option>
+            <option value={PracticeRole.ADMIN}>Admin - Full management access</option>
           </select>
         </div>
       </div>

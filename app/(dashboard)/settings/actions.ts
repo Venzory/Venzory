@@ -42,7 +42,7 @@ const updatePracticeSettingsSchema = z.object({
 
 const updateUserRoleSchema = z.object({
   userId: z.string().cuid(),
-  role: z.enum(['VIEWER', 'STAFF', 'ADMIN']),
+  role: z.enum(['STAFF', 'MANAGER', 'ADMIN']),  // OWNER cannot be assigned via this form
 });
 
 const inviteUserSchema = z.object({

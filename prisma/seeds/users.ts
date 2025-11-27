@@ -25,6 +25,15 @@ export async function seedUsers(prisma: PrismaClient) {
   // Create Users
   const passwordHash = await hash('admin123', 10);
 
+  const ownerUser = await prisma.user.create({
+    data: {
+      email: 'owner@admin.com',
+      name: 'Owner User',
+      passwordHash,
+      emailVerified: new Date(),
+    },
+  });
+
   const adminUser = await prisma.user.create({
     data: {
       email: 'admin@admin.com',
@@ -43,17 +52,16 @@ export async function seedUsers(prisma: PrismaClient) {
     },
   });
 
-  const viewerUser = await prisma.user.create({
-    data: {
-      email: 'viewer@admin.com',
-      name: 'Viewer User',
-      passwordHash,
-      emailVerified: new Date(),
-    },
-  });
-
   // Create Practice Memberships
   await Promise.all([
+    prisma.practiceUser.create({
+      data: {
+        practiceId: practice.id,
+        userId: ownerUser.id,
+        role: PracticeRole.OWNER,
+        status: 'ACTIVE',
+      },
+    }),
     prisma.practiceUser.create({
       data: {
         practiceId: practice.id,
@@ -70,25 +78,16 @@ export async function seedUsers(prisma: PrismaClient) {
         status: 'ACTIVE',
       },
     }),
-    prisma.practiceUser.create({
-      data: {
-        practiceId: practice.id,
-        userId: viewerUser.id,
-        role: PracticeRole.VIEWER,
-        status: 'ACTIVE',
-      },
-    }),
   ]);
 
-  console.log(`   - Users created: Admin, Staff, Viewer`);
+  console.log(`   - Users created: Owner, Admin, Staff`);
 
   return {
     practice,
     users: {
+      owner: ownerUser,
       admin: adminUser,
       staff: staffUser,
-      viewer: viewerUser,
     },
   };
 }
-

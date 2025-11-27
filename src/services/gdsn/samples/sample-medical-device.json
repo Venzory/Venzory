@@ -1,0 +1,169 @@
+{
+  "$schema": "https://example.com/gdsn-product-schema.json",
+  "_comment": "Sample GDSN product in JSON format - Medical Device (Syringes)",
+  
+  "tradeItem": {
+    "gtin": "05901234567890",
+    
+    "informationProviderGLN": "5901234000001",
+    "manufacturerName": "MediSafe Medical Devices Sp. z o.o.",
+    
+    "descriptions": [
+      { "languageCode": "en", "value": "Disposable Syringes 5ml Luer Lock" },
+      { "languageCode": "pl", "value": "Strzykawki jednorazowe 5ml Luer Lock" },
+      { "languageCode": "de", "value": "Einwegspritzen 5ml Luer Lock" }
+    ],
+    "shortDescription": [
+      { "languageCode": "en", "value": "Sterile single-use syringes with Luer lock" }
+    ],
+    "brandName": "MediSafe",
+    
+    "gpcCategoryCode": "10000449",
+    "gpcCategoryName": "Medical Syringes",
+    
+    "targetMarkets": ["NL", "DE", "PL", "BE"],
+    
+    "netContentValue": 100,
+    "netContentUom": "piece",
+    "grossWeight": 0.8,
+    "grossWeightUom": "kg",
+    
+    "isRegulatedDevice": true,
+    "deviceRiskClass": "I",
+    "udiDi": "(01)05901234567890",
+    "gmdnCode": "47017",
+    "gmdnDescription": "Syringe, general-purpose",
+    
+    "certificateNumber": "CE-2024-SYR-001",
+    "registrationId": "EUDAMED-2024-001234",
+    "complianceStatus": "COMPLIANT",
+    "notifiedBodyId": "0123",
+    "notifiedBodyName": "TÜV SÜD",
+    "effectiveDate": "2024-02-01",
+    "expirationDate": "2029-02-01",
+    
+    "packagingHierarchy": [
+      {
+        "level": "EACH",
+        "gtin": "05901234567890",
+        "childCount": 1,
+        "height": 15,
+        "width": 2,
+        "depth": 2,
+        "dimensionUom": "cm",
+        "grossWeight": 0.008,
+        "weightUom": "kg"
+      },
+      {
+        "level": "INNER_PACK",
+        "gtin": "15901234567897",
+        "childCount": 10,
+        "height": 16,
+        "width": 8,
+        "depth": 5,
+        "dimensionUom": "cm",
+        "grossWeight": 0.09,
+        "weightUom": "kg"
+      },
+      {
+        "level": "CASE",
+        "gtin": "25901234567894",
+        "childCount": 100,
+        "height": 35,
+        "width": 30,
+        "depth": 25,
+        "dimensionUom": "cm",
+        "grossWeight": 1.0,
+        "weightUom": "kg"
+      }
+    ],
+    
+    "digitalAssets": [
+      {
+        "type": "PRODUCT_IMAGE",
+        "url": "https://cdn.example.com/images/syringe-5ml-front.jpg",
+        "filename": "syringe-5ml-front.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1000,
+        "height": 1000,
+        "isPrimary": true,
+        "angle": "front"
+      },
+      {
+        "type": "PRODUCT_IMAGE",
+        "url": "https://cdn.example.com/images/syringe-5ml-detail.jpg",
+        "filename": "syringe-5ml-detail.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1000,
+        "height": 1000,
+        "isPrimary": false,
+        "angle": "detail"
+      },
+      {
+        "type": "MARKETING_IMAGE",
+        "url": "https://cdn.example.com/images/syringe-5ml-lifestyle.jpg",
+        "filename": "syringe-5ml-lifestyle.jpg",
+        "mimeType": "image/jpeg",
+        "width": 1920,
+        "height": 1080,
+        "isPrimary": false
+      }
+    ],
+    
+    "referencedDocuments": [
+      {
+        "type": "IFU",
+        "title": "Instructions for Use - Disposable Syringes",
+        "language": "en",
+        "url": "https://docs.example.com/ifu/syringe-ifu-en.pdf",
+        "filename": "syringe-ifu-en.pdf",
+        "effectiveDate": "2024-01-15",
+        "version": "1.2"
+      },
+      {
+        "type": "CE_DECLARATION",
+        "title": "EU Declaration of Conformity - Syringes",
+        "language": "en",
+        "url": "https://docs.example.com/ce/syringe-ce-declaration.pdf",
+        "filename": "syringe-ce-declaration.pdf",
+        "effectiveDate": "2024-02-01",
+        "expirationDate": "2029-02-01",
+        "version": "1.0"
+      },
+      {
+        "type": "SDS",
+        "title": "Safety Data Sheet",
+        "language": "en",
+        "url": "https://docs.example.com/sds/syringe-sds-en.pdf",
+        "filename": "syringe-sds-en.pdf",
+        "effectiveDate": "2024-01-01",
+        "version": "2.0"
+      },
+      {
+        "type": "TECHNICAL_FILE",
+        "title": "Technical Documentation",
+        "language": "en",
+        "url": "https://docs.example.com/tech/syringe-technical-file.pdf",
+        "filename": "syringe-technical-file.pdf",
+        "effectiveDate": "2024-01-01",
+        "version": "3.0"
+      }
+    ],
+    
+    "logisticsInfo": {
+      "storageTemp": "5-30°C",
+      "storageHumidity": "<70%",
+      "isHazardous": false,
+      "shelfLifeDays": 1825,
+      "countryOfOrigin": "PL",
+      "hsCode": "9018.31.10"
+    },
+    
+    "_metadata": {
+      "dataSource": "sample",
+      "lastUpdated": "2024-11-27T12:00:00Z",
+      "version": "1.0"
+    }
+  }
+}
+

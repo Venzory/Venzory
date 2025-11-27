@@ -3,6 +3,11 @@ import 'next-auth/jwt';
 
 import type { PracticeRole, MembershipStatus } from '@prisma/client';
 
+export type SessionLocation = {
+  id: string;
+  name: string;
+};
+
 export type SessionPractice = {
   id: string;
   practiceId: string;
@@ -15,6 +20,10 @@ export type SessionPractice = {
     onboardingCompletedAt: Date | null;
     onboardingSkippedAt: Date | null;
   };
+  // Location access for this membership
+  allowedLocationIds: string[];
+  // All locations in the practice (for context)
+  locations: SessionLocation[];
 };
 
 declare module 'next-auth' {
@@ -25,6 +34,7 @@ declare module 'next-auth' {
       email?: string | null;
       image?: string | null;
       activePracticeId: string | null;
+      activeLocationId: string | null;
       memberships: SessionPractice[];
     };
   }
@@ -40,6 +50,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     userId: string;
     activePracticeId?: string | null;
+    activeLocationId?: string | null;
     memberships?: SessionPractice[];
   }
 }

@@ -94,6 +94,7 @@ export interface SupplierItem extends BaseEntity {
   matchConfidence?: number | null;
   matchedAt?: Date | null;
   matchedBy?: string | null;
+  needsReview?: boolean; // Phase 5: Flag for manual review queue
   
   // Integration
   integrationType: IntegrationType;
@@ -142,12 +143,21 @@ export interface UpsertSupplierItemInput {
   globalSupplierId: string;
   productId: string;
   supplierSku?: string | null;
+  supplierName?: string | null;
+  supplierDescription?: string | null;
   unitPrice?: number | null;
   currency?: string | null;
   minOrderQty?: number | null;
+  stockLevel?: number | null;
+  leadTimeDays?: number | null;
   integrationType?: IntegrationType;
   integrationConfig?: Record<string, any> | null;
   isActive?: boolean;
+  // Match fields (Phase 5)
+  matchMethod?: MatchMethod;
+  matchConfidence?: number | null;
+  matchedBy?: string | null;
+  needsReview?: boolean;
 }
 
 /**

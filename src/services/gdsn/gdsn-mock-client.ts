@@ -11,6 +11,10 @@ import type {
   IGdsnClient,
   GdsnProductData,
   GdsnSubscriptionRequest,
+  GdsnFetchBatchOptions,
+  GdsnPaginatedResponse,
+  GdsnListChangesOptions,
+  GdsnCinMessage,
 } from './gdsn-client';
 import logger from '@/lib/logger';
 
@@ -604,6 +608,95 @@ export class GdsnMockClient implements IGdsnClient {
     
     // Mock: only known GTINs are "verified"
     return gtin in MOCK_PRODUCTS;
+  }
+  
+  async fetchProductBatch(options: GdsnFetchBatchOptions): Promise<GdsnPaginatedResponse<GdsnProductData>> {
+    logger.debug({
+      module: 'GdsnMockClient',
+      operation: 'fetchProductBatch',
+      options,
+    }, 'Mock GDSN batch fetch');
+    
+    await this.simulateDelay();
+    
+    let products = Object.values(MOCK_PRODUCTS);
+    
+    // Apply filters
+    if (options.gpcCategory) {
+      products = products.filter(p => p.gpcCategoryCode === options.gpcCategory);
+    }
+    if (options.manufacturerGln) {
+      products = products.filter(p => p.manufacturerGln === options.manufacturerGln);
+    }
+    if (options.targetMarket) {
+      products = products.filter(p => p.targetMarket.includes(options.targetMarket!));
+    }
+    // Note: modifiedSince filter would require tracking modification dates in mock data
+    
+    // Apply pagination
+    const page = options.pagination?.page ?? 1;
+    const pageSize = Math.min(options.pagination?.pageSize ?? 100, 1000);
+    const totalCount = products.length;
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const startIndex = (page - 1) * pageSize;
+    const items = products.slice(startIndex, startIndex + pageSize);
+    
+    return {
+      items,
+      totalCount,
+      page,
+      pageSize,
+      totalPages,
+      hasNextPage: page < totalPages,
+    };
+  }
+  
+  async listChanges(options: GdsnListChangesOptions): Promise<GdsnPaginatedResponse<GdsnCinMessage>> {
+    logger.debug({
+      module: 'GdsnMockClient',
+      operation: 'listChanges',
+      options,
+    }, 'Mock GDSN list changes');
+    
+    await this.simulateDelay();
+    
+    // Generate mock CIN messages for all known products
+    // In a real implementation, this would track actual changes
+    const mockChanges: GdsnCinMessage[] = Object.keys(MOCK_PRODUCTS).map((gtin, index) => ({
+      messageId: `mock-cin-${index + 1}-${Date.now()}`,
+      gtin,
+      sourceGln: MOCK_PRODUCTS[gtin].manufacturerGln || '0000000000000',
+      changeType: 'ADD' as const,
+      effectiveDate: options.since,
+      timestamp: new Date(),
+    }));
+    
+    // Filter by change type if specified
+    let filteredChanges = mockChanges;
+    if (options.changeTypes && options.changeTypes.length > 0) {
+      filteredChanges = mockChanges.filter(c => options.changeTypes!.includes(c.changeType));
+    }
+    
+    // Apply pagination
+    const page = options.pagination?.page ?? 1;
+    const pageSize = Math.min(options.pagination?.pageSize ?? 100, 1000);
+    const totalCount = filteredChanges.length;
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const startIndex = (page - 1) * pageSize;
+    const items = filteredChanges.slice(startIndex, startIndex + pageSize);
+    
+    return {
+      items,
+      totalCount,
+      page,
+      pageSize,
+      totalPages,
+      hasNextPage: page < totalPages,
+    };
+  }
+  
+  async listSubscriptions(): Promise<string[]> {
+    return Array.from(this.subscriptions.keys());
   }
   
   /**

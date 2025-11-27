@@ -405,11 +405,20 @@ export class SupplierImportService {
           globalSupplierId,
           productId,
           supplierSku: item.normalized.supplierSku,
+          supplierName: item.normalized.name,
+          supplierDescription: item.normalized.description,
           unitPrice: item.normalized.unitPrice,
           currency: item.normalized.currency,
           minOrderQty: item.normalized.minOrderQty,
+          stockLevel: item.normalized.stockLevel,
+          leadTimeDays: item.normalized.leadTimeDays,
           integrationType: options.integrationType,
           isActive: true,
+          // Match fields (Phase 5)
+          matchMethod: result.matchMethod ?? 'MANUAL',
+          matchConfidence: result.matchConfidence,
+          matchedBy: 'system',
+          needsReview: result.needsReview,
         });
         
         result.supplierItemId = supplierItem.id;

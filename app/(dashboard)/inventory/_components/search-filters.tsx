@@ -2,7 +2,12 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { Search, X } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 
 interface SearchFiltersProps {
   initialSearch?: string;
@@ -93,8 +98,8 @@ export function SearchFilters({
     updateSearchParams('supplier', e.target.value);
   };
 
-  const handleLowStockChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateSearchParams('lowStock', e.target.checked ? 'true' : '');
+  const handleLowStockChange = (checked: boolean) => {
+    updateSearchParams('lowStock', checked ? 'true' : '');
   };
 
   const handleClearFilters = () => {
@@ -106,22 +111,25 @@ export function SearchFilters({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end">
         <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Search by name or SKU..."
-            value={search}
-            onChange={handleSearchChange}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
-          />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Search by name or SKU..."
+              value={search}
+              onChange={handleSearchChange}
+              className="pl-10"
+            />
+          </div>
         </div>
         
         <div className="flex gap-3">
-          <select
+          <Select
             value={initialLocation}
             onChange={handleLocationChange}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+            className="min-w-[160px]"
           >
             <option value="">All locations</option>
             {locations.map((location) => (
@@ -130,12 +138,12 @@ export function SearchFilters({
                 {location.code ? ` (${location.code})` : ''}
               </option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             value={initialSupplier}
             onChange={handleSupplierChange}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+            className="min-w-[160px]"
           >
             <option value="">All suppliers</option>
             {suppliers.map((supplier) => (
@@ -143,33 +151,29 @@ export function SearchFilters({
                 {supplier.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={initialLowStock}
-            onChange={handleLowStockChange}
-            className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600 dark:border-slate-600"
-          />
-          <span className="text-sm text-slate-700 dark:text-slate-300">
-            Show only low stock items
-          </span>
-        </label>
+        <Checkbox
+          checked={initialLowStock}
+          onCheckedChange={handleLowStockChange}
+          label="Show only low stock items"
+        />
 
         {hasActiveFilters && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleClearFilters}
-            className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
           >
+            <X className="mr-1 h-4 w-4" />
             Clear filters
-          </button>
+          </Button>
         )}
       </div>
     </div>
   );
 }
-

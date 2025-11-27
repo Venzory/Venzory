@@ -163,7 +163,20 @@ export const {
             memberships: {
               include: {
                 practice: {
-                  select: { id: true, name: true, slug: true, onboardingCompletedAt: true, onboardingSkippedAt: true },
+                  select: { 
+                    id: true, 
+                    name: true, 
+                    slug: true, 
+                    onboardingCompletedAt: true, 
+                    onboardingSkippedAt: true,
+                    locations: {
+                      select: { id: true, name: true },
+                      orderBy: { name: 'asc' },
+                    },
+                  },
+                },
+                locationAccess: {
+                  select: { locationId: true },
                 },
               },
             },
@@ -195,17 +208,45 @@ export const {
         token.name = user.name;
         token.email = user.email;
         token.image = user.image;
-        token.activePracticeId = (user as any).memberships?.[0]?.practiceId ?? null;
-        token.memberships = (user as any).memberships?.map((m: any) => ({
-          id: m.id,
-          practiceId: m.practiceId,
-          role: m.role,
-          status: m.status,
-          practice: m.practice,
-        })) ?? [];
+        
+        const memberships = (user as any).memberships ?? [];
+        const firstMembership = memberships[0];
+        
+        token.activePracticeId = firstMembership?.practiceId ?? null;
+        token.memberships = memberships.map((m: any) => {
+          // Get allowed location IDs from explicit access or all locations for OWNER/ADMIN
+          const practiceLocations = m.practice?.locations ?? [];
+          const explicitLocationIds = m.locationAccess?.map((la: any) => la.locationId) ?? [];
+          
+          // OWNER and ADMIN have access to all locations; others need explicit assignment
+          const isFullAccess = m.role === 'OWNER' || m.role === 'ADMIN';
+          const allowedLocationIds = isFullAccess 
+            ? practiceLocations.map((loc: any) => loc.id)
+            : explicitLocationIds;
+          
+          return {
+            id: m.id,
+            practiceId: m.practiceId,
+            role: m.role,
+            status: m.status,
+            practice: {
+              id: m.practice.id,
+              name: m.practice.name,
+              slug: m.practice.slug,
+              onboardingCompletedAt: m.practice.onboardingCompletedAt,
+              onboardingSkippedAt: m.practice.onboardingSkippedAt,
+            },
+            allowedLocationIds,
+            locations: practiceLocations.map((loc: any) => ({ id: loc.id, name: loc.name })),
+          };
+        });
+        
+        // Set initial active location to first allowed location of first practice
+        const firstAllowedLocationId = (token.memberships as any[])?.[0]?.allowedLocationIds?.[0] ?? null;
+        token.activeLocationId = firstAllowedLocationId;
       }
 
-      // Refetch user data on update to get fresh onboarding status
+      // Refetch user data on update to get fresh onboarding status and location access
       if (trigger === 'update' && token.userId) {
         const freshUser = await prisma.user.findUnique({
           where: { id: token.userId as string },
@@ -213,7 +254,20 @@ export const {
             memberships: {
               include: {
                 practice: {
-                  select: { id: true, name: true, slug: true, onboardingCompletedAt: true, onboardingSkippedAt: true },
+                  select: { 
+                    id: true, 
+                    name: true, 
+                    slug: true, 
+                    onboardingCompletedAt: true, 
+                    onboardingSkippedAt: true,
+                    locations: {
+                      select: { id: true, name: true },
+                      orderBy: { name: 'asc' },
+                    },
+                  },
+                },
+                locationAccess: {
+                  select: { locationId: true },
                 },
               },
             },
@@ -221,13 +275,37 @@ export const {
         });
 
         if (freshUser) {
-          token.memberships = freshUser.memberships.map((m: any) => ({
-            id: m.id,
-            practiceId: m.practiceId,
-            role: m.role,
-            status: m.status,
-            practice: m.practice,
-          }));
+          token.memberships = freshUser.memberships.map((m: any) => {
+            const practiceLocations = m.practice?.locations ?? [];
+            const explicitLocationIds = m.locationAccess?.map((la: any) => la.locationId) ?? [];
+            const isFullAccess = m.role === 'OWNER' || m.role === 'ADMIN';
+            const allowedLocationIds = isFullAccess 
+              ? practiceLocations.map((loc: any) => loc.id)
+              : explicitLocationIds;
+            
+            return {
+              id: m.id,
+              practiceId: m.practiceId,
+              role: m.role,
+              status: m.status,
+              practice: {
+                id: m.practice.id,
+                name: m.practice.name,
+                slug: m.practice.slug,
+                onboardingCompletedAt: m.practice.onboardingCompletedAt,
+                onboardingSkippedAt: m.practice.onboardingSkippedAt,
+              },
+              allowedLocationIds,
+              locations: practiceLocations.map((loc: any) => ({ id: loc.id, name: loc.name })),
+            };
+          });
+          
+          // Preserve activeLocationId if still valid, otherwise reset
+          const currentPractice = token.memberships?.find((m: any) => m.practiceId === token.activePracticeId);
+          const currentLocationId = token.activeLocationId as string | null | undefined;
+          if (currentPractice && (!currentLocationId || !currentPractice.allowedLocationIds.includes(currentLocationId))) {
+            token.activeLocationId = currentPractice.allowedLocationIds[0] ?? null;
+          }
         }
       }
 

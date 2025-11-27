@@ -1,5 +1,5 @@
 /**
- * Media Services (GS1 Foundation - Phase 1)
+ * Media Services (GS1 Foundation - Phase 4)
  */
 
 export {
@@ -11,6 +11,7 @@ export {
 export {
   MediaDownloader,
   getMediaDownloader,
+  resetMediaDownloader,
   type DownloadResult,
   type DownloadOptions,
   type IStorageProvider,

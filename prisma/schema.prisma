@@ -11,9 +11,10 @@ datasource db {
 }
 
 enum PracticeRole {
-  ADMIN
-  STAFF
-  VIEWER
+  OWNER   // Can delete org, manage billing, full access
+  ADMIN   // Full management, cannot delete org
+  MANAGER // Team lead, can manage staff in assigned locations
+  STAFF   // Day-to-day operations in assigned locations
 }
 
 enum MembershipStatus {
@@ -194,11 +195,32 @@ model PracticeUser {
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
 
-  practice Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  practice       Practice               @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locationAccess PracticeUserLocation[]
 
   @@unique([practiceId, userId])
   @@index([userId])
+}
+
+// ============================================
+// LOCATION ACCESS CONTROL
+// ============================================
+// Join table for user-location access within a practice
+// OWNER/ADMIN: typically have access to all locations (managed via backfill)
+// MANAGER/STAFF: explicit location assignments required
+model PracticeUserLocation {
+  id             String   @id @default(cuid())
+  practiceUserId String
+  locationId     String
+  createdAt      DateTime @default(now())
+
+  practiceUser PracticeUser @relation(fields: [practiceUserId], references: [id], onDelete: Cascade)
+  location     Location     @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([practiceUserId, locationId])
+  @@index([practiceUserId])
+  @@index([locationId])
 }
 
 model Location {
@@ -217,10 +239,11 @@ model Location {
 
   inventory          LocationInventory[]
   stockAdjustments   StockAdjustment[]
-  outgoingTransfers  InventoryTransfer[] @relation("TransferFromLocation")
-  incomingTransfers  InventoryTransfer[] @relation("TransferToLocation")
+  outgoingTransfers  InventoryTransfer[]      @relation("TransferFromLocation")
+  incomingTransfers  InventoryTransfer[]      @relation("TransferToLocation")
   goodsReceipts      GoodsReceipt[]
   stockCountSessions StockCountSession[]
+  userAccess         PracticeUserLocation[]
 
   @@index([practiceId])
 }
@@ -302,10 +325,44 @@ model GlobalSupplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  practiceLinks PracticeSupplier[]
-  supplierItems SupplierItem[]
+  practiceLinks  PracticeSupplier[]
+  supplierItems  SupplierItem[]
+  catalogUploads SupplierCatalogUpload[]
 
   @@index([name])
+}
+
+// ============================================
+// SUPPLIER CATALOG UPLOAD (Phase 3)
+// ============================================
+// Stores raw supplier catalog uploads for auditing and tracking import results
+enum UploadStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model SupplierCatalogUpload {
+  id               String       @id @default(cuid())
+  globalSupplierId String
+  filename         String
+  rawContent       String       @db.Text
+  rowCount         Int
+  successCount     Int          @default(0)
+  failedCount      Int          @default(0)
+  reviewCount      Int          @default(0)
+  enrichedCount    Int          @default(0)
+  status           UploadStatus @default(PROCESSING)
+  errorMessage     String?
+  uploadedBy       String?
+  completedAt      DateTime?
+  createdAt        DateTime     @default(now())
+
+  globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
+
+  @@index([globalSupplierId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model PracticeSupplier {
@@ -369,6 +426,7 @@ model SupplierItem {
   matchConfidence Decimal?    @db.Decimal(5, 4) // 0.0000 - 1.0000
   matchedAt       DateTime? // When the match was made
   matchedBy       String? // User ID or "system" for automatic matches
+  needsReview     Boolean     @default(false) // Phase 5: Flag for manual review queue
 
   // Integration
   integrationType   IntegrationType @default(MANUAL)
@@ -389,6 +447,7 @@ model SupplierItem {
   @@index([isActive])
   @@index([supplierSku])
   @@index([matchMethod])
+  @@index([needsReview])
 }
 
 // Practice-specific view of a Product
@@ -812,6 +871,35 @@ model EmailJob {
 
   @@index([status])
   @@index([createdAt])
+}
+
+// ============================================
+// ASSET DOWNLOAD JOBS (Phase 4)
+// ============================================
+// Background jobs for downloading media and document assets
+
+enum AssetJobType {
+  MEDIA_DOWNLOAD
+  DOCUMENT_DOWNLOAD
+}
+
+model AssetJob {
+  id          String       @id @default(cuid())
+  type        AssetJobType // MEDIA_DOWNLOAD or DOCUMENT_DOWNLOAD
+  assetId     String // ProductMedia.id or ProductDocument.id
+  productId   String // For reference and cleanup
+  sourceUrl   String // Original URL to download from
+  status      JobStatus    @default(PENDING)
+  attempts    Int          @default(0)
+  lastError   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  processedAt DateTime?
+
+  @@index([status])
+  @@index([productId])
+  @@index([createdAt])
+  @@index([type, status])
 }
 
 // ============================================

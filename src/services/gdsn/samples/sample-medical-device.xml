@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Sample GS1 XML 3.1 Trade Item Message
+  
+  This is a sample medical device product for testing GDSN parsing.
+  Based on GS1 GDSN Trade Item schema.
+  
+  Use with: parseGdsnXmlResponse(xmlString, 'sample')
+-->
+<tradeItemMessage xmlns="urn:gs1:gdsn:tradeitem:xsd:3" 
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <transaction>
+    <transactionIdentification>
+      <entityIdentification>TXN-2024-001234</entityIdentification>
+    </transactionIdentification>
+    <documentCommand>
+      <documentCommandHeader type="ADD"/>
+    </documentCommand>
+  </transaction>
+  
+  <tradeItem>
+    <gtin>04006501003638</gtin>
+    
+    <informationProviderOfTradeItem>
+      <gln>4006501000001</gln>
+      <partyName>MedPro Medical Supplies GmbH</partyName>
+    </informationProviderOfTradeItem>
+    
+    <tradeItemDescriptionInformation>
+      <tradeItemDescription languageCode="en">Sterile Surgical Gloves (Size M)</tradeItemDescription>
+      <tradeItemDescription languageCode="de">Sterile Chirurgische Handschuhe (Größe M)</tradeItemDescription>
+      <descriptionShort languageCode="en">Latex-free sterile surgical gloves</descriptionShort>
+      <brandName>MedPro</brandName>
+      <functionalName languageCode="en">Surgical Gloves</functionalName>
+      <netContent measurementUnitCode="PAIR">50</netContent>
+    </tradeItemDescriptionInformation>
+    
+    <gdsnTradeItemClassification>
+      <gpcCategoryCode>10000449</gpcCategoryCode>
+      <gpcCategoryName>Medical/Surgical Gloves</gpcCategoryName>
+    </gdsnTradeItemClassification>
+    
+    <targetMarket>
+      <targetMarketCountryCode>NL</targetMarketCountryCode>
+    </targetMarket>
+    <targetMarket>
+      <targetMarketCountryCode>DE</targetMarketCountryCode>
+    </targetMarket>
+    <targetMarket>
+      <targetMarketCountryCode>BE</targetMarketCountryCode>
+    </targetMarket>
+    
+    <tradeItemMeasurements>
+      <grossWeight measurementUnitCode="KGM">0.5</grossWeight>
+      <netWeight measurementUnitCode="KGM">0.45</netWeight>
+      <height measurementUnitCode="CMT">25</height>
+      <width measurementUnitCode="CMT">12</width>
+      <depth measurementUnitCode="CMT">3</depth>
+    </tradeItemMeasurements>
+    
+    <healthcareItemInformation>
+      <isTradeItemAMedicalDevice>true</isTradeItemAMedicalDevice>
+      <medicalDeviceClass>IIa</medicalDeviceClass>
+      <deviceIdentifier>(01)04006501003638</deviceIdentifier>
+      <gmdnCode>35370</gmdnCode>
+      <gmdnTermDescription>Surgical glove, sterile</gmdnTermDescription>
+      
+      <notifiedBody>
+        <notifiedBodyNumber>0297</notifiedBodyNumber>
+        <notifiedBodyName>BSI Group</notifiedBodyName>
+      </notifiedBody>
+      
+      <regulatoryAgency>
+        <agencyCode>EU_MDR</agencyCode>
+        <agencyName>EU Medical Device Regulation</agencyName>
+        <region>EU</region>
+      </regulatoryAgency>
+      
+      <registrationInformation>
+        <certificateNumber>CE-2023-12345</certificateNumber>
+        <registrationStatus>COMPLIANT</registrationStatus>
+        <effectiveDate>2023-06-01</effectiveDate>
+        <expirationDate>2028-06-01</expirationDate>
+      </registrationInformation>
+    </healthcareItemInformation>
+    
+    <packagingInformation>
+      <packagingLevel>BASE_UNIT_OR_EACH</packagingLevel>
+      <packagedProductGtin>04006501003638</packagedProductGtin>
+      <totalQuantityOfNextLowerLevelTradeItem>1</totalQuantityOfNextLowerLevelTradeItem>
+      <packagingDimensions>
+        <height measurementUnitCode="CMT">25</height>
+        <width measurementUnitCode="CMT">12</width>
+        <depth measurementUnitCode="CMT">3</depth>
+        <grossWeight measurementUnitCode="KGM">0.01</grossWeight>
+      </packagingDimensions>
+    </packagingInformation>
+    
+    <packagingInformation>
+      <packagingLevel>CASE</packagingLevel>
+      <packagedProductGtin>14006501003635</packagedProductGtin>
+      <totalQuantityOfNextLowerLevelTradeItem>50</totalQuantityOfNextLowerLevelTradeItem>
+      <packagingDimensions>
+        <height measurementUnitCode="CMT">30</height>
+        <width measurementUnitCode="CMT">40</width>
+        <depth measurementUnitCode="CMT">25</depth>
+        <grossWeight measurementUnitCode="KGM">0.6</grossWeight>
+      </packagingDimensions>
+    </packagingInformation>
+    
+    <referencedFileInformation>
+      <referencedFileTypeCode>PRODUCT_IMAGE</referencedFileTypeCode>
+      <uniformResourceIdentifier>https://cdn.example.com/images/gloves-m-front.jpg</uniformResourceIdentifier>
+      <fileName>gloves-m-front.jpg</fileName>
+      <fileFormatName>image/jpeg</fileFormatName>
+      <imagePixelWidth>1200</imagePixelWidth>
+      <imagePixelHeight>1200</imagePixelHeight>
+      <isPrimaryImage>true</isPrimaryImage>
+      <imageAngle>front</imageAngle>
+    </referencedFileInformation>
+    
+    <referencedFileInformation>
+      <referencedFileTypeCode>PRODUCT_IMAGE</referencedFileTypeCode>
+      <uniformResourceIdentifier>https://cdn.example.com/images/gloves-m-back.jpg</uniformResourceIdentifier>
+      <fileName>gloves-m-back.jpg</fileName>
+      <fileFormatName>image/jpeg</fileFormatName>
+      <imagePixelWidth>1200</imagePixelWidth>
+      <imagePixelHeight>1200</imagePixelHeight>
+      <isPrimaryImage>false</isPrimaryImage>
+      <imageAngle>back</imageAngle>
+    </referencedFileInformation>
+    
+    <referencedFileInformation>
+      <referencedFileTypeCode>IFU</referencedFileTypeCode>
+      <uniformResourceIdentifier>https://docs.example.com/ifu/gloves-ifu-en.pdf</uniformResourceIdentifier>
+      <fileName>gloves-ifu-en.pdf</fileName>
+      <fileFormatName>application/pdf</fileFormatName>
+      <fileLanguageCode>en</fileLanguageCode>
+      <fileEffectiveDate>2023-01-01</fileEffectiveDate>
+      <fileVersion>2.1</fileVersion>
+    </referencedFileInformation>
+    
+    <referencedFileInformation>
+      <referencedFileTypeCode>CE_DECLARATION</referencedFileTypeCode>
+      <uniformResourceIdentifier>https://docs.example.com/ce/gloves-ce-declaration.pdf</uniformResourceIdentifier>
+      <fileName>gloves-ce-declaration.pdf</fileName>
+      <fileFormatName>application/pdf</fileFormatName>
+      <fileLanguageCode>en</fileLanguageCode>
+      <fileEffectiveDate>2023-06-01</fileEffectiveDate>
+      <fileExpirationDate>2028-06-01</fileExpirationDate>
+      <fileVersion>1.0</fileVersion>
+    </referencedFileInformation>
+    
+    <tradeItemHandlingInformation>
+      <storageHandlingTemperatureInformation>
+        <minimumTemperature measurementUnitCode="CEL">15</minimumTemperature>
+        <maximumTemperature measurementUnitCode="CEL">25</maximumTemperature>
+      </storageHandlingTemperatureInformation>
+      <storageHandlingHumidityInformation>
+        <maximumHumidity>80</maximumHumidity>
+      </storageHandlingHumidityInformation>
+      <minimumTradeItemLifespanFromTimeOfProduction>1825</minimumTradeItemLifespanFromTimeOfProduction>
+      <countryOfOrigin>
+        <countryCode>MY</countryCode>
+      </countryOfOrigin>
+      <customsInformation>
+        <hsCode>4015.11.00</hsCode>
+      </customsInformation>
+    </tradeItemHandlingInformation>
+    
+  </tradeItem>
+</tradeItemMessage>
+

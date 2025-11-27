@@ -48,6 +48,54 @@ export abstract class BaseRepository {
   }
 
   /**
+   * Build location scope filter
+   */
+  protected scopeToLocation(locationId: string): { locationId: string } {
+    return { locationId };
+  }
+
+  /**
+   * Build combined practice and location scope
+   */
+  protected scopeToPracticeAndLocation(
+    practiceId: string,
+    locationId: string
+  ): { practiceId: string; locationId: string } {
+    return { practiceId, locationId };
+  }
+
+  /**
+   * Build location filter for allowed locations
+   * Returns undefined if locationIds is null (user has access to all)
+   * Returns { in: locationIds } if specific locations are provided
+   */
+  protected buildLocationFilter(
+    locationIds: string[] | null
+  ): { in: string[] } | undefined {
+    if (locationIds === null) {
+      return undefined; // User has access to all locations
+    }
+    return { in: locationIds };
+  }
+
+  /**
+   * Build scope with optional location filtering
+   * Useful for queries that should filter by allowed locations
+   */
+  protected scopeToPracticeWithLocations<T extends Record<string, any>>(
+    practiceId: string,
+    allowedLocationIds: string[] | null,
+    filters?: T
+  ): T & { practiceId: string; locationId?: { in: string[] } } {
+    const locationFilter = this.buildLocationFilter(allowedLocationIds);
+    return {
+      ...(filters as T),
+      practiceId,
+      ...(locationFilter && { locationId: locationFilter }),
+    };
+  }
+
+  /**
    * Ensure entity exists and belongs to practice
    * Throws NotFoundError if not found
    */

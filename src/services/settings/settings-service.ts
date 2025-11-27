@@ -3,7 +3,7 @@
  * Business logic for practice settings and user management
  */
 
-import { UserRepository } from '@/src/repositories/users';
+import { UserRepository, UserLocationRepository, userLocationRepository } from '@/src/repositories/users';
 import { PracticeSupplierRepository, getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { InventoryRepository } from '@/src/repositories/inventory';
 import { OrderRepository } from '@/src/repositories/orders';
@@ -16,6 +16,7 @@ import {
   ValidationError,
   BusinessRuleViolationError,
   NotFoundError,
+  ForbiddenError,
 } from '@/src/domain/errors';
 import { validateStringLength } from '@/src/domain/validators';
 import { getAuthService } from '../auth';
@@ -41,6 +42,7 @@ export class SettingsService {
     private inventoryRepository: InventoryRepository,
     private orderRepository: OrderRepository,
     private locationRepository: LocationRepository,
+    private userLocationRepository: UserLocationRepository,
     private auditService: AuditService
   ) {}
 
@@ -110,13 +112,14 @@ export class SettingsService {
 
   /**
    * Update user role
+   * New roles: OWNER, ADMIN, MANAGER, STAFF
    */
   async updateUserRole(
     ctx: RequestContext,
     userId: string,
-    role: 'VIEWER' | 'STAFF' | 'ADMIN'
+    role: PracticeRole
   ): Promise<void> {
-    // Check permissions
+    // Check permissions - only ADMIN+ can change roles
     requireRole(ctx, 'ADMIN');
 
     // Cannot change own role
@@ -138,16 +141,26 @@ export class SettingsService {
 
       const oldRole = membership.role;
 
-      // Prevent demoting the last admin
-      if (oldRole === 'ADMIN' && role !== 'ADMIN') {
-        const adminCount = await this.userRepository.countAdminsInPractice(
+      // Only OWNER can assign OWNER role
+      if (role === 'OWNER' && ctx.role !== 'OWNER') {
+        throw new ForbiddenError('Only the organization owner can assign the owner role');
+      }
+
+      // Cannot demote OWNER unless you are the OWNER
+      if (oldRole === 'OWNER' && ctx.role !== 'OWNER') {
+        throw new ForbiddenError('Only the organization owner can change their own role');
+      }
+
+      // Prevent removing the last OWNER or ADMIN
+      if ((oldRole === 'OWNER' || oldRole === 'ADMIN') && role !== 'OWNER' && role !== 'ADMIN') {
+        const ownerAdminCount = await this.userRepository.countOwnersAndAdminsInPractice(
           ctx.practiceId,
           { tx }
         );
 
-        if (adminCount === 1) {
+        if (ownerAdminCount === 1) {
           throw new BusinessRuleViolationError(
-            'Cannot remove the last admin from the practice'
+            'Cannot remove the last owner/admin from the organization'
           );
         }
       }
@@ -158,6 +171,15 @@ export class SettingsService {
         role,
         { tx }
       );
+
+      // If promoting to OWNER or ADMIN, grant access to all locations
+      if ((role === 'OWNER' || role === 'ADMIN') && oldRole !== 'OWNER' && oldRole !== 'ADMIN') {
+        await this.userLocationRepository.assignAllPracticeLocations(
+          membership.id,
+          ctx.practiceId,
+          { tx }
+        );
+      }
 
       // Log audit event
       await this.auditService.logUserRoleUpdated(
@@ -395,6 +417,157 @@ export class SettingsService {
   }
 
   /**
+   * Get user location assignments
+   * Returns the locations a specific user has access to
+   */
+  async getUserLocationAccess(ctx: RequestContext, userId: string) {
+    // Must be ADMIN to view other users' location access
+    if (userId !== ctx.userId) {
+      requireRole(ctx, 'ADMIN');
+    }
+
+    // Find the membership
+    const membership = await this.userRepository.findPracticeUserMembership(
+      ctx.practiceId,
+      userId
+    );
+
+    if (!membership) {
+      throw new NotFoundError('User not found in practice');
+    }
+
+    // OWNER and ADMIN have access to all locations
+    if (membership.role === 'OWNER' || membership.role === 'ADMIN') {
+      const locations = await this.locationRepository.findLocations(ctx.practiceId);
+      return {
+        hasFullAccess: true,
+        locations: locations.map(l => ({ id: l.id, name: l.name, code: l.code })),
+      };
+    }
+
+    // Get explicit location assignments
+    const locationAccess = await this.userLocationRepository.findUserLocations(membership.id);
+
+    return {
+      hasFullAccess: false,
+      locations: locationAccess.map(la => la.location),
+    };
+  }
+
+  /**
+   * Set user location assignments
+   * Updates the locations a user can access
+   * Only for MANAGER and STAFF roles (OWNER/ADMIN have automatic full access)
+   */
+  async setUserLocationAccess(
+    ctx: RequestContext,
+    userId: string,
+    locationIds: string[]
+  ): Promise<void> {
+    // Check permissions - only ADMIN can assign locations
+    requireRole(ctx, 'ADMIN');
+
+    return withTransaction(async (tx) => {
+      // Find the membership
+      const membership = await this.userRepository.findPracticeUserMembership(
+        ctx.practiceId,
+        userId,
+        { tx }
+      );
+
+      if (!membership) {
+        throw new NotFoundError('User not found in practice');
+      }
+
+      // OWNER and ADMIN don't need explicit location assignments
+      if (membership.role === 'OWNER' || membership.role === 'ADMIN') {
+        throw new BusinessRuleViolationError(
+          'Owners and admins automatically have access to all locations'
+        );
+      }
+
+      // Validate that all locations belong to this practice
+      const practiceLocations = await this.locationRepository.findLocations(ctx.practiceId, { tx });
+      const practiceLocationIds = new Set(practiceLocations.map(l => l.id));
+      
+      for (const locId of locationIds) {
+        if (!practiceLocationIds.has(locId)) {
+          throw new ValidationError(`Location ${locId} does not belong to this practice`);
+        }
+      }
+
+      // Update location assignments
+      await this.userLocationRepository.setUserLocations(
+        membership.id,
+        locationIds,
+        { tx }
+      );
+
+      // Log audit event
+      await this.auditService.logPracticeSettingsUpdated(
+        ctx,
+        ctx.practiceId,
+        {
+          action: 'user_location_access_updated',
+          userId,
+          locationIds,
+        },
+        tx
+      );
+
+      logger.info(
+        {
+          action: 'user-location-access-updated',
+          practiceId: ctx.practiceId,
+          targetUserId: userId,
+          locationIds,
+          updatedBy: ctx.userId,
+        },
+        'User location access updated',
+      );
+    });
+  }
+
+  /**
+   * Get all users with their location assignments
+   * For admin UI display
+   */
+  async getPracticeUsersWithLocations(ctx: RequestContext) {
+    requireRole(ctx, 'ADMIN');
+
+    const users = await this.userRepository.findPracticeUsersWithDetails(ctx.practiceId);
+    const locations = await this.locationRepository.findLocations(ctx.practiceId);
+
+    // For each user, get their location access
+    const usersWithLocations = await Promise.all(
+      users.map(async (user) => {
+        // OWNER and ADMIN have full access
+        if (user.role === 'OWNER' || user.role === 'ADMIN') {
+          return {
+            ...user,
+            hasFullAccess: true,
+            allowedLocationIds: locations.map(l => l.id),
+          };
+        }
+
+        // Get explicit assignments for MANAGER/STAFF
+        const locationAccess = await this.userLocationRepository.getUserLocationIds(user.id);
+        
+        return {
+          ...user,
+          hasFullAccess: false,
+          allowedLocationIds: locationAccess,
+        };
+      })
+    );
+
+    return {
+      users: usersWithLocations,
+      allLocations: locations.map(l => ({ id: l.id, name: l.name, code: l.code })),
+    };
+  }
+
+  /**
    * Get setup progress (counts for locations, suppliers, items, orders, received orders)
    */
   async getSetupProgress(ctx: RequestContext) {
@@ -437,6 +610,7 @@ export function getSettingsService(): SettingsService {
       new InventoryRepository(),
       new OrderRepository(),
       new LocationRepository(),
+      userLocationRepository,
       getAuditService()
     );
   }

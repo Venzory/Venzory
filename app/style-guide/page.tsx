@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Package, ChevronRight, ShoppingCart } from 'lucide-react';
+import { Search, Package, ChevronRight, ShoppingCart, Edit, Trash2, Bell, Home, Settings } from 'lucide-react';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { StyleSection } from '@/components/style-guide/StyleSection';
 import { ColorGrid } from '@/components/style-guide/ColorGrid';
@@ -23,12 +23,27 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
 import { useToastContext } from '@/lib/toast';
+// New components from UI/UX audit
+import { Dialog } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { Skeleton, SkeletonText, SkeletonCircle, SkeletonCard, SkeletonKPI } from '@/components/ui/skeleton';
+import { Tooltip } from '@/components/ui/tooltip';
+import { IconButton } from '@/components/ui/icon-button';
+import { FormField, FormFieldGroup } from '@/components/ui/form-field';
+import { FormSection, FormActions, FormDivider } from '@/components/ui/form-section';
+import { Breadcrumb } from '@/components/layout/breadcrumb';
+import { SlideOver } from '@/components/ui/slide-over';
 
 export default function StyleGuidePage() {
   const { addToast } = useToastContext();
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isBaseDialogOpen, setIsBaseDialogOpen] = useState(false);
+  const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [switchValue, setSwitchValue] = useState(false);
+  const [showAlert, setShowAlert] = useState(true);
 
   const handleLoadingDemo = () => {
     setIsLoading(true);
@@ -775,6 +790,301 @@ addToast('error', 'An error occurred');`}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        </ComponentShowcase>
+      </StyleSection>
+
+      {/* New Components Section (from UI/UX Audit) */}
+      <StyleSection
+        title="New Components"
+        description="Additional components added from the UI/UX audit to improve consistency and user experience."
+      >
+        <ComponentShowcase
+          title="Base Dialog"
+          description="Flexible modal dialog component with configurable size, title, and footer."
+          code={`<Dialog
+  isOpen={isOpen}
+  onClose={() => setIsOpen(false)}
+  title="Dialog Title"
+  description="Optional description"
+  footer={<Button onClick={...}>Confirm</Button>}
+>
+  <p>Dialog content here</p>
+</Dialog>`}
+          usage="Use Dialog for modals that need custom content. ConfirmDialog extends this for simple confirmations."
+        >
+          <Button onClick={() => setIsBaseDialogOpen(true)}>Open Dialog</Button>
+          <Dialog
+            isOpen={isBaseDialogOpen}
+            onClose={() => setIsBaseDialogOpen(false)}
+            title="Example Dialog"
+            description="This is a base dialog component with full customization support."
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setIsBaseDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={() => {
+                  setIsBaseDialogOpen(false);
+                  addToast('success', 'Dialog action completed');
+                }}>
+                  Confirm
+                </Button>
+              </>
+            }
+          >
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              You can put any content here including forms, tables, or complex layouts.
+            </p>
+          </Dialog>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="Alert"
+          description="Inline notification banners for important messages."
+          code={`<Alert variant="info" title="Information">
+  This is an informational message.
+</Alert>
+<Alert variant="success">Success message</Alert>
+<Alert variant="warning">Warning message</Alert>
+<Alert variant="error" dismissible onDismiss={...}>Error message</Alert>`}
+        >
+          <div className="space-y-3">
+            <Alert variant="info" title="Information">
+              This is an informational message with a title.
+            </Alert>
+            <Alert variant="success">
+              Your changes have been saved successfully.
+            </Alert>
+            <Alert variant="warning">
+              Please review your input before continuing.
+            </Alert>
+            {showAlert && (
+              <Alert variant="error" dismissible onDismiss={() => setShowAlert(false)}>
+                An error occurred. Click to dismiss.
+              </Alert>
+            )}
+            {!showAlert && (
+              <Button variant="ghost" size="sm" onClick={() => setShowAlert(true)}>
+                Reset Alert Demo
+              </Button>
+            )}
+          </div>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="Switch"
+          description="Toggle switch for boolean settings."
+          code={`<Switch
+  checked={value}
+  onCheckedChange={setValue}
+  label="Enable notifications"
+  description="Receive email alerts"
+/>`}
+        >
+          <div className="space-y-4">
+            <Switch
+              checked={switchValue}
+              onChange={(e) => setSwitchValue(e.target.checked)}
+              label="Enable notifications"
+              description="Receive email alerts for important updates"
+            />
+            <Switch
+              checked={true}
+              label="Dark mode"
+              disabled
+            />
+            <div className="flex items-center gap-4">
+              <Switch size="sm" />
+              <Switch size="md" />
+              <Switch size="lg" />
+            </div>
+          </div>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="Skeleton"
+          description="Loading placeholders for content that is being fetched."
+          code={`<Skeleton className="h-4 w-32" />
+<SkeletonText lines={3} />
+<SkeletonCircle size="lg" />
+<SkeletonCard showHeader contentLines={3} />
+<SkeletonKPI />`}
+        >
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Basic Skeletons</h4>
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-48" />
+              <SkeletonText lines={3} />
+            </div>
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium">Skeleton Variants</h4>
+              <div className="flex gap-3">
+                <SkeletonCircle size="sm" />
+                <SkeletonCircle size="md" />
+                <SkeletonCircle size="lg" />
+              </div>
+              <SkeletonKPI />
+            </div>
+          </div>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="Tooltip"
+          description="Displays additional information on hover."
+          code={`<Tooltip content="Helpful information" placement="top">
+  <Button>Hover me</Button>
+</Tooltip>`}
+        >
+          <div className="flex flex-wrap gap-4">
+            <Tooltip content="Top tooltip" placement="top">
+              <Button variant="secondary">Top</Button>
+            </Tooltip>
+            <Tooltip content="Bottom tooltip" placement="bottom">
+              <Button variant="secondary">Bottom</Button>
+            </Tooltip>
+            <Tooltip content="Left tooltip" placement="left">
+              <Button variant="secondary">Left</Button>
+            </Tooltip>
+            <Tooltip content="Right tooltip" placement="right">
+              <Button variant="secondary">Right</Button>
+            </Tooltip>
+          </div>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="IconButton"
+          description="Button that displays only an icon with tooltip."
+          code={`<IconButton
+  icon={<Edit />}
+  aria-label="Edit item"
+  tooltip="Edit"
+  variant="ghost"
+/>`}
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <IconButton icon={<Edit className="h-5 w-5" />} aria-label="Edit" variant="ghost" />
+            <IconButton icon={<Trash2 className="h-5 w-5" />} aria-label="Delete" variant="destructive" />
+            <IconButton icon={<Bell className="h-5 w-5" />} aria-label="Notifications" variant="secondary" />
+            <IconButton icon={<Settings className="h-5 w-5" />} aria-label="Settings" variant="primary" />
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <IconButton icon={<Edit className="h-4 w-4" />} aria-label="Edit small" size="sm" variant="ghost" />
+            <IconButton icon={<Edit className="h-5 w-5" />} aria-label="Edit medium" size="md" variant="ghost" />
+            <IconButton icon={<Edit className="h-6 w-6" />} aria-label="Edit large" size="lg" variant="ghost" />
+          </div>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="Breadcrumb"
+          description="Navigation trail showing current location."
+          code={`<Breadcrumb
+  items={[
+    { label: 'Orders', href: '/orders' },
+    { label: 'Order #1234' }
+  ]}
+/>`}
+        >
+          <div className="space-y-4">
+            <Breadcrumb
+              items={[
+                { label: 'Orders', href: '/orders' },
+                { label: 'Order #1234' }
+              ]}
+            />
+            <Breadcrumb
+              items={[
+                { label: 'Settings', href: '/settings' },
+                { label: 'Team', href: '/settings/team' },
+                { label: 'John Doe' }
+              ]}
+            />
+          </div>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="SlideOver"
+          description="Side panel drawer for workflows and forms."
+          code={`<SlideOver
+  isOpen={isOpen}
+  onClose={() => setIsOpen(false)}
+  title="Panel Title"
+  footer={<Button>Save</Button>}
+>
+  <p>Panel content</p>
+</SlideOver>`}
+        >
+          <Button onClick={() => setIsSlideOverOpen(true)}>Open Slide Over</Button>
+          <SlideOver
+            isOpen={isSlideOverOpen}
+            onClose={() => setIsSlideOverOpen(false)}
+            title="Edit Details"
+            description="Make changes to your item details here."
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setIsSlideOverOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={() => {
+                  setIsSlideOverOpen(false);
+                  addToast('success', 'Changes saved');
+                }}>
+                  Save Changes
+                </Button>
+              </>
+            }
+          >
+            <div className="space-y-6">
+              <FormField label="Name" required htmlFor="name">
+                <Input id="name" placeholder="Enter name" />
+              </FormField>
+              <FormField label="Description" htmlFor="description">
+                <Textarea id="description" placeholder="Enter description" />
+              </FormField>
+            </div>
+          </SlideOver>
+        </ComponentShowcase>
+
+        <ComponentShowcase
+          title="FormField & FormSection"
+          description="Consistent form layout components."
+          code={`<FormSection title="Personal Info">
+  <FormFieldGroup columns={2}>
+    <FormField label="First Name" required>
+      <Input />
+    </FormField>
+    <FormField label="Last Name">
+      <Input />
+    </FormField>
+  </FormFieldGroup>
+</FormSection>`}
+        >
+          <FormSection title="Personal Information" description="Enter your basic details.">
+            <FormFieldGroup columns={2}>
+              <FormField label="First Name" required htmlFor="firstName">
+                <Input id="firstName" placeholder="John" />
+              </FormField>
+              <FormField label="Last Name" htmlFor="lastName">
+                <Input id="lastName" placeholder="Doe" />
+              </FormField>
+            </FormFieldGroup>
+            <FormField 
+              label="Email" 
+              required 
+              description="We'll never share your email."
+              htmlFor="email"
+            >
+              <Input id="email" type="email" placeholder="john@example.com" />
+            </FormField>
+            <FormDivider label="Optional" />
+            <FormField label="Phone" htmlFor="phone">
+              <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" />
+            </FormField>
+            <FormActions>
+              <Button variant="secondary">Cancel</Button>
+              <Button>Save</Button>
+            </FormActions>
+          </FormSection>
         </ComponentShowcase>
       </StyleSection>
 

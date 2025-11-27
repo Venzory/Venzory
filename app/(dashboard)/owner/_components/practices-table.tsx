@@ -12,6 +12,7 @@ interface Practice {
   createdAt: Date;
   status: string;
   userCount: number;
+  locationCount: number;
 }
 
 interface PracticesTableProps {
@@ -22,7 +23,7 @@ export function PracticesTable({ practices }: PracticesTableProps) {
   const columns = [
     { 
       accessorKey: 'name', 
-      header: 'Practice Name', 
+      header: 'Organization', 
       cell: (row: Practice) => (
         <Link href={`/owner/${row.id}`} className="font-medium hover:underline text-blue-600">
           {row.name}
@@ -45,6 +46,7 @@ export function PracticesTable({ practices }: PracticesTableProps) {
       ) 
     },
     { accessorKey: 'userCount', header: 'Users' },
+    { accessorKey: 'locationCount', header: 'Locations' },
   ];
 
   return <DataTable columns={columns} data={practices} />;

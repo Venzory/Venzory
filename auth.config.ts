@@ -43,6 +43,7 @@ export const authConfig = {
           emailVerified: null,
           image: token.image as string | null,
           activePracticeId: token.activePracticeId as string | null,
+          activeLocationId: token.activeLocationId as string | null,
           memberships: (token.memberships as any[]) || [],
         };
       }
@@ -57,12 +58,15 @@ export const authConfig = {
         token.email = user.email;
         token.image = user.image;
         token.activePracticeId = (user as any).memberships?.[0]?.practiceId ?? null;
+        token.activeLocationId = null; // Will be set properly in auth.ts
         token.memberships = (user as any).memberships?.map((m: any) => ({
           id: m.id,
           practiceId: m.practiceId,
           role: m.role,
           status: m.status,
           practice: m.practice,
+          allowedLocationIds: [],
+          locations: [],
         })) ?? [];
       }
       return token;

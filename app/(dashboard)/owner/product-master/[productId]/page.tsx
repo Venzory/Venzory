@@ -8,6 +8,7 @@ import { buildRequestContext } from '@/src/lib/context/context-builder';
 import { getProductService } from '@/src/services';
 import { canViewProductPricing } from '@/lib/rbac';
 import { decimalToNumber } from '@/lib/prisma-transforms';
+import { resolveAssetUrl, isLocallyStored } from '@/src/lib/storage';
 import {
   PackagingRepository,
   MediaRepository,
@@ -301,13 +302,22 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                     {m.type.replace('_', ' ')}
                   </span>
                   <a 
-                    href={m.url} 
+                    href={resolveAssetUrl(m)} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="truncate text-sky-600 hover:underline dark:text-sky-400"
                   >
                     {m.filename || 'View'}
                   </a>
+                  {isLocallyStored(m) ? (
+                    <span className="inline-block rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      local
+                    </span>
+                  ) : (
+                    <span className="inline-block rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                      external
+                    </span>
+                  )}
                   {m.width && m.height ? (
                     <span className="text-xs text-slate-500">{m.width}×{m.height}</span>
                   ) : null}
@@ -333,13 +343,22 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                     {doc.type}
                   </span>
                   <a 
-                    href={doc.url} 
+                    href={resolveAssetUrl(doc)} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="truncate text-sky-600 hover:underline dark:text-sky-400"
                   >
                     {doc.title}
                   </a>
+                  {isLocallyStored(doc) ? (
+                    <span className="inline-block rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      local
+                    </span>
+                  ) : (
+                    <span className="inline-block rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                      external
+                    </span>
+                  )}
                   <span className="text-xs text-slate-500 uppercase">{doc.language}</span>
                 </li>
               ))}

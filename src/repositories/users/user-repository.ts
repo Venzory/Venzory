@@ -361,7 +361,7 @@ export class UserRepository extends BaseRepository {
    */
   async updatePracticeUserRole(
     membershipId: string,
-    role: 'VIEWER' | 'STAFF' | 'ADMIN',
+    role: 'OWNER' | 'ADMIN' | 'MANAGER' | 'STAFF',
     options?: RepositoryOptions
   ): Promise<any> {
     const client = this.getClient(options?.tx);
@@ -385,6 +385,24 @@ export class UserRepository extends BaseRepository {
       where: {
         practiceId,
         role: 'ADMIN',
+      },
+    });
+  }
+
+  /**
+   * Count owners and admins in practice
+   * Used to prevent removing the last privileged user
+   */
+  async countOwnersAndAdminsInPractice(
+    practiceId: string,
+    options?: RepositoryOptions
+  ): Promise<number> {
+    const client = this.getClient(options?.tx);
+
+    return client.practiceUser.count({
+      where: {
+        practiceId,
+        role: { in: ['OWNER', 'ADMIN'] },
       },
     });
   }

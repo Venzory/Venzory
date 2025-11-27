@@ -38,18 +38,24 @@ export function DropdownMenu({ children }: DropdownMenuProps) {
 interface DropdownMenuTriggerProps {
   children: ReactNode;
   className?: string;
+  disabled?: boolean;
 }
 
 /**
  * Trigger element that toggles the dropdown
  */
-export function DropdownMenuTrigger({ children, className }: DropdownMenuTriggerProps) {
+export function DropdownMenuTrigger({ children, className, disabled }: DropdownMenuTriggerProps) {
   const { isOpen, setIsOpen } = useDropdownContext();
 
   return (
-    <div onClick={() => setIsOpen(!isOpen)} className={className}>
+    <button
+      type="button"
+      onClick={() => !disabled && setIsOpen(!isOpen)}
+      disabled={disabled}
+      className={cn('inline-flex items-center', className)}
+    >
       {children}
-    </div>
+    </button>
   );
 }
 
@@ -152,4 +158,25 @@ interface DropdownMenuSeparatorProps {
  */
 export function DropdownMenuSeparator({ className }: DropdownMenuSeparatorProps) {
   return <div className={cn('my-1 border-t border-border', className)} />;
+}
+
+interface DropdownMenuLabelProps {
+  children: ReactNode;
+  className?: string;
+}
+
+/**
+ * Label/heading for a group of dropdown items
+ */
+export function DropdownMenuLabel({ children, className }: DropdownMenuLabelProps) {
+  return (
+    <div
+      className={cn(
+        'px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
 }

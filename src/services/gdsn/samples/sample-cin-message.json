@@ -1,0 +1,66 @@
+{
+  "$schema": "https://example.com/gdsn-cin-schema.json",
+  "_comment": "Sample GDSN Change In Notification (CIN) message",
+  
+  "catalogueItemNotification": {
+    "catalogueItemNotificationIdentification": "CIN-2024-1127-001",
+    "creationDateTime": "2024-11-27T10:30:00Z",
+    
+    "sender": {
+      "gln": "1234567890123",
+      "partyName": "GDSN Data Pool Provider"
+    },
+    
+    "receiver": {
+      "gln": "9876543210987",
+      "partyName": "Subscriber Organization"
+    },
+    
+    "catalogueItem": {
+      "gtin": "04006501003638",
+      "informationProviderGLN": "4006501000001",
+      "targetMarketCountryCode": "NL",
+      
+      "catalogueItemState": "CHANGE",
+      "effectiveDateTime": "2024-11-27T00:00:00Z",
+      
+      "changeDescription": "Updated regulatory information and added new product images",
+      
+      "changedFields": [
+        "healthcareItemInformation.registrationInformation",
+        "referencedFileInformation"
+      ]
+    }
+  },
+  
+  "_batchExample": [
+    {
+      "catalogueItemNotificationIdentification": "CIN-2024-1127-001",
+      "gtin": "04006501003638",
+      "informationProviderGLN": "4006501000001",
+      "catalogueItemState": "CHANGE",
+      "effectiveDateTime": "2024-11-27T00:00:00Z",
+      "creationDateTime": "2024-11-27T10:30:00Z",
+      "targetMarketCountryCode": "NL"
+    },
+    {
+      "catalogueItemNotificationIdentification": "CIN-2024-1127-002",
+      "gtin": "05901234567890",
+      "informationProviderGLN": "5901234000001",
+      "catalogueItemState": "ADD",
+      "effectiveDateTime": "2024-11-27T00:00:00Z",
+      "creationDateTime": "2024-11-27T10:35:00Z",
+      "targetMarketCountryCode": "DE"
+    },
+    {
+      "catalogueItemNotificationIdentification": "CIN-2024-1127-003",
+      "gtin": "08714632012345",
+      "informationProviderGLN": "8714632000001",
+      "catalogueItemState": "DELETE",
+      "effectiveDateTime": "2024-11-30T00:00:00Z",
+      "creationDateTime": "2024-11-27T10:40:00Z",
+      "targetMarketCountryCode": "NL"
+    }
+  ]
+}
+

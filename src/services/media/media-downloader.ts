@@ -1,12 +1,17 @@
 /**
- * Media Downloader (GS1 Foundation - Phase 1)
+ * Media Downloader (GS1 Foundation - Phase 4)
  * 
- * Handles downloading media files from external URLs.
- * Phase 1: Stub with interface definition
- * Phase 4: Full implementation with storage providers
+ * Handles downloading media files from external URLs and storing them
+ * via the configured storage provider.
  */
 
 import logger from '@/lib/logger';
+import type { IStorageProvider } from '@/src/lib/storage';
+import {
+  getStorageProvider,
+  getExtensionFromUrl,
+  getExtensionFromMimeType,
+} from '@/src/lib/storage';
 
 export interface DownloadResult {
   success: boolean;
@@ -14,6 +19,7 @@ export interface DownloadResult {
   mimeType: string | null;
   fileSize: number;
   storageKey: string;
+  url: string;
   error?: string;
 }
 
@@ -29,12 +35,17 @@ export interface DownloadOptions {
   timeout?: number;
   
   /**
-   * Allowed MIME types (default: all images)
+   * Allowed MIME types (default: all images and videos)
    */
   allowedMimeTypes?: string[];
+  
+  /**
+   * Storage folder (default: 'media')
+   */
+  folder?: string;
 }
 
-const DEFAULT_OPTIONS: DownloadOptions = {
+const DEFAULT_OPTIONS: Required<DownloadOptions> = {
   maxFileSize: 50 * 1024 * 1024, // 50MB
   timeout: 30000, // 30 seconds
   allowedMimeTypes: [
@@ -46,19 +57,13 @@ const DEFAULT_OPTIONS: DownloadOptions = {
     'video/mp4',
     'video/webm',
   ],
+  folder: 'media',
 };
 
 /**
- * Storage provider interface
- * 
- * TODO (Phase 4): Implement for S3, Cloudinary, etc.
+ * Storage provider interface (re-exported for backwards compatibility)
  */
-export interface IStorageProvider {
-  readonly providerId: string;
-  upload(buffer: Buffer, filename: string, mimeType: string): Promise<string>;
-  getUrl(storageKey: string): string;
-  delete(storageKey: string): Promise<void>;
-}
+export { IStorageProvider };
 
 /**
  * Media Downloader
@@ -66,16 +71,14 @@ export interface IStorageProvider {
  * Downloads media from URLs and stores in configured storage provider.
  */
 export class MediaDownloader {
-  private storageProvider: IStorageProvider | null = null;
+  private storageProvider: IStorageProvider;
   
   constructor(storageProvider?: IStorageProvider) {
-    this.storageProvider = storageProvider ?? null;
+    this.storageProvider = storageProvider ?? getStorageProvider();
   }
   
   /**
    * Download media from URL
-   * 
-   * TODO (Phase 4): Implement actual download
    */
   async download(
     url: string,
@@ -87,34 +90,163 @@ export class MediaDownloader {
       module: 'MediaDownloader',
       operation: 'download',
       url,
-    }, 'Media download not implemented (Phase 4)');
+    }, 'Starting media download');
     
-    // Phase 1: Return stub result
-    // Phase 4: Implement actual download
-    return {
-      success: false,
-      filename: '',
-      mimeType: null,
-      fileSize: 0,
-      storageKey: '',
-      error: 'Media download not implemented (Phase 4)',
-    };
+    // Validate URL
+    if (!this.isValidUrl(url)) {
+      return {
+        success: false,
+        filename: '',
+        mimeType: null,
+        fileSize: 0,
+        storageKey: '',
+        url: '',
+        error: 'Invalid URL',
+      };
+    }
+    
+    try {
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), opts.timeout);
+      
+      // Fetch the file
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Venzory-GS1-Downloader/1.0',
+        },
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+      }
+      
+      // Check content type
+      const contentType = response.headers.get('content-type')?.split(';')[0].trim() || 'application/octet-stream';
+      
+      if (!opts.allowedMimeTypes.includes(contentType)) {
+        return {
+          success: false,
+          filename: '',
+          mimeType: contentType,
+          fileSize: 0,
+          storageKey: '',
+          url: '',
+          error: `Invalid content type: ${contentType}. Allowed: ${opts.allowedMimeTypes.join(', ')}`,
+        };
+      }
+      
+      // Check content length if available
+      const contentLength = response.headers.get('content-length');
+      if (contentLength && parseInt(contentLength, 10) > opts.maxFileSize) {
+        return {
+          success: false,
+          filename: '',
+          mimeType: contentType,
+          fileSize: parseInt(contentLength, 10),
+          storageKey: '',
+          url: '',
+          error: `File too large: ${parseInt(contentLength, 10)} bytes (max: ${opts.maxFileSize} bytes)`,
+        };
+      }
+      
+      // Download the file into buffer
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      
+      // Check actual size
+      if (buffer.length > opts.maxFileSize) {
+        return {
+          success: false,
+          filename: '',
+          mimeType: contentType,
+          fileSize: buffer.length,
+          storageKey: '',
+          url: '',
+          error: `File too large: ${buffer.length} bytes (max: ${opts.maxFileSize} bytes)`,
+        };
+      }
+      
+      // Determine file extension
+      let ext = getExtensionFromUrl(url);
+      if (!ext) {
+        ext = getExtensionFromMimeType(contentType) || '.bin';
+      }
+      
+      // Extract original filename from URL if possible
+      const originalFilename = this.extractFilenameFromUrl(url) || `download${ext}`;
+      
+      // Upload to storage
+      const uploadResult = await this.storageProvider.upload(buffer, {
+        folder: opts.folder,
+        contentType,
+      });
+      
+      logger.info({
+        module: 'MediaDownloader',
+        operation: 'download',
+        url,
+        storageKey: uploadResult.storageKey,
+        fileSize: uploadResult.fileSize,
+        contentType: uploadResult.contentType,
+      }, 'Media downloaded and stored successfully');
+      
+      return {
+        success: true,
+        filename: originalFilename,
+        mimeType: contentType,
+        fileSize: uploadResult.fileSize,
+        storageKey: uploadResult.storageKey,
+        url: uploadResult.url,
+      };
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isTimeout = error instanceof Error && error.name === 'AbortError';
+      
+      logger.error({
+        module: 'MediaDownloader',
+        operation: 'download',
+        url,
+        error: errorMessage,
+        isTimeout,
+      }, 'Media download failed');
+      
+      return {
+        success: false,
+        filename: '',
+        mimeType: null,
+        fileSize: 0,
+        storageKey: '',
+        url: '',
+        error: isTimeout ? 'Request timed out' : errorMessage,
+      };
+    }
   }
   
   /**
-   * Download multiple media files
-   * 
-   * TODO (Phase 4): Implement parallel download with rate limiting
+   * Download multiple media files with concurrency control
    */
   async downloadBatch(
     urls: string[],
-    options: DownloadOptions = {}
+    options: DownloadOptions = {},
+    concurrency: number = 3
   ): Promise<Map<string, DownloadResult>> {
     const results = new Map<string, DownloadResult>();
     
-    for (const url of urls) {
-      const result = await this.download(url, options);
-      results.set(url, result);
+    // Process in batches for concurrency control
+    for (let i = 0; i < urls.length; i += concurrency) {
+      const batch = urls.slice(i, i + concurrency);
+      const batchResults = await Promise.all(
+        batch.map(url => this.download(url, options))
+      );
+      
+      batch.forEach((url, index) => {
+        results.set(url, batchResults[index]);
+      });
     }
     
     return results;
@@ -133,25 +265,25 @@ export class MediaDownloader {
   }
   
   /**
-   * Generate storage key from URL and filename
+   * Extract filename from URL
    */
-  private generateStorageKey(url: string, filename?: string): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    const ext = this.getExtensionFromUrl(url);
-    return `media/${timestamp}-${random}${ext}`;
-  }
-  
-  /**
-   * Extract file extension from URL
-   */
-  private getExtensionFromUrl(url: string): string {
+  private extractFilenameFromUrl(url: string): string | null {
     try {
       const pathname = new URL(url).pathname;
-      const match = pathname.match(/\.([a-zA-Z0-9]+)$/);
-      return match ? `.${match[1].toLowerCase()}` : '';
+      const segments = pathname.split('/');
+      const lastSegment = segments[segments.length - 1];
+      
+      // Decode URL-encoded characters
+      const decoded = decodeURIComponent(lastSegment);
+      
+      // Check if it looks like a filename (has extension)
+      if (decoded && decoded.includes('.')) {
+        return decoded;
+      }
+      
+      return null;
     } catch {
-      return '';
+      return null;
     }
   }
 }
@@ -166,3 +298,9 @@ export function getMediaDownloader(): MediaDownloader {
   return mediaDownloaderInstance;
 }
 
+/**
+ * Reset the downloader instance (for testing)
+ */
+export function resetMediaDownloader(): void {
+  mediaDownloaderInstance = null;
+}

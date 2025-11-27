@@ -1,8 +1,9 @@
 /**
- * Product Enrichment Service (GS1 Foundation - Phase 2)
+ * Product Enrichment Service (GS1 Foundation - Phase 4)
  * 
  * Handles enriching products with GS1/GDSN data.
  * Phase 2: Full enrichment pipeline with packaging, media, documents mapping
+ * Phase 4: Automatic asset download job enqueueing
  */
 
 import { PackagingLevel, MediaType, DocumentType } from '@prisma/client';
@@ -24,6 +25,10 @@ import {
   type GdsnDocumentData,
 } from '@/src/services/gdsn';
 import { withTransaction } from '@/src/repositories/base';
+import {
+  enqueueMediaDownloadsForProduct,
+  enqueueDocumentDownloadsForProduct,
+} from '@/src/lib/jobs/asset-queue';
 import logger from '@/lib/logger';
 
 export interface EnrichmentResult {
@@ -157,6 +162,35 @@ export class ProductEnrichmentService {
         productId,
         enrichedFields: result.enrichedFields.length,
       }, 'Product enrichment completed');
+      
+      // 5. Enqueue asset download jobs (outside transaction, non-blocking)
+      try {
+        const [mediaJobs, docJobs] = await Promise.all([
+          enqueueMediaDownloadsForProduct(productId),
+          enqueueDocumentDownloadsForProduct(productId),
+        ]);
+        
+        if (mediaJobs > 0 || docJobs > 0) {
+          logger.info({
+            module: 'ProductEnrichmentService',
+            operation: 'enrichFromGdsn',
+            productId,
+            mediaJobs,
+            docJobs,
+          }, 'Asset download jobs enqueued');
+        }
+      } catch (queueError) {
+        // Don't fail enrichment if job enqueueing fails
+        const queueErrorMessage = queueError instanceof Error ? queueError.message : String(queueError);
+        result.warnings.push(`Failed to enqueue asset downloads: ${queueErrorMessage}`);
+        
+        logger.warn({
+          module: 'ProductEnrichmentService',
+          operation: 'enrichFromGdsn',
+          productId,
+          error: queueErrorMessage,
+        }, 'Failed to enqueue asset download jobs');
+      }
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

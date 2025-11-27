@@ -89,9 +89,10 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
 
   // Role priority for filtering
   const rolePriority: Record<PracticeRole, number> = {
+    OWNER: 4,
     ADMIN: 3,
-    STAFF: 2,
-    VIEWER: 1,
+    MANAGER: 2,
+    STAFF: 1,
   };
 
   // Filter navigation items based on user role
@@ -155,7 +156,7 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden animate-fade-in"
           onClick={onClose}
           aria-hidden="true"
         />
