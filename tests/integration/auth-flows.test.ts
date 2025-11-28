@@ -56,6 +56,8 @@ describe('Auth Flows - Integration Tests', () => {
         role: 'ADMIN',
         memberships: [],
         timestamp: new Date(),
+        locationId: null,
+        allowedLocationIds: [],
     };
   });
 

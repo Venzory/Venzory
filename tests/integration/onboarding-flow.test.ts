@@ -46,9 +46,11 @@ describe('Onboarding status transitions', () => {
       userName: user.name ?? null,
       practiceId,
       role: 'ADMIN',
-      memberships: [{ practiceId, role: 'ADMIN', status: 'ACTIVE' }],
+      memberships: [{ practiceId, role: 'ADMIN', status: 'ACTIVE', allowedLocationIds: [] }],
       timestamp: new Date(),
       requestId: 'test-onboarding-flow',
+      locationId: null,
+      allowedLocationIds: [],
     };
   });
 

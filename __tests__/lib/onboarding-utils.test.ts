@@ -84,7 +84,7 @@ describe('Onboarding Utils', () => {
       hasReceivedOrders: true,
     };
 
-    it('should return false when user cannot manage (VIEWER)', () => {
+    it('should return false when user cannot manage (no membership)', () => {
       const result = shouldShowOnboardingBanner(
         { onboardingCompletedAt: null, onboardingSkippedAt: null },
         incompleteSetup,

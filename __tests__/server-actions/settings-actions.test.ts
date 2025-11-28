@@ -231,12 +231,12 @@ describe('Settings Actions', () => {
     it('should handle optional name field', async () => {
       const formData = new FormData();
       formData.append('email', 'user@example.com');
-      formData.append('role', 'VIEWER');
+      formData.append('role', 'STAFF');
 
       mockCreateInvite.mockResolvedValue({
         id: 'invite-id',
         email: 'user@example.com',
-        role: 'VIEWER',
+        role: 'STAFF',
       });
 
       const result = await inviteUserAction(null, formData);
@@ -246,7 +246,7 @@ describe('Settings Actions', () => {
         expect.anything(),
         expect.objectContaining({
           email: 'user@example.com',
-          role: 'VIEWER',
+          role: 'STAFF',
           inviterName: null,
         })
       );
@@ -343,7 +343,7 @@ describe('Settings Actions', () => {
     });
 
     it('should accept all valid role values', async () => {
-      const roles = ['ADMIN', 'STAFF', 'VIEWER'];
+      const roles = ['ADMIN', 'STAFF', 'STAFF'];
 
       for (const role of roles) {
         vi.clearAllMocks();

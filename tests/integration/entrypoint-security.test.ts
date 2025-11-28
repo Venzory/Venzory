@@ -98,6 +98,8 @@ describe('Entrypoint Security & Hardening Tests', () => {
       role: 'STAFF',
       memberships: [],
       timestamp: new Date(),
+      locationId: location1Id,
+      allowedLocationIds: [location1Id],
     };
   });
 
@@ -282,25 +284,19 @@ describe('Entrypoint Security & Hardening Tests', () => {
       expect(updated?.customLabel).toBe('Updated Label');
     });
 
-    it('should deny VIEWER from updating supplier', async () => {
-      const viewerCtx = { ...ctx, role: 'VIEWER' as const };
-      vi.spyOn(ContextBuilder, 'buildRequestContext').mockResolvedValue(viewerCtx);
+    it('should allow STAFF to update supplier (STAFF is the minimum role)', async () => {
+      // STAFF is the lowest role and can update supplier settings
+      const staffCtx = { ...ctx, role: 'STAFF' as const };
+      vi.spyOn(ContextBuilder, 'buildRequestContext').mockResolvedValue(staffCtx);
       
       const formData = new FormData();
       formData.append('practiceSupplierId', practiceSupplierId);
-      formData.append('customLabel', 'Hacker Label');
+      formData.append('customLabel', 'Staff Updated Label');
 
-      // The action catches errors and returns object or throws?
-      // It uses requireRole which throws ForbiddenError.
-      // The action catches error and logs it. 
-      // It returns { error: ... } if domain error. ForbiddenError is likely a domain error?
-      // Let's check if ForbiddenError isDomainError.
+      // STAFF can update supplier settings
+      const result = await updatePracticeSupplierAction(null, formData);
       
-      // If requireRole throws ForbiddenError, and isDomainError(err) is true, it returns error message.
-      
-      await expect(updatePracticeSupplierAction(null, formData)).resolves.toEqual({
-        error: expect.stringContaining('Insufficient permissions'),
-      });
+      expect(result).toEqual({ success: 'Supplier settings updated successfully.' });
     });
   });
 });

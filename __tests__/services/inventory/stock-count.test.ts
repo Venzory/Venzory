@@ -181,7 +181,7 @@ describe('Stock Count Service', () => {
     });
 
     it('should require STAFF role', async () => {
-      const ctx = createTestContext({ role: 'VIEWER' });
+      const ctx = createTestContext({ role: 'STAFF' });
       const location = createTestLocation(ctx.practiceId);
 
       await expect(

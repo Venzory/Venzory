@@ -81,6 +81,8 @@ describe('Order Template Actions - RBAC Tests', () => {
       role: 'STAFF',
       memberships: [],
       timestamp: new Date(),
+      locationId: null,
+      allowedLocationIds: [],
     };
   });
 
@@ -123,39 +125,56 @@ describe('Order Template Actions - RBAC Tests', () => {
       expect(created).not.toBeNull();
     });
 
-    it('should deny VIEWER from creating template', async () => {
-      const viewerCtx = { ...ctx, role: 'VIEWER' as const };
-      vi.spyOn(ContextBuilder, 'buildRequestContext').mockResolvedValue(viewerCtx);
+    it('should allow STAFF to create template (STAFF is the minimum role)', async () => {
+      // STAFF is the lowest role and can create templates
+      const staffCtx = { ...ctx, role: 'STAFF' as const };
+      vi.spyOn(ContextBuilder, 'buildRequestContext').mockResolvedValue(staffCtx);
 
       const formData = new FormData();
-      formData.append('name', 'Hacker Template');
+      formData.append('name', 'Another Staff Template');
       formData.append('items', JSON.stringify([{ itemId, defaultQuantity: 5 }]));
 
       const result = await createTemplateAction(null, formData);
       
-      expect(result).toEqual({ error: expect.stringContaining('Insufficient permissions') });
+      // STAFF can create templates, so this should succeed
+      const created = await prisma.orderTemplate.findFirst({
+        where: { name: 'Another Staff Template' },
+      });
+      expect(created).not.toBeNull();
     });
   });
 
   describe('updateTemplateAction', () => {
-    it('should deny VIEWER from updating template', async () => {
-      const viewerCtx = { ...ctx, role: 'VIEWER' as const };
-      vi.spyOn(ContextBuilder, 'buildRequestContext').mockResolvedValue(viewerCtx);
+    it('should allow STAFF to update template', async () => {
+      // STAFF is the minimum role and can update templates
+      const staffCtx = { ...ctx, role: 'STAFF' as const };
+      vi.spyOn(ContextBuilder, 'buildRequestContext').mockResolvedValue(staffCtx);
 
       const formData = new FormData();
       formData.append('templateId', templateId);
-      formData.append('name', 'Hacked Name');
+      formData.append('name', 'Updated By Staff');
 
-      await expect(updateTemplateAction(formData)).rejects.toThrow('Insufficient permissions');
+      // This should succeed - STAFF can update templates
+      await expect(updateTemplateAction(formData)).resolves.not.toThrow();
     });
   });
 
   describe('deleteTemplateAction', () => {
-    it('should deny VIEWER from deleting template', async () => {
-      const viewerCtx = { ...ctx, role: 'VIEWER' as const };
-      vi.spyOn(ContextBuilder, 'buildRequestContext').mockResolvedValue(viewerCtx);
+    it('should allow STAFF to delete template', async () => {
+      // Create a template to delete
+      const templateToDelete = await prisma.orderTemplate.create({
+        data: {
+          practiceId,
+          name: 'Template To Delete',
+          createdById: user1Id,
+        },
+      });
+      
+      const staffCtx = { ...ctx, role: 'STAFF' as const };
+      vi.spyOn(ContextBuilder, 'buildRequestContext').mockResolvedValue(staffCtx);
 
-      await expect(deleteTemplateAction(templateId)).rejects.toThrow('Insufficient permissions');
+      // STAFF can delete templates
+      await expect(deleteTemplateAction(templateToDelete.id)).resolves.not.toThrow();
     });
   });
 });

@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SettingsService } from '@/src/services/settings/settings-service';
 import { UserRepository } from '@/src/repositories/users';
+import { UserLocationRepository } from '@/src/repositories/users';
 import { PracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { InventoryRepository } from '@/src/repositories/inventory';
 import { OrderRepository } from '@/src/repositories/orders';
@@ -21,6 +22,7 @@ import {
 describe('SettingsService', () => {
   let settingsService: SettingsService;
   let mockUserRepository: any;
+  let mockUserLocationRepository: any;
   let mockPracticeSupplierRepository: any;
   let mockInventoryRepository: any;
   let mockOrderRepository: any;
@@ -41,6 +43,13 @@ describe('SettingsService', () => {
       deleteUserInvite: vi.fn(),
       findPracticeUsersWithDetails: vi.fn(),
       findPendingInvites: vi.fn(),
+    };
+
+    mockUserLocationRepository = {
+      assignUserToLocations: vi.fn(),
+      removeUserFromLocations: vi.fn(),
+      findUserLocationAssignments: vi.fn(),
+      findUsersInLocation: vi.fn(),
     };
 
     mockPracticeSupplierRepository = {
@@ -70,6 +79,7 @@ describe('SettingsService', () => {
       mockInventoryRepository as InventoryRepository,
       mockOrderRepository as OrderRepository,
       mockLocationRepository as LocationRepository,
+      mockUserLocationRepository as UserLocationRepository,
       mockAuditService as AuditService
     );
   });
@@ -77,18 +87,6 @@ describe('SettingsService', () => {
   describe('updatePracticeSettings', () => {
     it('should throw ForbiddenError when user is not ADMIN', async () => {
       const ctx = createTestContext({ role: 'STAFF' });
-
-      await expect(
-        settingsService.updatePracticeSettings(ctx, {
-          name: 'Updated Practice',
-        })
-      ).rejects.toThrow(ForbiddenError);
-
-      expect(mockUserRepository.findPracticeById).not.toHaveBeenCalled();
-    });
-
-    it('should throw ForbiddenError when user is VIEWER', async () => {
-      const ctx = createTestContext({ role: 'VIEWER' });
 
       await expect(
         settingsService.updatePracticeSettings(ctx, {
@@ -129,7 +127,7 @@ describe('SettingsService', () => {
       const ctx = createTestContext({ role: 'STAFF' });
 
       await expect(
-        settingsService.updateUserRole(ctx, 'other-user-id', 'VIEWER')
+        settingsService.updateUserRole(ctx, 'other-user-id', 'MANAGER')
       ).rejects.toThrow(ForbiddenError);
 
       expect(mockUserRepository.findPracticeUserMembership).not.toHaveBeenCalled();
@@ -233,7 +231,7 @@ describe('SettingsService', () => {
       expect(mockAuditService.logUserRoleUpdated).toHaveBeenCalled();
     });
 
-    it('should allow changing role from STAFF to VIEWER', async () => {
+    it('should allow changing role from STAFF to MANAGER', async () => {
       const ctx = createTestContext({ role: 'ADMIN' });
 
       mockUserRepository.findPracticeUserMembership.mockResolvedValue({
@@ -244,11 +242,11 @@ describe('SettingsService', () => {
         status: 'ACTIVE',
       });
 
-      await settingsService.updateUserRole(ctx, 'staff-user', 'VIEWER');
+      await settingsService.updateUserRole(ctx, 'staff-user', 'MANAGER');
 
       expect(mockUserRepository.updatePracticeUserRole).toHaveBeenCalledWith(
         'membership-1',
-        'VIEWER',
+        'MANAGER',
         expect.anything()
       );
       expect(mockAuditService.logUserRoleUpdated).toHaveBeenCalled();
@@ -418,16 +416,6 @@ describe('SettingsService', () => {
   });
 
   describe('updateOnboardingStatus', () => {
-    it('should throw ForbiddenError when user is VIEWER', async () => {
-      const ctx = createTestContext({ role: 'VIEWER' });
-
-      await expect(
-        settingsService.updateOnboardingStatus(ctx, 'complete')
-      ).rejects.toThrow(ForbiddenError);
-
-      expect(mockUserRepository.updatePractice).not.toHaveBeenCalled();
-    });
-
     it('should allow STAFF to update onboarding status', async () => {
       const ctx = createTestContext({ role: 'STAFF' });
 
@@ -578,4 +566,3 @@ describe('SettingsService', () => {
     });
   });
 });
-

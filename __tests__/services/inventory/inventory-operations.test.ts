@@ -273,7 +273,7 @@ describe('Inventory Operations', () => {
     });
 
     it('should require STAFF role', async () => {
-      const ctx = createTestContext({ role: 'VIEWER' });
+      const ctx = createTestContext({ role: 'STAFF' });
 
       await expect(
         inventoryService.adjustStock(ctx, {
@@ -471,7 +471,7 @@ describe('Inventory Operations', () => {
     });
 
     it('should require STAFF role', async () => {
-      const ctx = createTestContext({ role: 'VIEWER' });
+      const ctx = createTestContext({ role: 'STAFF' });
 
       await expect(
         inventoryService.transferInventory(ctx, {

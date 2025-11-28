@@ -425,7 +425,7 @@ describe('Database Unique Constraints', () => {
           data: {
             practiceId: testPractice1Id,
             userId: testUserId,
-            role: 'VIEWER',
+            role: 'STAFF',
             status: 'SUSPENDED',
           },
         });

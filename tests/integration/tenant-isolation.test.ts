@@ -192,6 +192,8 @@ describe('Cross-Tenant Access Prevention - Integration Tests', () => {
       role: 'ADMIN',
       memberships: [],
       timestamp: new Date(),
+      locationId: location1Id,
+      allowedLocationIds: [location1Id],
     };
 
     ctx2 = {
@@ -203,6 +205,8 @@ describe('Cross-Tenant Access Prevention - Integration Tests', () => {
       role: 'ADMIN',
       memberships: [],
       timestamp: new Date(),
+      locationId: location2Id,
+      allowedLocationIds: [location2Id],
     };
   });
 
