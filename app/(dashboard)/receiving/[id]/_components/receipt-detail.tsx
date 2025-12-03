@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import {
@@ -14,6 +14,7 @@ import {
   Check,
   X,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { GoodsReceiptStatus } from '@prisma/client';
 import { ScannerModal } from '@/components/scanner/scanner-modal';
@@ -26,7 +27,8 @@ import {
   searchItemByGtinAction,
 } from '../../actions';
 import { AddLineForm } from './add-line-form';
-import { ExpectedItemsForm } from './expected-items-form';
+import { BulkReceivingTable, type DiscrepancyType } from './bulk-receiving-table';
+import { MismatchPanel } from './mismatch-panel';
 
 interface ReceiptDetailProps {
   receipt: {
@@ -49,7 +51,7 @@ interface ReceiptDetailProps {
         name: string;
         sku: string | null;
         unit: string | null;
-        product: { gtin: string | null };
+        product: { id?: string; gtin: string | null };
       };
     }>;
     createdBy: { name: string | null; email: string };
@@ -59,7 +61,7 @@ interface ReceiptDetailProps {
     name: string;
     sku: string | null;
     unit: string | null;
-    product: { gtin: string | null };
+    product: { id?: string; gtin: string | null };
   }>;
   canEdit: boolean;
   expectedItems?: Array<{
@@ -70,6 +72,7 @@ interface ReceiptDetailProps {
     alreadyReceived: number;
     remainingQuantity: number;
     unit: string | null;
+    productId?: string | null;
   }> | null;
 }
 
@@ -80,6 +83,16 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showMismatchPanel, setShowMismatchPanel] = useState(false);
+  const [mismatchItems, setMismatchItems] = useState<Array<{
+    itemId: string;
+    itemName: string;
+    itemSku: string | null;
+    orderedQuantity: number;
+    receivedQuantity: number;
+    discrepancy: DiscrepancyType;
+    unit: string | null;
+  }>>([]);
   const confirm = useConfirm();
 
   const handleScanResult = async (code: string) => {
@@ -185,6 +198,55 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
       setIsCancelling(false);
     }
   };
+
+  // Handle submit from bulk receiving table - check for discrepancies first
+  const handleSubmitReceiving = useCallback(() => {
+    // Build discrepancy list from current receipt lines vs expected
+    if (!expectedItems || expectedItems.length === 0) {
+      // No expected items, just proceed to confirm
+      handleConfirm();
+      return;
+    }
+
+    const discrepancies: typeof mismatchItems = [];
+    
+    for (const expected of expectedItems) {
+      const line = (receipt.lines || []).find((l) => l.item.id === expected.itemId);
+      const received = line?.quantity ?? 0;
+      
+      let discrepancy: DiscrepancyType = 'NONE';
+      if (received < expected.orderedQuantity) {
+        discrepancy = 'SHORT';
+      } else if (received > expected.orderedQuantity) {
+        discrepancy = 'OVER';
+      }
+      
+      if (discrepancy !== 'NONE') {
+        discrepancies.push({
+          itemId: expected.itemId,
+          itemName: expected.itemName,
+          itemSku: expected.itemSku,
+          orderedQuantity: expected.orderedQuantity,
+          receivedQuantity: received,
+          discrepancy,
+          unit: expected.unit,
+        });
+      }
+    }
+
+    if (discrepancies.length > 0) {
+      setMismatchItems(discrepancies);
+      setShowMismatchPanel(true);
+    } else {
+      handleConfirm();
+    }
+  }, [expectedItems, receipt.lines]);
+
+  // Handle proceeding with discrepancies
+  const handleProceedWithDiscrepancies = useCallback(() => {
+    setShowMismatchPanel(false);
+    handleConfirm();
+  }, []);
 
   const getStatusColor = (status: GoodsReceiptStatus) => {
     switch (status) {
@@ -308,43 +370,36 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
           </div>
         )}
 
-        {/* Expected Items Quick Entry (when receiving an order) */}
-        {canEdit && expectedItems && Array.isArray(expectedItems) && receipt.order && (
-          <>
-            {expectedItems.length > 0 ? (
-              <div className="rounded-lg border border-card-border bg-card p-4">
-                <div className="mb-3">
-                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                    Receive Order Items
-                  </h2>
-                  <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-                    Quickly enter batch numbers and expiry dates for expected items
-                  </p>
-                </div>
-                <ExpectedItemsForm
-                  receiptId={receipt.id}
-                  expectedItems={expectedItems}
-                  receivedItemIds={new Set((receipt.lines || []).map((l) => l?.item?.id).filter(Boolean))}
-                  onSuccess={() => router.refresh()}
-                />
+        {/* Bulk Receiving Table (when receiving an order) */}
+        {canEdit && expectedItems && Array.isArray(expectedItems) && expectedItems.length > 0 && receipt.order && (
+          <div className="rounded-lg border border-card-border bg-card p-4">
+            <BulkReceivingTable
+              receiptId={receipt.id}
+              expectedItems={expectedItems}
+              existingLines={receipt.lines || []}
+              onRefresh={() => router.refresh()}
+              onSubmitReceiving={handleSubmitReceiving}
+              canEdit={canEdit}
+            />
+          </div>
+        )}
+
+        {/* All items received message */}
+        {canEdit && expectedItems && Array.isArray(expectedItems) && expectedItems.length === 0 && (receipt.lines || []).length > 0 && receipt.order && (
+          <div className="rounded-lg border border-green-600 bg-green-950/30 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-green-100">
+                  All Order Items Received
+                </h3>
+                <p className="mt-1 text-sm text-green-300">
+                  You&apos;ve received all {(receipt.lines || []).length} items from this order. 
+                  Review the receipt lines below and click &quot;Confirm Receipt&quot; when ready to update inventory.
+                </p>
               </div>
-            ) : (receipt.lines || []).length > 0 && (
-              <div className="rounded-lg border border-green-600 bg-green-950/30 p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <h3 className="text-base font-semibold text-green-100">
-                      All Order Items Received
-                    </h3>
-                    <p className="mt-1 text-sm text-green-300">
-                      You&apos;ve received all {(receipt.lines || []).length} items from this order. 
-                      Review the receipt lines below and click &quot;Confirm Receipt&quot; when ready to update inventory.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
+            </div>
+          </div>
         )}
 
         {/* Manual Entry (when not receiving an order, or after finishing expected items) */}
@@ -501,6 +556,14 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
         onClose={closeScanner}
         onScan={handleScanResult}
         title="Scan Item Barcode"
+      />
+
+      {/* Mismatch Panel */}
+      <MismatchPanel
+        isOpen={showMismatchPanel}
+        onClose={() => setShowMismatchPanel(false)}
+        items={mismatchItems}
+        onProceedAnyway={handleProceedWithDiscrepancies}
       />
     </>
   );

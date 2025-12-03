@@ -426,6 +426,126 @@ export async function deleteGoodsReceiptAction(receiptId: string) {
   redirect('/receiving');
 }
 
+// Schema for bulk line updates
+const bulkLineSchema = z.object({
+  itemId: z.string().min(1),
+  quantity: z.coerce.number().int().min(0).max(999999),
+  batchNumber: z.string().max(128).optional().nullable().transform((v) => v?.trim() || null),
+  expiryDate: z.string().optional().nullable().transform((v) => {
+    if (!v?.trim()) return null;
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }),
+  notes: z.string().max(256).optional().nullable().transform((v) => v?.trim() || null),
+  lineId: z.string().optional().nullable(),
+});
+
+const bulkUpdateSchema = z.object({
+  receiptId: z.string().min(1, 'Receipt ID is required'),
+  lines: z.array(bulkLineSchema).min(1, 'At least one line is required'),
+});
+
+/**
+ * Bulk update/create receipt lines (for bulk receiving workflow)
+ */
+export async function bulkUpdateReceiptLinesAction(data: {
+  receiptId: string;
+  lines: Array<{
+    itemId: string;
+    quantity: number;
+    batchNumber?: string | null;
+    expiryDate?: string | null;
+    notes?: string | null;
+    lineId?: string | null;
+  }>;
+}) {
+  await verifyCsrfFromHeaders();
+
+  try {
+    const ctx = await buildRequestContext();
+
+    const parsed = bulkUpdateSchema.safeParse(data);
+
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || 'Invalid input';
+      return { error: firstError } as const;
+    }
+
+    const { receiptId, lines } = parsed.data;
+    const results: { itemId: string; success: boolean; error?: string }[] = [];
+
+    for (const line of lines) {
+      try {
+        if (line.lineId) {
+          // Update existing line
+          const result = await receivingService.updateReceiptLine(ctx, line.lineId, {
+            quantity: line.quantity,
+            batchNumber: line.batchNumber,
+            expiryDate: line.expiryDate,
+            notes: line.notes,
+          });
+
+          if (isDomainError(result)) {
+            results.push({ itemId: line.itemId, success: false, error: result.message });
+          } else {
+            results.push({ itemId: line.itemId, success: true });
+          }
+        } else if (line.quantity > 0) {
+          // Add new line only if quantity > 0
+          const result = await receivingService.addReceiptLine(ctx, receiptId, {
+            itemId: line.itemId,
+            quantity: line.quantity,
+            batchNumber: line.batchNumber,
+            expiryDate: line.expiryDate,
+            notes: line.notes,
+          });
+
+          if (isDomainError(result)) {
+            results.push({ itemId: line.itemId, success: false, error: result.message });
+          } else {
+            results.push({ itemId: line.itemId, success: true });
+          }
+        } else {
+          // Skip lines with 0 quantity and no existing lineId
+          results.push({ itemId: line.itemId, success: true });
+        }
+      } catch (error) {
+        results.push({
+          itemId: line.itemId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    revalidatePath(`/receiving/${receiptId}`);
+
+    const failedCount = results.filter((r) => !r.success).length;
+    if (failedCount > 0) {
+      return {
+        success: false,
+        error: `${failedCount} of ${lines.length} lines failed to save`,
+        results,
+      } as const;
+    }
+
+    return { success: true, results } as const;
+  } catch (error: unknown) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'bulkUpdateReceiptLinesAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      receiptId: data.receiptId,
+      lineCount: data.lines?.length,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to bulk update receipt lines');
+
+    return { error: error instanceof Error ? error.message : 'Failed to save lines' } as const;
+  }
+}
+
 /**
  * Search for an item by GTIN (for barcode scanning)
  */

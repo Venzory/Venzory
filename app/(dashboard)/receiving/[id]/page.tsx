@@ -42,6 +42,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
     alreadyReceived: number;
     remainingQuantity: number;
     unit: string | null;
+    productId: string | null;
   }> | null = null;
 
   if (receipt.orderId) {
@@ -108,6 +109,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
             alreadyReceived,
             remainingQuantity,
             unit: oi.item?.unit || null,
+            productId: (oi.item as any)?.productId || null,
           };
         })
         // Filter out items that are fully received, unless they are part of the current draft (so they can be reviewed/edited)
