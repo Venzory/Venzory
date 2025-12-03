@@ -6,11 +6,10 @@ import { buildRequestContextFromSession } from '@/src/lib/context/context-builde
 import { getProductService, getInventoryService } from '@/src/services';
 import { getPracticeSupplierRepository } from '@/src/repositories/suppliers';
 import { hasRole } from '@/lib/rbac';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { parseListParams } from '@/lib/url-params';
 
-import { CatalogProductList } from './_components/catalog-product-list';
+import { CatalogWithDrawer } from './_components/catalog-with-drawer';
 import { CatalogFilters } from './_components/catalog-filters';
 
 interface CatalogPageProps {
@@ -150,7 +149,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           suppliers={practiceSuppliers}
         />
 
-        <CatalogProductList
+        <CatalogWithDrawer
           products={finalProducts as any}
           canManage={canManage}
           hasActiveFilters={hasActiveFilters}
