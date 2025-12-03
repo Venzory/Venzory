@@ -10,7 +10,7 @@ import { env } from '@/lib/env';
 import logger from '@/lib/logger';
 import { isPracticeOnboardingComplete } from '@/lib/onboarding-status';
 
-const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog', '/onboarding', '/owner', '/reorder-suggestions', '/product-master', '/global-supplier-catalog', '/supplier-catalog', '/my-items', '/needs-attention'];
+const protectedMatchers = ['/dashboard', '/inventory', '/suppliers', '/orders', '/locations', '/settings', '/receiving', '/stock-count', '/products', '/catalog', '/my-catalog', '/onboarding', '/owner', '/admin', '/reorder-suggestions', '/product-master', '/global-supplier-catalog', '/supplier-catalog', '/my-items', '/needs-attention'];
 const authRoutes = ['/login', '/register'];
 const publicApiRoutes = ['/api/auth', '/api/health', '/api/invites/accept', '/api/cron'];
 
@@ -170,7 +170,7 @@ export default auth(async (request) => {
 
   // For authenticated users on protected routes, check role-based access
   if (request.auth && isProtected) {
-    // Owner Console Access - Explicit check before any other logic
+    // Owner Portal Access - Platform owner only
     if (pathname.startsWith('/owner')) {
       const ownerEmail = request.auth.user.email;
       const ownerCheck = isPlatformOwner(ownerEmail);
@@ -181,7 +181,25 @@ export default auth(async (request) => {
         const response = NextResponse.redirect(accessDeniedUrl);
         return await applySecurityHeaders(response, nonce, request);
       }
-      // Allow owner to proceed without onboarding checks for owner console
+      // Allow owner to proceed without onboarding checks for owner portal
+      const response = NextResponse.next();
+      return await applySecurityHeaders(response, nonce, request);
+    }
+
+    // Admin Console Access - Platform owner/data steward only
+    // Currently uses same check as Owner Portal (isPlatformOwner)
+    // In future, this could be expanded to include a separate data steward role
+    if (pathname.startsWith('/admin')) {
+      const adminEmail = request.auth.user.email;
+      const adminCheck = isPlatformOwner(adminEmail);
+
+      if (!adminCheck) {
+        const accessDeniedUrl = new URL('/access-denied', request.nextUrl.origin);
+        accessDeniedUrl.searchParams.set('from', pathname);
+        const response = NextResponse.redirect(accessDeniedUrl);
+        return await applySecurityHeaders(response, nonce, request);
+      }
+      // Allow admin to proceed without onboarding checks for admin console
       const response = NextResponse.next();
       return await applySecurityHeaders(response, nonce, request);
     }

@@ -260,7 +260,7 @@ describe('Server Actions CSRF Protection', () => {
         createProductAction,
         updateProductAction,
         deleteProductAction
-      } = await import('@/app/(dashboard)/owner/product-master/actions');
+      } = await import('@/app/(dashboard)/admin/product-master/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Product');
