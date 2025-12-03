@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { QualityKPIs } from './_components/quality-kpis';
 import { LowQualityTable } from './_components/low-quality-table';
 import Link from 'next/link';
-import { ArrowRight, Database } from 'lucide-react';
+import { ArrowRight, Database, Shield } from 'lucide-react';
 
 export default async function GS1QualityPage() {
   const session = await auth();
@@ -43,18 +43,21 @@ export default async function GS1QualityPage() {
           />
         </div>
         
-        {stats.needsReviewCount > 0 && (
-          <Link
-            href="/admin/match-review"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-admin rounded-lg hover:bg-admin-hover transition-colors"
-          >
-            Review Matches
-            <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold text-admin-light bg-admin-dark rounded-full">
-              {stats.needsReviewCount}
-            </span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          {stats.needsReviewCount > 0 && (
+            <Link
+              href="/admin/authority"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-admin rounded-lg hover:bg-admin-hover transition-colors"
+            >
+              <Shield className="h-4 w-4" />
+              Authority Tool
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold text-admin-light bg-admin-dark rounded-full">
+                {stats.needsReviewCount}
+              </span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards */}

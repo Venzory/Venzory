@@ -100,7 +100,7 @@ const adminNavSection: NavSection = {
     { href: '/admin', label: 'Data Dashboard', icon: Database, accent: 'admin' },
     { href: '/admin/product-master', label: 'Product Master', icon: Package2, accent: 'admin' },
     { href: '/admin/gs1-quality', label: 'GS1 Quality', icon: CheckCircle2, accent: 'admin' },
-    { href: '/admin/match-review', label: 'Match Review', icon: FileSearch, accent: 'admin' },
+    { href: '/admin/authority', label: 'Authority Tool', icon: Shield, accent: 'admin' },
     { href: '/admin/suppliers', label: 'Global Suppliers', icon: Building2, accent: 'admin' },
     { href: '/admin/supplier-catalog', label: 'Supplier Catalog', icon: BookOpen, accent: 'admin' },
     { href: '/admin/import', label: 'Bulk Import', icon: Upload, accent: 'admin' },
