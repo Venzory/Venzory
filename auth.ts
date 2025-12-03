@@ -198,9 +198,19 @@ export const {
   ],
   callbacks: {
     ...authConfig.callbacks,
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session: updateData }) {
       // Call base logic from authConfig if needed, but here we just duplicate/override for simplicity
       // because we need full control and authConfig.jwt is basic.
+      
+      // Handle session update with new active practice/location
+      if (trigger === 'update' && updateData) {
+        if (updateData.activePracticeId !== undefined) {
+          token.activePracticeId = updateData.activePracticeId;
+        }
+        if (updateData.activeLocationId !== undefined) {
+          token.activeLocationId = updateData.activeLocationId;
+        }
+      }
       
       if (user) {
         // Store user data in token on initial sign in

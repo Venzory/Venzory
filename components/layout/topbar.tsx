@@ -4,7 +4,7 @@ import { Menu } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 import { UserMenu } from '../auth/user-menu';
 import { NotificationBell } from '../notifications/notification-bell';
-import { OrgLocationSwitcher } from './org-location-switcher';
+import { PracticeContextSelector, PracticeContextSelectorCompact } from './practice-context-selector';
 import { SystemContextBadge, SystemContextBadgeCompact } from './SystemContextBadge';
 
 type TopBarProps = {
@@ -16,7 +16,7 @@ type TopBarProps = {
 export function TopBar({ userName, practiceName, onMenuClick }: TopBarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-surface/60 px-4 backdrop-blur md:px-6">
-      {/* Left side: Mobile Menu + Org/Location Switcher + System Context */}
+      {/* Left side: Mobile Menu + Practice Context Selector + System Context */}
       <div className="flex items-center gap-3">
         {/* Mobile Menu Button */}
         <button
@@ -27,9 +27,14 @@ export function TopBar({ userName, practiceName, onMenuClick }: TopBarProps) {
           <Menu className="h-5 w-5" />
         </button>
 
-        {/* Organization / Location Switcher */}
+        {/* Practice / Location Context Selector - Full version on desktop */}
         <div className="hidden md:block">
-          <OrgLocationSwitcher />
+          <PracticeContextSelector />
+        </div>
+        
+        {/* Practice Context - Compact version on mobile */}
+        <div className="md:hidden">
+          <PracticeContextSelectorCompact />
         </div>
 
         {/* System Context Badge - shows when in Owner Portal or Admin Console */}
