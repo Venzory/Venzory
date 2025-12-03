@@ -23,6 +23,22 @@ enum MembershipStatus {
   SUSPENDED
 }
 
+// ============================================
+// PLATFORM ADMIN ROLES
+// ============================================
+enum PlatformRole {
+  PLATFORM_OWNER // Full platform access, billing, critical settings, Owner Portal
+  DATA_STEWARD   // Admin Console: product master, supplier catalog, matching
+}
+
+// ============================================
+// SUPPLIER PORTAL ROLES
+// ============================================
+enum SupplierRole {
+  ADMIN  // Full supplier portal access, can manage users
+  MEMBER // Limited access, can view and edit catalog
+}
+
 enum OrderStatus {
   DRAFT
   SENT
@@ -148,6 +164,26 @@ model User {
   createdOrderTemplates OrderTemplate[]      @relation("OrderTemplateCreatedBy")
   goodsReceipts         GoodsReceipt[]       @relation("GoodsReceiptCreatedBy")
   stockCountSessions    StockCountSession[]  @relation("StockCountCreatedBy")
+  platformAdmin         PlatformAdmin?
+  supplierAccess        SupplierUser?
+}
+
+// ============================================
+// PLATFORM ADMIN (Multi-Admin Support)
+// ============================================
+// Enables multiple platform administrators with role differentiation
+// PLATFORM_OWNER: Owner Portal + Admin Console access
+// DATA_STEWARD: Admin Console access only
+model PlatformAdmin {
+  id        String       @id @default(cuid())
+  userId    String       @unique
+  role      PlatformRole @default(DATA_STEWARD)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([role])
 }
 
 model Practice {
@@ -328,8 +364,28 @@ model GlobalSupplier {
   practiceLinks  PracticeSupplier[]
   supplierItems  SupplierItem[]
   catalogUploads SupplierCatalogUpload[]
+  supplierUsers  SupplierUser[]
 
   @@index([name])
+}
+
+// ============================================
+// SUPPLIER USER (Supplier Portal Access)
+// ============================================
+// Bridge table linking users to suppliers for external supplier portal access
+// One user can represent one supplier (unique userId)
+model SupplierUser {
+  id               String       @id @default(cuid())
+  userId           String       @unique
+  globalSupplierId String
+  role             SupplierRole @default(MEMBER)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
+
+  @@index([globalSupplierId])
 }
 
 // ============================================

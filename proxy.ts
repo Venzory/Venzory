@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 import { auth } from '@/auth.edge';
 import { checkRouteAccess } from '@/lib/route-guards';
-import { isPlatformOwner } from '@/lib/owner-guard';
+import { isPlatformOwner, hasAdminConsoleAccessEnv } from '@/lib/owner-guard';
 import { generateCSP } from '@/lib/csp';
 import { createSignedCsrfToken, getCsrfTokenFromCookie, parseAndVerifySignedToken } from '@/lib/csrf';
 import { env } from '@/lib/env';
@@ -170,7 +170,9 @@ export default auth(async (request) => {
 
   // For authenticated users on protected routes, check role-based access
   if (request.auth && isProtected) {
-    // Owner Portal Access - Platform owner only
+    // Owner Portal Access - Platform owner only (PLATFORM_OWNER role)
+    // Middleware uses env-based check for fast rejection (edge runtime limitation)
+    // Database-level PlatformAdmin role verification happens in page components via buildAdminContext()
     if (pathname.startsWith('/owner')) {
       const ownerEmail = request.auth.user.email;
       const ownerCheck = isPlatformOwner(ownerEmail);
@@ -186,12 +188,17 @@ export default auth(async (request) => {
       return await applySecurityHeaders(response, nonce, request);
     }
 
-    // Admin Console Access - Platform owner/data steward only
-    // Currently uses same check as Owner Portal (isPlatformOwner)
-    // In future, this could be expanded to include a separate data steward role
+    // Admin Console Access - Platform admin roles (PLATFORM_OWNER or DATA_STEWARD)
+    // Middleware uses env-based check for fast rejection (edge runtime limitation)
+    // Checks both PLATFORM_OWNER_EMAIL and PLATFORM_DATA_STEWARD_EMAILS env vars
+    // Database-level PlatformAdmin role verification happens in page components via:
+    //   - buildAdminContext() for full context building
+    //   - hasAdminConsoleAccess() for permission checks
+    //   - isPlatformOwner() / hasOwnerPortalAccess() for owner-only features
     if (pathname.startsWith('/admin')) {
       const adminEmail = request.auth.user.email;
-      const adminCheck = isPlatformOwner(adminEmail);
+      // Check both platform owner and data steward emails for admin console access
+      const adminCheck = hasAdminConsoleAccessEnv(adminEmail);
 
       if (!adminCheck) {
         const accessDeniedUrl = new URL('/access-denied', request.nextUrl.origin);

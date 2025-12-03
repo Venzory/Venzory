@@ -4,7 +4,7 @@
  * Mirrors the context.Context pattern from Go
  */
 
-import type { PracticeRole, MembershipStatus } from '@prisma/client';
+import type { PracticeRole, MembershipStatus, PlatformRole } from '@prisma/client';
 
 /**
  * Practice membership information in context
@@ -85,6 +85,69 @@ export const ROLE_PRIORITY: Record<PracticeRole, number> = {
   MANAGER: 2,
   STAFF: 1,
 };
+
+// ============================================
+// PLATFORM ADMIN CONTEXT
+// ============================================
+
+/**
+ * Platform Admin context for Admin Console and Owner Portal routes.
+ * Unlike RequestContext, this does NOT require a practice context.
+ */
+export interface PlatformAdminContext {
+  /**
+   * User ID of the platform admin
+   */
+  userId: string;
+
+  /**
+   * User email
+   */
+  userEmail: string;
+
+  /**
+   * User name (may be null)
+   */
+  userName: string | null;
+
+  /**
+   * Platform role (PLATFORM_OWNER or DATA_STEWARD)
+   */
+  platformRole: PlatformRole;
+
+  /**
+   * PlatformAdmin record ID
+   */
+  platformAdminId: string;
+
+  /**
+   * Request timestamp
+   */
+  timestamp: Date;
+
+  /**
+   * Optional request ID for tracing
+   */
+  requestId?: string;
+}
+
+/**
+ * Platform role priority for permission checks
+ */
+export const PLATFORM_ROLE_PRIORITY: Record<PlatformRole, number> = {
+  PLATFORM_OWNER: 2,
+  DATA_STEWARD: 1,
+};
+
+/**
+ * Check if platform admin has required platform role
+ */
+export function hasRequiredPlatformRole(
+  ctx: PlatformAdminContext,
+  minimumRole: PlatformRole
+): boolean {
+  return PLATFORM_ROLE_PRIORITY[ctx.platformRole] >= PLATFORM_ROLE_PRIORITY[minimumRole];
+}
 
 /**
  * Check if user has required role in the active practice

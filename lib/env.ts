@@ -52,6 +52,9 @@ const coreSchema = z.object({
   CSRF_SECRET: secretSchema('CSRF_SECRET'),
   EMAIL_FROM: z.string().email().default('noreply@venzory.com'),
   PLATFORM_OWNER_EMAIL: z.string().email().optional().or(z.literal('')),
+  // Comma-separated list of data steward emails for Admin Console access
+  // These users have Admin Console access but NOT Owner Portal access
+  PLATFORM_DATA_STEWARD_EMAILS: z.string().optional().or(z.literal('')),
 });
 
 /**

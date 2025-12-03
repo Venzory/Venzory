@@ -243,15 +243,15 @@ LEFT JOIN "User" u ON u.id = o."createdById"
 WHERE u.id IS NULL
 ORDER BY o."createdAt" DESC;
 
--- Find Orders with non-existent supplier
+-- Find Orders with non-existent practice supplier
 SELECT 
-    'Order Orphaned Supplier' as issue_type,
+    'Order Orphaned PracticeSupplier' as issue_type,
     o.id,
-    o."supplierId",
+    o."practiceSupplierId",
     o."practiceId"
 FROM "Order" o
-LEFT JOIN "Supplier" s ON s.id = o."supplierId"
-WHERE s.id IS NULL
+LEFT JOIN "PracticeSupplier" ps ON ps.id = o."practiceSupplierId"
+WHERE o."practiceSupplierId" IS NOT NULL AND ps.id IS NULL
 ORDER BY o."createdAt" DESC;
 
 -- Find GoodsReceipts with non-existent creator
@@ -309,32 +309,31 @@ LEFT JOIN "User" u ON u.id = ot."createdById"
 WHERE u.id IS NULL
 ORDER BY ot."createdAt" DESC;
 
--- Find Items with non-existent default supplier
+-- Find Items with non-existent default practice supplier
 SELECT 
-    'Item Orphaned Default Supplier' as issue_type,
+    'Item Orphaned Default PracticeSupplier' as issue_type,
     i.id,
-    i."defaultSupplierId",
+    i."defaultPracticeSupplierId",
     i."practiceId"
 FROM "Item" i
-LEFT JOIN "Supplier" s ON s.id = i."defaultSupplierId"
-WHERE i."defaultSupplierId" IS NOT NULL AND s.id IS NULL
+LEFT JOIN "PracticeSupplier" ps ON ps.id = i."defaultPracticeSupplierId"
+WHERE i."defaultPracticeSupplierId" IS NOT NULL AND ps.id IS NULL
 ORDER BY i."createdAt" DESC;
 
 -- =============================================================================
--- P3: DUPLICATE SUPPLIER NAMES (will add unique constraint)
+-- P3: ORPHANED PRACTICE SUPPLIERS & DUPLICATE NAMES
 -- =============================================================================
 
--- Find duplicate Supplier names within same Practice
+-- Find PracticeSuppliers with non-existent GlobalSupplier
 SELECT 
-    'Duplicate Supplier Name' as issue_type,
-    s."practiceId",
-    s.name,
-    COUNT(*) as duplicate_count,
-    STRING_AGG(s.id, ', ') as supplier_ids
-FROM "Supplier" s
-GROUP BY s."practiceId", s.name
-HAVING COUNT(*) > 1
-ORDER BY duplicate_count DESC;
+    'PracticeSupplier Orphaned GlobalSupplier' as issue_type,
+    ps.id,
+    ps."practiceId",
+    ps."globalSupplierId"
+FROM "PracticeSupplier" ps
+LEFT JOIN "GlobalSupplier" gs ON gs.id = ps."globalSupplierId"
+WHERE gs.id IS NULL
+ORDER BY ps."createdAt" DESC;
 
 -- Find duplicate GlobalSupplier names
 SELECT 

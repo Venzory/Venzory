@@ -64,6 +64,12 @@
     --color-admin-accent-light: 224 231 255; /* indigo-100 */
     --color-admin-accent-dark: 67 56 202; /* indigo-700 */
     
+    /* Supplier Portal accent (teal) */
+    --color-supplier-accent: 20 184 166; /* teal-500 */
+    --color-supplier-accent-hover: 13 148 136; /* teal-600 */
+    --color-supplier-accent-light: 204 251 241; /* teal-100 */
+    --color-supplier-accent-dark: 15 118 110; /* teal-700 */
+    
     /* Shadows (opacity values) */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
@@ -128,6 +134,12 @@
     --color-admin-accent-hover: 99 102 241; /* indigo-500 */
     --color-admin-accent-light: 49 46 129; /* indigo-900 */
     --color-admin-accent-dark: 165 180 252; /* indigo-300 */
+    
+    /* Supplier Portal accent (teal) */
+    --color-supplier-accent: 45 212 191; /* teal-400 */
+    --color-supplier-accent-hover: 20 184 166; /* teal-500 */
+    --color-supplier-accent-light: 19 78 74; /* teal-900 */
+    --color-supplier-accent-dark: 94 234 212; /* teal-300 */
     
     /* Shadows (minimal in dark mode) */
     --shadow-sm: none;
