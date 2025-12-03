@@ -25,7 +25,7 @@ export function PracticesTable({ practices }: PracticesTableProps) {
       accessorKey: 'name', 
       header: 'Organization', 
       cell: (row: Practice) => (
-        <Link href={`/owner/${row.id}`} className="font-medium hover:underline text-blue-600">
+        <Link href={`/owner/tenants/${row.id}`} className="font-medium hover:underline text-owner">
           {row.name}
         </Link>
       ) 

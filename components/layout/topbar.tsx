@@ -5,6 +5,7 @@ import { ThemeToggle } from './theme-toggle';
 import { UserMenu } from '../auth/user-menu';
 import { NotificationBell } from '../notifications/notification-bell';
 import { OrgLocationSwitcher } from './org-location-switcher';
+import { SystemContextBadge, SystemContextBadgeCompact } from './SystemContextBadge';
 
 type TopBarProps = {
   userName?: string | null;
@@ -15,8 +16,8 @@ type TopBarProps = {
 export function TopBar({ userName, practiceName, onMenuClick }: TopBarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-surface/60 px-4 backdrop-blur md:px-6">
-      {/* Left side: Mobile Menu + Org/Location Switcher */}
-      <div className="flex items-center gap-2">
+      {/* Left side: Mobile Menu + Org/Location Switcher + System Context */}
+      <div className="flex items-center gap-3">
         {/* Mobile Menu Button */}
         <button
           onClick={onMenuClick}
@@ -29,6 +30,14 @@ export function TopBar({ userName, practiceName, onMenuClick }: TopBarProps) {
         {/* Organization / Location Switcher */}
         <div className="hidden md:block">
           <OrgLocationSwitcher />
+        </div>
+
+        {/* System Context Badge - shows when in Owner Portal or Admin Console */}
+        <div className="hidden md:block">
+          <SystemContextBadge />
+        </div>
+        <div className="md:hidden">
+          <SystemContextBadgeCompact />
         </div>
       </div>
 

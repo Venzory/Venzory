@@ -32,6 +32,18 @@ const config: Config = {
           'active-text': 'rgb(var(--color-sidebar-active-text) / <alpha-value>)',
           'active-border': 'rgb(var(--color-sidebar-active-border) / <alpha-value>)',
         },
+        owner: {
+          DEFAULT: 'rgb(var(--color-owner-accent) / <alpha-value>)',
+          hover: 'rgb(var(--color-owner-accent-hover) / <alpha-value>)',
+          light: 'rgb(var(--color-owner-accent-light) / <alpha-value>)',
+          dark: 'rgb(var(--color-owner-accent-dark) / <alpha-value>)',
+        },
+        admin: {
+          DEFAULT: 'rgb(var(--color-admin-accent) / <alpha-value>)',
+          hover: 'rgb(var(--color-admin-accent-hover) / <alpha-value>)',
+          light: 'rgb(var(--color-admin-accent-light) / <alpha-value>)',
+          dark: 'rgb(var(--color-admin-accent-dark) / <alpha-value>)',
+        },
         text: {
           DEFAULT: 'rgb(var(--color-text-primary) / <alpha-value>)',
           secondary: 'rgb(var(--color-text-secondary) / <alpha-value>)',
