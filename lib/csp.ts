@@ -58,6 +58,9 @@ const CSP_DIRECTIVES: Record<CspDirectiveKey, readonly string[]> = {
     // Fallback for older browsers (ignored by modern browsers when strict-dynamic is present)
     // This is a standard pattern and does NOT weaken security in modern browsers
     "'unsafe-inline'",
+    // TEMPORARY: Added 'unsafe-eval' to fix Vercel production issues with Turbopack
+    // TODO: Remove this once nonce propagation is fixed
+    "'unsafe-eval'",
     // Allow Vercel Analytics/Insights if used (safe with strict-dynamic + nonce)
     // 'https://va.vercel-scripts.com',
     // 'https://vitals.vercel-insights.com',
