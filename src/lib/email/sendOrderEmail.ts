@@ -1,4 +1,3 @@
-
 import { Resend } from 'resend';
 import { env } from '@/lib/env';
 import logger from '@/lib/logger';
@@ -10,6 +9,39 @@ const resend = env.RESEND_API_KEY
   ? new Resend(env.RESEND_API_KEY)
   : null;
 
+/**
+ * Get the effective recipient based on environment
+ * In non-production with DEV_EMAIL_RECIPIENT set, redirect all emails to dev inbox
+ */
+function getEffectiveRecipient(originalRecipient: string): {
+  recipient: string;
+  subject: (original: string) => string;
+  isRedirected: boolean;
+} {
+  const devRecipient = process.env.DEV_EMAIL_RECIPIENT;
+  
+  if (env.NODE_ENV !== 'production' && devRecipient) {
+    return {
+      recipient: devRecipient,
+      subject: (original: string) => `[DEV] ${original} (was: ${originalRecipient})`,
+      isRedirected: true,
+    };
+  }
+  
+  return {
+    recipient: originalRecipient,
+    subject: (original: string) => original,
+    isRedirected: false,
+  };
+}
+
+/**
+ * Get the from address - standardized across all emails
+ */
+function getFromAddress(): string {
+  return `Venzory <${env.EMAIL_FROM}>`;
+}
+
 export interface SendOrderEmailParams extends OrderEmailData {
   supplierEmail: string;
 }
@@ -19,6 +51,11 @@ export async function sendOrderEmail(
 ): Promise<{ success: boolean; error?: string }> {
   const { supplierEmail, practiceName, orderReference, supplierName } = params;
   
+  // Apply sandbox mode for non-production
+  const { recipient, subject: makeSubject, isRedirected } = getEffectiveRecipient(supplierEmail);
+  const baseSubject = `New Order from ${practiceName}${orderReference ? ` - ${orderReference}` : ''}`;
+  const subject = makeSubject(baseSubject);
+  
   try {
     if (!resend) {
       // In dev: log order details instead of crashing
@@ -26,7 +63,9 @@ export async function sendOrderEmail(
         module: 'email',
         operation: 'sendOrderEmail',
         isDev: true,
-        supplierEmail,
+        originalRecipient: supplierEmail,
+        actualRecipient: recipient,
+        isRedirected,
         practiceName,
         supplierName,
         orderReference,
@@ -37,11 +76,10 @@ export async function sendOrderEmail(
 
     const html = renderOrderEmailHtml(params);
     const text = renderOrderEmailText(params);
-    const subject = `New Order from ${practiceName}${orderReference ? ` - ${orderReference}` : ''}`;
 
     await resend.emails.send({
-      from: 'Venzory <noreply@venzory.com>',
-      to: supplierEmail,
+      from: getFromAddress(),
+      to: recipient,
       subject,
       html,
       text,
@@ -50,7 +88,9 @@ export async function sendOrderEmail(
     logger.info({
       module: 'email',
       operation: 'sendOrderEmail',
-      supplierEmail,
+      originalRecipient: supplierEmail,
+      actualRecipient: recipient,
+      isRedirected,
       orderReference,
     }, 'Order email sent successfully');
 

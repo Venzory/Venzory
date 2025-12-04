@@ -1,10 +1,29 @@
-import { ContextPageWrapper } from '@/components/layout/ContextPageWrapper';
+import type { ReactNode } from 'react';
+import { redirect } from 'next/navigation';
 
-export default function OwnerLayout({ children }: { children: React.ReactNode }) {
+import { auth } from '@/auth';
+import { isPlatformOwner } from '@/lib/owner-guard';
+import { OwnerShell } from '@/components/layout/owner-shell';
+
+type OwnerLayoutProps = {
+  children: ReactNode;
+};
+
+export default async function OwnerLayout({ children }: OwnerLayoutProps) {
+  const session = await auth();
+
+  if (!session?.user) {
+    redirect('/login');
+  }
+
+  // Only platform owners can access the Owner Portal
+  if (!isPlatformOwner(session.user.email)) {
+    redirect('/access-denied');
+  }
+
   return (
-    <ContextPageWrapper context="owner">
+    <OwnerShell userName={session.user.name}>
       {children}
-    </ContextPageWrapper>
+    </OwnerShell>
   );
 }
-

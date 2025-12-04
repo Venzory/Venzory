@@ -362,6 +362,24 @@ export const registerRateLimiter = createRateLimiter({
   failClosed: true,
 });
 
+// Magic link / login code requests: 5 per 10 minutes per email
+// Prevents abuse of email sending and code generation
+export const magicLinkRateLimiter = createRateLimiter({
+  id: 'magic-link-request',
+  limit: 5,
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  failClosed: true,
+});
+
+// Login code verification: 10 per 15 minutes (same as login)
+// Reuses login limits since it's an alternative login method
+export const loginCodeRateLimiter = createRateLimiter({
+  id: 'login-code',
+  limit: 10,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  failClosed: true,
+});
+
 /**
  * Helper to get client IP from request
  */

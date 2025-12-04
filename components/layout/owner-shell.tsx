@@ -2,40 +2,27 @@
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import type { PracticeRole } from '@prisma/client';
 
-import { Sidebar } from './sidebar';
-import { TopBar } from './topbar';
+import { OwnerSidebar } from './owner-sidebar';
+import { OwnerTopBar } from './owner-topbar';
 
-type DashboardLayoutClientProps = {
+type OwnerShellProps = {
   children: ReactNode;
   userName?: string | null;
-  practiceName?: string | null;
-  userRole?: PracticeRole | null;
 };
 
-export function DashboardLayoutClient({
-  children,
-  userName,
-  practiceName,
-  userRole,
-}: DashboardLayoutClientProps) {
+export function OwnerShell({ children, userName }: OwnerShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const normalizedPracticeName =
-    practiceName === 'Demo Pracite' ? 'Demo Practice' : practiceName;
 
   return (
-    <div className="flex h-screen bg-surface-secondary">
-      <Sidebar
-        practiceName={normalizedPracticeName}
-        userRole={userRole}
+    <div className="flex h-screen bg-amber-50/30 dark:bg-amber-950/10">
+      <OwnerSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <TopBar
+        <OwnerTopBar
           userName={userName}
-          practiceName={normalizedPracticeName}
           onMenuClick={() => setIsSidebarOpen(true)}
         />
         <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">

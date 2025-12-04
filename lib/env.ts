@@ -98,6 +98,9 @@ const developmentSchema = z.object({
   NEXTAUTH_URL: z.string().url().default('http://localhost:3000'),
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   CRON_SECRET: z.string().optional(),
+  // Email sandbox: When set in non-production, ALL emails are redirected to this address
+  // This prevents accidental sends to real users during development/staging
+  DEV_EMAIL_RECIPIENT: z.string().email().optional().or(z.literal('')),
 });
 
 /**

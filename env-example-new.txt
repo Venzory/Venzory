@@ -22,8 +22,26 @@ DIRECT_URL="postgresql://venzory:venzory@localhost:5432/venzory_dev"
 
 # Option B: NEON (Staging/Production)
 # ------------------------------------------------------------------
-# DATABASE_URL="postgres://<user>:<password>@<host>/neondb?sslmode=require&pgbouncer=true"
-# DIRECT_URL="postgres://<user>:<password>@<host>/neondb?sslmode=require"
+# For Neon serverless PostgreSQL, you need TWO connection strings:
+#
+# 1. DATABASE_URL - Uses Neon's connection pooler (PgBouncer)
+#    - Use for all application queries
+#    - Host format: ep-<branch>-<id>-pooler.<region>.aws.neon.tech
+#    - Required params: sslmode=require, pgbouncer=true
+#
+# 2. DIRECT_URL - Direct connection (no pooler)
+#    - Used by Prisma for migrations and schema changes
+#    - Host format: ep-<branch>-<id>.<region>.aws.neon.tech (no "-pooler")
+#    - Required params: sslmode=require
+#
+# Example (replace with your actual credentials from Neon console):
+# DATABASE_URL="postgresql://neondb_owner:<password>@ep-example-branch-pooler.us-west-2.aws.neon.tech/neondb?sslmode=require&pgbouncer=true&connect_timeout=15"
+# DIRECT_URL="postgresql://neondb_owner:<password>@ep-example-branch.us-west-2.aws.neon.tech/neondb?sslmode=require"
+#
+# Important for Vercel/serverless deployments:
+# - Always use the pooler URL for DATABASE_URL to prevent connection exhaustion
+# - The connect_timeout=15 helps with cold starts
+# - channel_binding=require adds security (optional but recommended)
 
 
 # ============================================
@@ -64,6 +82,12 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 # Optional in development (logs to console instead)
 # Get your API key from: https://resend.com/api-keys
 RESEND_API_KEY=re_your_api_key_here
+
+# Email Sandbox (Non-Production Safety)
+# When set in development/staging, ALL emails are redirected to this address
+# This prevents accidental sends to real users during testing
+# Leave empty in production to send to actual recipients
+# DEV_EMAIL_RECIPIENT=dev-team@venzory.com
 
 # Redis Connection
 # Required in production for distributed rate limiting

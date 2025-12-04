@@ -2,40 +2,27 @@
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import type { PracticeRole } from '@prisma/client';
 
-import { Sidebar } from './sidebar';
-import { TopBar } from './topbar';
+import { AdminSidebar } from './admin-sidebar';
+import { AdminTopBar } from './admin-topbar';
 
-type DashboardLayoutClientProps = {
+type AdminShellProps = {
   children: ReactNode;
   userName?: string | null;
-  practiceName?: string | null;
-  userRole?: PracticeRole | null;
 };
 
-export function DashboardLayoutClient({
-  children,
-  userName,
-  practiceName,
-  userRole,
-}: DashboardLayoutClientProps) {
+export function AdminShell({ children, userName }: AdminShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const normalizedPracticeName =
-    practiceName === 'Demo Pracite' ? 'Demo Practice' : practiceName;
 
   return (
-    <div className="flex h-screen bg-surface-secondary">
-      <Sidebar
-        practiceName={normalizedPracticeName}
-        userRole={userRole}
+    <div className="flex h-screen bg-indigo-50/30 dark:bg-indigo-950/10">
+      <AdminSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <TopBar
+        <AdminTopBar
           userName={userName}
-          practiceName={normalizedPracticeName}
           onMenuClick={() => setIsSidebarOpen(true)}
         />
         <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">

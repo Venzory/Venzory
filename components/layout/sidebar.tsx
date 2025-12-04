@@ -7,7 +7,6 @@ import type { PracticeRole } from '@prisma/client';
 import {
   LayoutDashboard,
   Package,
-  Package2,
   MapPin,
   Building2,
   ShoppingCart,
@@ -20,13 +19,6 @@ import {
   FolderOpen,
   ListPlus,
   AlertTriangle,
-  Shield,
-  Users,
-  Database,
-  FileSearch,
-  CheckCircle2,
-  Upload,
-  FileEdit,
 } from 'lucide-react';
 
 type NavItem = {
@@ -34,13 +26,11 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   minRole?: PracticeRole; // Minimum role required to see this item
-  accent?: 'owner' | 'admin'; // Special accent color for platform items
 };
 
 type NavSection = {
   title?: string;
   items: NavItem[];
-  accent?: 'owner' | 'admin'; // Section-level accent
 };
 
 const navSections: NavSection[] = [
@@ -82,42 +72,14 @@ const navSections: NavSection[] = [
   },
 ];
 
-// Owner Portal navigation (amber accent)
-const ownerNavSection: NavSection = {
-  title: 'Owner Portal',
-  accent: 'owner',
-  items: [
-    { href: '/owner', label: 'Platform Dashboard', icon: Shield, accent: 'owner' },
-    { href: '/owner/tenants', label: 'Tenants', icon: Building2, accent: 'owner' },
-    { href: '/owner/users', label: 'User Lifecycle', icon: Users, accent: 'owner' },
-  ],
-};
-
-// Admin Console navigation (indigo accent)
-const adminNavSection: NavSection = {
-  title: 'Admin Console',
-  accent: 'admin',
-  items: [
-    { href: '/admin', label: 'Data Dashboard', icon: Database, accent: 'admin' },
-    { href: '/admin/product-master', label: 'Product Master', icon: Package2, accent: 'admin' },
-    { href: '/admin/gs1-quality', label: 'GS1 Quality', icon: CheckCircle2, accent: 'admin' },
-    { href: '/admin/authority', label: 'Authority Tool', icon: Shield, accent: 'admin' },
-    { href: '/admin/suppliers', label: 'Global Suppliers', icon: Building2, accent: 'admin' },
-    { href: '/admin/supplier-catalog', label: 'Supplier Catalog', icon: BookOpen, accent: 'admin' },
-    { href: '/admin/supplier-corrections', label: 'Supplier Corrections', icon: FileEdit, accent: 'admin' },
-    { href: '/admin/import', label: 'Bulk Import', icon: Upload, accent: 'admin' },
-  ],
-};
-
 type SidebarProps = {
   practiceName?: string | null;
   userRole?: PracticeRole | null;
-  isOwner?: boolean;
   isOpen: boolean;
   onClose: () => void;
 };
 
-export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClose }: SidebarProps) {
+export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -140,16 +102,6 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
       }),
     }))
     .filter((section) => section.items.length > 0);
-
-  // Add platform sections for owners
-  if (isOwner) {
-    filteredNavSections.push(ownerNavSection);
-    filteredNavSections.push(adminNavSection);
-  }
-
-  // Determine current context (owner, admin, or regular)
-  const isInOwnerContext = pathname.startsWith('/owner');
-  const isInAdminContext = pathname.startsWith('/admin');
 
   // Load collapsed state from localStorage
   useEffect(() => {
@@ -243,83 +195,37 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto p-3">
           {filteredNavSections.map((section, sectionIndex) => {
-            const isOwnerSection = section.accent === 'owner';
-            const isAdminSection = section.accent === 'admin';
-            
-            // Section container styling
-            const sectionContainerClass = isOwnerSection
-              ? 'rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-2'
-              : isAdminSection
-                ? 'rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-800/30 p-2'
-                : '';
-
             return (
               <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-6' : ''}>
-                <div className={sectionContainerClass}>
-                  {section.title && (!isCollapsed || !mounted) && (
-                    <div className={`mb-2 px-3 text-xs font-semibold uppercase tracking-wider ${
-                      isOwnerSection
-                        ? 'text-amber-700 dark:text-amber-400'
-                        : isAdminSection
-                          ? 'text-indigo-700 dark:text-indigo-400'
-                          : 'text-sidebar-text-muted/80'
-                    }`}>
-                      {section.title}
-                    </div>
-                  )}
-                  {/* Collapsed state: show accent indicator dot */}
-                  {(isOwnerSection || isAdminSection) && isCollapsed && mounted && (
-                    <div className="flex justify-center mb-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        isOwnerSection ? 'bg-amber-500' : 'bg-indigo-500'
-                      }`} />
-                    </div>
-                  )}
-                  <div className="space-y-1">
-                    {section.items.map((item) => {
-                      const Icon = item.icon;
-                      const isActive =
-                        pathname === item.href || pathname.startsWith(`${item.href}/`);
-                      const itemAccent = item.accent;
-
-                      // Determine active and hover styles based on accent
-                      const getItemClasses = () => {
-                        if (isActive) {
-                          if (itemAccent === 'owner') {
-                            return 'bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100 font-medium border-l-2 border-amber-500';
-                          }
-                          if (itemAccent === 'admin') {
-                            return 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-900 dark:text-indigo-100 font-medium border-l-2 border-indigo-500';
-                          }
-                          return 'bg-sidebar-active-bg text-sidebar-active-text font-medium';
-                        }
-                        if (itemAccent === 'owner') {
-                          return 'text-amber-800 dark:text-amber-200 hover:bg-amber-100/70 dark:hover:bg-amber-900/30 font-normal';
-                        }
-                        if (itemAccent === 'admin') {
-                          return 'text-indigo-800 dark:text-indigo-200 hover:bg-indigo-100/70 dark:hover:bg-indigo-900/30 font-normal';
-                        }
-                        return 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text font-normal';
-                      };
-
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={handleLinkClick}
-                          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${getItemClasses()} ${isCollapsed && mounted ? 'justify-center' : ''}`}
-                          aria-current={isActive ? 'page' : undefined}
-                          title={isCollapsed && mounted ? item.label : undefined}
-                        >
-                          <Icon className={`h-5 w-5 flex-shrink-0 ${
-                            itemAccent === 'owner' && isActive ? 'text-amber-600 dark:text-amber-400' :
-                            itemAccent === 'admin' && isActive ? 'text-indigo-600 dark:text-indigo-400' : ''
-                          }`} />
-                          {(!isCollapsed || !mounted) && <span>{item.label}</span>}
-                        </Link>
-                      );
-                    })}
+                {section.title && (!isCollapsed || !mounted) && (
+                  <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-text-muted/80">
+                    {section.title}
                   </div>
+                )}
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive =
+                      pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={handleLinkClick}
+                        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                          isActive
+                            ? 'bg-sidebar-active-bg text-sidebar-active-text font-medium'
+                            : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text font-normal'
+                        } ${isCollapsed && mounted ? 'justify-center' : ''}`}
+                        aria-current={isActive ? 'page' : undefined}
+                        title={isCollapsed && mounted ? item.label : undefined}
+                      >
+                        <Icon className="h-5 w-5 flex-shrink-0" />
+                        {(!isCollapsed || !mounted) && <span>{item.label}</span>}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -329,4 +235,3 @@ export function Sidebar({ practiceName, userRole, isOwner = false, isOpen, onClo
     </>
   );
 }
-

@@ -1,5 +1,4 @@
 import { auth } from '@/auth';
-import { isPlatformOwner } from '@/lib/owner-guard';
 import { ownerService } from '@/src/services';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { prisma } from '@/lib/prisma';
@@ -11,22 +10,14 @@ import {
   FileSearch,
   Building2,
   BookOpen,
-  Upload
+  Upload,
+  Database
 } from 'lucide-react';
 
 export default async function AdminConsolePage() {
   const session = await auth();
   
-  if (!isPlatformOwner(session?.user?.email)) {
-    return (
-      <div className="space-y-4 p-6">
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Access Denied</h1>
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Only platform administrators can access the Admin Console.
-        </p>
-      </div>
-    );
-  }
+  // Access control is handled by the layout - if we get here, user has admin console access
 
   // Get base data from owner service
   const overviewData = await ownerService.getProductDataOverview(session?.user?.email);
@@ -96,38 +87,38 @@ export default async function AdminConsolePage() {
   ];
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-8">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
-          <Package className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          <Database className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
         </div>
         <PageHeader 
-          title="Admin Console" 
+          title="Data Dashboard" 
           subtitle="Product data authority and stewardship"
         />
       </div>
 
       {/* Data Quality Overview */}
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="rounded-xl border border-indigo-200/50 bg-white p-5 shadow-sm dark:border-indigo-800/30 dark:bg-indigo-950/20">
           <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Products</div>
           <div className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">
             {stats.totalProducts.toLocaleString()}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="rounded-xl border border-indigo-200/50 bg-white p-5 shadow-sm dark:border-indigo-800/30 dark:bg-indigo-950/20">
           <div className="text-sm font-medium text-slate-500 dark:text-slate-400">GS1 Verified</div>
           <div className="mt-1 text-3xl font-bold text-emerald-600 dark:text-emerald-400">
             {stats.verifiedProducts.toLocaleString()}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="rounded-xl border border-indigo-200/50 bg-white p-5 shadow-sm dark:border-indigo-800/30 dark:bg-indigo-950/20">
           <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Needs Review</div>
           <div className="mt-1 text-3xl font-bold text-amber-600 dark:text-amber-400">
             {stats.needsReview.toLocaleString()}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="rounded-xl border border-indigo-200/50 bg-white p-5 shadow-sm dark:border-indigo-800/30 dark:bg-indigo-950/20">
           <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Supplier Items</div>
           <div className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">
             {stats.supplierItems.toLocaleString()}
@@ -145,11 +136,11 @@ export default async function AdminConsolePage() {
               <Link
                 key={action.href}
                 href={action.href}
-                className="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-indigo-700"
+                className="group rounded-xl border border-indigo-200/50 bg-white p-5 shadow-sm transition-all hover:border-indigo-400 hover:shadow-md dark:border-indigo-800/30 dark:bg-indigo-950/20 dark:hover:border-indigo-600"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 transition-colors group-hover:bg-indigo-100 dark:bg-slate-800 dark:group-hover:bg-indigo-900/30">
-                    <Icon className="h-5 w-5 text-slate-600 transition-colors group-hover:text-indigo-600 dark:text-slate-400 dark:group-hover:text-indigo-400" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 transition-colors group-hover:bg-indigo-100 dark:bg-indigo-900/30 dark:group-hover:bg-indigo-800/50">
+                    <Icon className="h-5 w-5 text-indigo-600 transition-colors group-hover:text-indigo-700 dark:text-indigo-400 dark:group-hover:text-indigo-300" />
                   </div>
                   {action.count !== undefined && (
                     <span className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -194,4 +185,3 @@ export default async function AdminConsolePage() {
     </div>
   );
 }
-

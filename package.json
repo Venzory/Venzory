@@ -26,6 +26,8 @@
     "db:verify-constraints": "tsx scripts/verify-constraints.ts",
     "db:verify-all": "npm run db:validate && npm run db:check-duplicates && npm run db:verify-constraints",
     "db:setup:local": "tsx scripts/setup-local-db.ts",
+    "db:check-migrations": "tsx scripts/check-migrations.ts",
+    "db:migrate:status": "prisma migrate status",
     "backfill:suppliers": "tsx scripts/backfill-global-suppliers.ts",
     "backfill:supplier-catalog": "tsx scripts/backfill-supplier-catalog-practice-links.ts",
     "backfill:practice-supplier-final": "tsx scripts/backfill-practice-supplier-final.ts"

@@ -983,6 +983,28 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// ============================================
+// LOGIN CODE (Dual Auth Flow)
+// ============================================
+// 6-digit numeric codes as alternative/fallback to magic links.
+// Why both magic links AND codes?
+// - Better UX for B2B: email scanners can invalidate links
+// - Device flexibility: user can request link on desktop, enter code on mobile
+// - Fallback when links expire: user can still login with code from same email
+model LoginCode {
+  id         String   @id @default(cuid())
+  identifier String   // email address (lowercase)
+  code       String   // 6-digit code stored as string to preserve leading zeros
+  expires    DateTime
+  attempts   Int      @default(0) // brute-force protection: max 5 attempts
+  used       Boolean  @default(false) // prevent replay attacks
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, code])
+  @@index([identifier])
+  @@index([expires])
+}
+
 model PasswordResetToken {
   id        String   @id @default(cuid())
   token     String   @unique

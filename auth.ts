@@ -12,6 +12,56 @@ import { authConfig } from './auth.config';
 
 import logger from '@/lib/logger';
 
+/**
+ * Generate a cryptographically random 6-digit login code
+ * Range: 100000-999999 (always 6 digits)
+ */
+function generateLoginCode(): string {
+  // Use crypto for better randomness in production
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  // Map to 100000-999999 range
+  const code = 100000 + (array[0] % 900000);
+  return code.toString();
+}
+
+/**
+ * Create a login code for the given email
+ * Invalidates any existing unused codes for this email first
+ */
+async function createLoginCode(email: string): Promise<string> {
+  const normalizedEmail = email.toLowerCase();
+  const code = generateLoginCode();
+  
+  // Set expiration to 10 minutes from now
+  const expires = new Date();
+  expires.setMinutes(expires.getMinutes() + 10);
+
+  // Invalidate any existing unused codes for this email (mark as used)
+  await prisma.loginCode.updateMany({
+    where: {
+      identifier: normalizedEmail,
+      used: false,
+    },
+    data: {
+      used: true,
+    },
+  });
+
+  // Create new login code
+  await prisma.loginCode.create({
+    data: {
+      identifier: normalizedEmail,
+      code,
+      expires,
+      attempts: 0,
+      used: false,
+    },
+  });
+
+  return code;
+}
+
 // Schema for login validation only.
 const credentialsSchema = z.object({
   email: z.string().email().min(1),
@@ -32,28 +82,54 @@ export const {
     Resend({
       from: env.EMAIL_FROM,
       sendVerificationRequest: async ({ identifier: email, url, provider }) => {
-        // In development, ALWAYS log the magic link details for visibility
-        if (process.env.NODE_ENV === 'development') {
-          const { host } = new URL(url);
-          console.log('\n📨 EMAIL LOG (Dev Mode):', JSON.stringify({
+        const { host } = new URL(url);
+        
+        // Generate a 6-digit login code as alternative to magic link
+        // This provides fallback when links expire or don't work (email scanners, device switching)
+        let loginCode: string | null = null;
+        try {
+          loginCode = await createLoginCode(email);
+        } catch (codeError) {
+          // Log but don't fail - magic link will still work
+          logger.warn({
             module: 'auth',
             operation: 'sendVerificationRequest',
             email,
-            subject: `Sign in to ${host}`,
+            error: codeError instanceof Error ? codeError.message : String(codeError),
+          }, 'Failed to generate login code, proceeding with magic link only');
+        }
+
+        // Apply sandbox mode for non-production - redirect emails to dev inbox
+        const devRecipient = process.env.DEV_EMAIL_RECIPIENT;
+        const isRedirected = env.NODE_ENV !== 'production' && !!devRecipient;
+        const actualRecipient = isRedirected ? devRecipient : email;
+        const baseSubject = `Sign in to ${host}`;
+        const subject = isRedirected ? `[DEV] ${baseSubject} (was: ${email})` : baseSubject;
+
+        // In development, ALWAYS log the magic link details for visibility
+        if (process.env.NODE_ENV === 'development') {
+          console.log('\n📨 EMAIL LOG (Dev Mode):', JSON.stringify({
+            module: 'auth',
+            operation: 'sendVerificationRequest',
+            originalRecipient: email,
+            actualRecipient,
+            isRedirected,
+            subject,
             url,
+            loginCode: loginCode ?? 'N/A',
           }, null, 2), '\n');
         }
 
         // Gracefully handle missing API key if not in development (already logged above for dev)
         if (!env.RESEND_API_KEY) {
            if (process.env.NODE_ENV !== 'development') {
-            const { host } = new URL(url);
             logger.warn({
               module: 'auth',
               operation: 'sendVerificationRequest',
               email,
-              subject: `Sign in to ${host}`,
+              subject,
               url,
+              // Don't log code in production
             }, 'Resend not configured - would send magic link');
            }
           return;
@@ -63,13 +139,32 @@ export const {
           const { resend } = await import('@/lib/email');
           if (!resend) throw new Error('Resend client not initialized');
 
-          const { host } = new URL(url);
+          // Build email content with both magic link and login code
+          const codeSection = loginCode ? `
+                  <tr>
+                    <td align="center" style="padding: 24px 20px; border-top: 1px solid #e5e7eb;">
+                      <p style="margin: 0 0 12px 0; font-size: 14px; font-family: Helvetica, Arial, sans-serif; color: #6b7280;">
+                        Or enter this code on the login page:
+                      </p>
+                      <div style="font-size: 32px; font-family: 'Courier New', monospace; letter-spacing: 8px; color: #1f2937; font-weight: bold; background: #f3f4f6; padding: 16px 24px; border-radius: 8px; display: inline-block;">
+                        ${loginCode}
+                      </div>
+                      <p style="margin: 12px 0 0 0; font-size: 12px; font-family: Helvetica, Arial, sans-serif; color: #9ca3af;">
+                        This code expires in 10 minutes
+                      </p>
+                    </td>
+                  </tr>
+          ` : '';
+
+          const textCodeSection = loginCode 
+            ? `\n\nOr enter this code on the login page: ${loginCode}\n(Code expires in 10 minutes)` 
+            : '';
 
           const { data, error } = await resend.emails.send({
-            from: provider.from || 'Venzory <noreply@venzory.com>',
-            to: email,
-            subject: `Sign in to ${host}`,
-            text: `Sign in to ${host}\n${url}\n\n`,
+            from: `Venzory <${env.EMAIL_FROM}>`,
+            to: actualRecipient,
+            subject,
+            text: `Sign in to ${host}\n\nClick this link to sign in:\n${url}${textCodeSection}\n\nIf you did not request this email, you can safely ignore it.`,
             html: `
               <body style="background: #f9f9f9;">
                 <table width="100%" border="0" cellspacing="20" cellpadding="0"
@@ -95,6 +190,7 @@ export const {
                       </table>
                     </td>
                   </tr>
+                  ${codeSection}
                   <tr>
                     <td align="center"
                       style="padding: 0px 0px 10px 0px; font-size: 16px; line-height: 22px; font-family: Helvetica, Arial, sans-serif; color: #444;">
@@ -119,7 +215,9 @@ export const {
           logger.info({
             module: 'auth',
             operation: 'sendVerificationRequest',
-            email,
+            originalRecipient: email,
+            actualRecipient,
+            isRedirected,
             messageId: data?.id,
           }, 'Magic link sent successfully via Resend');
 

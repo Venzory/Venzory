@@ -1,12 +1,98 @@
+/**
+ * Email Job Queue
+ * 
+ * Provides reliable email delivery with:
+ * - Persistent storage in database (survives restarts)
+ * - Automatic retry for transient failures (max 3 attempts)
+ * - Visibility into delivery status for debugging/support
+ * 
+ * Architecture note:
+ * Auth emails (password reset, invite, magic link) are sent directly for now
+ * because they are time-sensitive and users expect immediate delivery.
+ * Order emails are queued because they are less time-critical and benefit
+ * from retry capability.
+ * 
+ * Future consideration: Queue auth emails too for better observability,
+ * but process them with higher priority or immediate dispatch.
+ */
+
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { sendOrderEmail, SendOrderEmailParams } from '@/src/lib/email/sendOrderEmail';
-import { JobStatus, EmailJob } from '@prisma/client';
+import { sendPasswordResetEmail, sendUserInviteEmail } from '@/lib/email';
+import { JobStatus, EmailJob, Prisma } from '@prisma/client';
 
-export type EmailJobType = 'ORDER_CONFIRMATION';
+/**
+ * Supported email job types
+ * 
+ * ORDER_CONFIRMATION - Sent to suppliers when orders are placed
+ * PASSWORD_RESET - Sent to users requesting password reset
+ * USER_INVITE - Sent when inviting team members to a practice
+ * 
+ * Note: MAGIC_LINK is not queued because NextAuth handles it synchronously
+ */
+export type EmailJobType = 
+  | 'ORDER_CONFIRMATION'
+  | 'PASSWORD_RESET'
+  | 'USER_INVITE';
 
-export interface EmailJobPayload {
-  [key: string]: any;
+/**
+ * Type-safe payload interfaces for each job type
+ */
+export interface OrderConfirmationPayload extends SendOrderEmailParams {}
+
+export interface PasswordResetPayload {
+  email: string;
+  token: string;
+  name: string | null;
+}
+
+export interface UserInvitePayload {
+  email: string;
+  token: string;
+  practiceName: string;
+  role: 'OWNER' | 'ADMIN' | 'STAFF';
+  inviterName?: string;
+}
+
+/**
+ * Union type for all email job payloads
+ */
+export type EmailJobPayload = 
+  | OrderConfirmationPayload
+  | PasswordResetPayload
+  | UserInvitePayload;
+
+/**
+ * Execute an email job based on its type
+ * Routes to the appropriate email sending function
+ */
+async function executeEmailJob(
+  type: EmailJobType, 
+  payload: unknown
+): Promise<{ success: boolean; error?: string }> {
+  switch (type) {
+    case 'ORDER_CONFIRMATION': {
+      const params = payload as OrderConfirmationPayload;
+      return sendOrderEmail(params);
+    }
+    
+    case 'PASSWORD_RESET': {
+      const params = payload as PasswordResetPayload;
+      return sendPasswordResetEmail(params);
+    }
+    
+    case 'USER_INVITE': {
+      const params = payload as UserInvitePayload;
+      return sendUserInviteEmail(params);
+    }
+    
+    default:
+      return {
+        success: false,
+        error: `Unknown job type: ${type}`,
+      };
+  }
 }
 
 /**
@@ -22,7 +108,8 @@ export async function enqueueEmailJob(
       data: {
         type,
         recipient,
-        payload,
+        // Cast to Prisma's JSON type - safe because EmailJobPayload is JSON-serializable
+        payload: payload as unknown as Prisma.InputJsonValue,
         status: JobStatus.PENDING,
       },
     });
@@ -115,15 +202,10 @@ export async function processEmailJobs(batchSize = 10): Promise<{ processed: num
       }, 'Processing email job');
 
       // 3. Execute logic based on type
-      if (job.type === 'ORDER_CONFIRMATION') {
-        const params = job.payload as unknown as SendOrderEmailParams;
-        const result = await sendOrderEmail(params);
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to send email');
-        }
-      } else {
-        throw new Error(`Unknown job type: ${job.type}`);
+      const result = await executeEmailJob(job.type as EmailJobType, job.payload);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send email');
       }
 
       // 4. Mark as completed

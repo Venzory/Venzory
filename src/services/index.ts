@@ -20,4 +20,5 @@ export * from './media';
 export * from './documents';
 export * from './quality';
 export * from './import';
+export * from './email';
 
