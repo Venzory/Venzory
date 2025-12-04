@@ -21,6 +21,40 @@ const nextConfig = {
     ];
     return config;
   },
+  // Backward-compatible redirects for role-scoped UI shell migration
+  async redirects() {
+    return [
+      // Clinic routes - redirect old paths to /app prefix
+      { source: '/dashboard', destination: '/app/dashboard', permanent: true },
+      { source: '/dashboard/:path*', destination: '/app/dashboard/:path*', permanent: true },
+      { source: '/inventory', destination: '/app/inventory', permanent: true },
+      { source: '/inventory/:path*', destination: '/app/inventory/:path*', permanent: true },
+      { source: '/orders', destination: '/app/orders', permanent: true },
+      { source: '/orders/:path*', destination: '/app/orders/:path*', permanent: true },
+      { source: '/suppliers', destination: '/app/suppliers', permanent: true },
+      { source: '/suppliers/:path*', destination: '/app/suppliers/:path*', permanent: true },
+      { source: '/my-items', destination: '/app/my-items', permanent: true },
+      { source: '/my-items/:path*', destination: '/app/my-items/:path*', permanent: true },
+      { source: '/receiving', destination: '/app/receiving', permanent: true },
+      { source: '/receiving/:path*', destination: '/app/receiving/:path*', permanent: true },
+      { source: '/stock-count', destination: '/app/stock-count', permanent: true },
+      { source: '/stock-count/:path*', destination: '/app/stock-count/:path*', permanent: true },
+      { source: '/locations', destination: '/app/locations', permanent: true },
+      { source: '/locations/:path*', destination: '/app/locations/:path*', permanent: true },
+      { source: '/settings', destination: '/app/settings', permanent: true },
+      { source: '/settings/:path*', destination: '/app/settings/:path*', permanent: true },
+      { source: '/reorder-suggestions', destination: '/app/reorder-suggestions', permanent: true },
+      { source: '/reorder-suggestions/:path*', destination: '/app/reorder-suggestions/:path*', permanent: true },
+      { source: '/supplier-catalog', destination: '/app/supplier-catalog', permanent: true },
+      { source: '/supplier-catalog/:path*', destination: '/app/supplier-catalog/:path*', permanent: true },
+      { source: '/needs-attention', destination: '/app/needs-attention', permanent: true },
+      { source: '/needs-attention/:path*', destination: '/app/needs-attention/:path*', permanent: true },
+      { source: '/global-supplier-catalog', destination: '/app/global-supplier-catalog', permanent: true },
+      { source: '/global-supplier-catalog/:path*', destination: '/app/global-supplier-catalog/:path*', permanent: true },
+      { source: '/product-master', destination: '/app/product-master', permanent: true },
+      { source: '/product-master/:path*', destination: '/app/product-master/:path*', permanent: true },
+    ];
+  },
 }
 
 // Only enable Sentry in production to improve dev speed

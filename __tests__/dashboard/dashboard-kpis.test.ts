@@ -3,7 +3,7 @@ import { OrderStatus } from '@prisma/client';
 import {
   calculateAwaitingReceiptCount,
   AWAITING_RECEIPT_LINK,
-} from '@/app/(dashboard)/dashboard/_utils/kpi-utils';
+} from '@/app/(clinic)/app/dashboard/_utils/kpi-utils';
 
 describe('calculateAwaitingReceiptCount', () => {
   it('should count only SENT orders', () => {

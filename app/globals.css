@@ -79,6 +79,10 @@
     --scrollbar-track: 241 245 249; /* slate-100 */
     --scrollbar-thumb: 203 213 225; /* slate-300 */
     --scrollbar-thumb-hover: 14 165 233; /* sky-500 - brand accent */
+    
+    /* Glass surface specific */
+    --glass-bg: 255 255 255;
+    --glass-border: 0 0 0;
   }
 
   .dark {
@@ -146,10 +150,14 @@
     --color-supplier-accent-light: 19 78 74; /* teal-900 */
     --color-supplier-accent-dark: 94 234 212; /* teal-300 */
     
-    /* Shadows (minimal in dark mode) */
-    --shadow-sm: none;
-    --shadow-md: none;
-    --shadow-lg: none;
+    /* Shadows (subtle in dark mode for glass surfaces) */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3), 0 0 0 1px rgb(255 255 255 / 0.03);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.03);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.03);
+    
+    /* Glass surface specific */
+    --glass-bg: 15 23 42;
+    --glass-border: 255 255 255;
     
     /* Scrollbar colors */
     --scrollbar-track: 30 41 59; /* slate-800 */
@@ -201,6 +209,49 @@
 
   ::-webkit-scrollbar-corner {
     background: rgb(var(--scrollbar-track));
+  }
+}
+
+@layer components {
+  /* Glass surface utilities - Apple/Linear-style frosted glass effect */
+  .glass-surface {
+    @apply backdrop-blur-xl;
+    background: rgb(var(--glass-bg) / 0.72);
+    box-shadow: 
+      0 1px 3px 0 rgb(0 0 0 / 0.04),
+      0 1px 2px -1px rgb(0 0 0 / 0.04),
+      inset 0 1px 0 0 rgb(var(--glass-border) / 0.06);
+  }
+  
+  .dark .glass-surface {
+    background: rgb(var(--glass-bg) / 0.78);
+    box-shadow: 
+      0 1px 3px 0 rgb(0 0 0 / 0.3),
+      0 1px 2px -1px rgb(0 0 0 / 0.2),
+      inset 0 1px 0 0 rgb(var(--glass-border) / 0.04);
+  }
+  
+  /* Glass border - soft translucent border */
+  .glass-border {
+    border-color: rgb(var(--glass-border) / 0.08);
+  }
+  
+  .dark .glass-border {
+    border-color: rgb(var(--glass-border) / 0.06);
+  }
+  
+  /* Elevation shadow for glass surfaces */
+  .glass-elevation {
+    box-shadow: 
+      0 1px 3px 0 rgb(0 0 0 / 0.05),
+      0 1px 2px -1px rgb(0 0 0 / 0.05);
+  }
+  
+  .dark .glass-elevation {
+    box-shadow: 
+      0 1px 3px 0 rgb(0 0 0 / 0.35),
+      0 1px 2px -1px rgb(0 0 0 / 0.25),
+      0 0 0 1px rgb(255 255 255 / 0.02);
   }
 }
 

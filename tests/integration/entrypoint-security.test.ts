@@ -6,7 +6,7 @@ import { InventoryService, getInventoryService } from '@/src/services/inventory'
 import { AuditService, getAuditService } from '@/src/services/audit';
 import type { RequestContext } from '@/src/lib/context/request-context';
 import * as ContextBuilder from '@/src/lib/context/context-builder';
-import { updatePracticeSupplierAction } from '@/app/(dashboard)/suppliers/actions';
+import { updatePracticeSupplierAction } from '@/app/(clinic)/app/suppliers/actions';
 import { ForbiddenError } from '@/src/domain/errors';
 
 // Mock logger to avoid noise but allow debugging

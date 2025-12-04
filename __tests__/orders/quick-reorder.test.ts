@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { selectQuickTemplates } from '@/app/(dashboard)/orders/_utils/quick-reorder';
+import { selectQuickTemplates } from '@/app/(clinic)/app/orders/_utils/quick-reorder';
 
 describe('selectQuickTemplates', () => {
   it('should return up to maxCount templates', () => {

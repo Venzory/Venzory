@@ -390,7 +390,7 @@ export function PracticeContextSelector() {
           {/* CTA Links */}
           <div className="p-2 space-y-0.5">
             <Link
-              href="/settings"
+              href="/app/settings"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
             >
@@ -398,7 +398,7 @@ export function PracticeContextSelector() {
               Manage Practice
             </Link>
             <Link
-              href="/settings#team"
+              href="/app/settings#team"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
             >

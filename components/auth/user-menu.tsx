@@ -103,7 +103,7 @@ export function UserMenu({ userName, practiceName, userEmail }: UserMenuProps) {
           {/* Menu Items */}
           <div className="py-1">
             <Link
-              href="/settings"
+              href="/app/settings"
               onClick={() => setIsOpen(false)}
               className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             >

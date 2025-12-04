@@ -8,7 +8,7 @@ import {
   createTemplateAction, 
   updateTemplateAction, 
   deleteTemplateAction 
-} from '@/app/(dashboard)/orders/templates/actions';
+} from '@/app/(clinic)/app/orders/templates/actions';
 
 // Mock logger
 vi.mock('@/lib/logger', () => ({

@@ -219,7 +219,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should create item with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { upsertItemAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Item');
@@ -235,7 +235,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should update item with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { upsertItemAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       const formData = new FormData();
       formData.append('itemId', 'test-item-id');
@@ -250,7 +250,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should create stock adjustment with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { createStockAdjustmentAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { createStockAdjustmentAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       const formData = new FormData();
       formData.append('itemId', 'test-item-id');
@@ -267,7 +267,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should create location with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { upsertLocationAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { upsertLocationAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Location');
@@ -284,7 +284,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should create draft order with indexed FormData format', async () => {
       await mockValidCsrfHeaders();
 
-      const { createDraftOrderAction } = await import('@/app/(dashboard)/orders/actions');
+      const { createDraftOrderAction } = await import('@/app/(clinic)/app/orders/actions');
       
       const formData = new FormData();
       formData.append('practiceSupplierId', 'test-practice-supplier-id');
@@ -303,7 +303,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should add order item with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { addOrderItemAction } = await import('@/app/(dashboard)/orders/actions');
+      const { addOrderItemAction } = await import('@/app/(clinic)/app/orders/actions');
       
       const formData = new FormData();
       formData.append('orderId', 'test-order-id');
@@ -319,7 +319,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should send order and return success', async () => {
       await mockValidCsrfHeaders();
 
-      const { sendOrderAction } = await import('@/app/(dashboard)/orders/actions');
+      const { sendOrderAction } = await import('@/app/(clinic)/app/orders/actions');
       
       const result = await sendOrderAction('test-order-id');
       
@@ -330,7 +330,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should send order, mark it SENT, and trigger purchase order email', async () => {
       await mockValidCsrfHeaders();
 
-      const { sendOrderAction } = await import('@/app/(dashboard)/orders/actions');
+      const { sendOrderAction } = await import('@/app/(clinic)/app/orders/actions');
       const { sendOrderEmail } = await import('@/src/lib/email/sendOrderEmail');
       
       // Clear previous calls
@@ -349,7 +349,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should delete order and return success', async () => {
       await mockValidCsrfHeaders();
 
-      const { deleteOrderAction } = await import('@/app/(dashboard)/orders/actions');
+      const { deleteOrderAction } = await import('@/app/(clinic)/app/orders/actions');
       
       const result = await deleteOrderAction('test-order-id');
       
@@ -362,7 +362,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should create goods receipt with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { createGoodsReceiptAction } = await import('@/app/(dashboard)/receiving/actions');
+      const { createGoodsReceiptAction } = await import('@/app/(clinic)/app/receiving/actions');
       
       const formData = new FormData();
       formData.append('locationId', 'test-location-id');
@@ -375,7 +375,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should add receipt line with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { addReceiptLineAction } = await import('@/app/(dashboard)/receiving/actions');
+      const { addReceiptLineAction } = await import('@/app/(clinic)/app/receiving/actions');
       
       const formData = new FormData();
       formData.append('receiptId', 'test-receipt-id');
@@ -393,7 +393,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should create stock count session with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { createStockCountSessionAction } = await import('@/app/(dashboard)/stock-count/actions');
+      const { createStockCountSessionAction } = await import('@/app/(clinic)/app/stock-count/actions');
       
       const formData = new FormData();
       formData.append('locationId', 'test-location-id');
@@ -409,7 +409,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should add count line with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { addCountLineAction } = await import('@/app/(dashboard)/stock-count/actions');
+      const { addCountLineAction } = await import('@/app/(clinic)/app/stock-count/actions');
       
       const formData = new FormData();
       formData.append('sessionId', 'test-session-id');
@@ -427,7 +427,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should create product with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { createProductAction } = await import('@/app/(dashboard)/admin/product-master/actions');
+      const { createProductAction } = await import('@/app/(admin)/admin/product-master/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Product');
@@ -443,7 +443,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should update product with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { updateProductAction } = await import('@/app/(dashboard)/admin/product-master/actions');
+      const { updateProductAction } = await import('@/app/(admin)/admin/product-master/actions');
       
       const formData = new FormData();
       formData.append('productId', 'test-product-id');
@@ -460,7 +460,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should update practice settings with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { updatePracticeSettingsAction } = await import('@/app/(dashboard)/settings/actions');
+      const { updatePracticeSettingsAction } = await import('@/app/(clinic)/app/settings/actions');
       
       const formData = new FormData();
       formData.append('name', 'Updated Practice Name');
@@ -475,7 +475,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should update user role with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { updateUserRoleAction } = await import('@/app/(dashboard)/settings/actions');
+      const { updateUserRoleAction } = await import('@/app/(clinic)/app/settings/actions');
       
       const formData = new FormData();
       formData.append('userId', 'test-user-id');
@@ -492,7 +492,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should update practice supplier with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { updatePracticeSupplierAction } = await import('@/app/(dashboard)/suppliers/actions');
+      const { updatePracticeSupplierAction } = await import('@/app/(clinic)/app/suppliers/actions');
       
       const formData = new FormData();
       formData.append('practiceSupplierId', 'test-supplier-id');
@@ -508,7 +508,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should link global supplier with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { linkGlobalSupplierAction } = await import('@/app/(dashboard)/suppliers/actions');
+      const { linkGlobalSupplierAction } = await import('@/app/(clinic)/app/suppliers/actions');
       
       const formData = new FormData();
       formData.append('globalSupplierId', 'test-global-supplier-id');
@@ -524,7 +524,7 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should add to catalog with valid CSRF token', async () => {
       await mockValidCsrfHeaders();
 
-      const { addToCatalogAction } = await import('@/app/(dashboard)/supplier-catalog/actions');
+      const { addToCatalogAction } = await import('@/app/(clinic)/app/supplier-catalog/actions');
       
       const formData = new FormData();
       formData.append('productId', 'test-product-id');
@@ -543,8 +543,8 @@ describe('Server Actions Integration (Valid CSRF)', () => {
     it('should accept same valid token across multiple actions', async () => {
       await mockValidCsrfHeaders();
 
-      const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
-      const { createProductAction } = await import('@/app/(dashboard)/admin/product-master/actions');
+      const { upsertItemAction } = await import('@/app/(clinic)/app/inventory/actions');
+      const { createProductAction } = await import('@/app/(admin)/admin/product-master/actions');
       
       // First action
       const formData1 = new FormData();

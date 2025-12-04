@@ -76,7 +76,7 @@ describe('Server Actions CSRF Protection', () => {
         }),
       } as any);
 
-      const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { upsertItemAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Item');
@@ -97,7 +97,7 @@ describe('Server Actions CSRF Protection', () => {
         }),
       } as any);
 
-      const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { upsertItemAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Item');
@@ -113,7 +113,7 @@ describe('Server Actions CSRF Protection', () => {
         get: vi.fn(() => null),
       } as any);
 
-      const { createDraftOrderAction } = await import('@/app/(dashboard)/orders/actions');
+      const { createDraftOrderAction } = await import('@/app/(clinic)/app/orders/actions');
       
       const formData = new FormData();
       formData.append('supplierId', 'test-supplier-id');
@@ -138,7 +138,7 @@ describe('Server Actions CSRF Protection', () => {
         }),
       } as any);
 
-      const { deleteItemAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { deleteItemAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       await expect(deleteItemAction('test-item-id')).rejects.toThrow('Invalid request');
     });
@@ -156,7 +156,7 @@ describe('Server Actions CSRF Protection', () => {
         }),
       } as any);
 
-      const { createStockAdjustmentAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { createStockAdjustmentAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       const formData = new FormData();
       formData.append('itemId', 'test-item');
@@ -175,8 +175,8 @@ describe('Server Actions CSRF Protection', () => {
         get: vi.fn(() => null),
       } as any);
 
-      const { upsertLocationAction } = await import('@/app/(dashboard)/inventory/actions');
-      const { updatePracticeSupplierAction } = await import('@/app/(dashboard)/suppliers/actions');
+      const { upsertLocationAction } = await import('@/app/(clinic)/app/inventory/actions');
+      const { updatePracticeSupplierAction } = await import('@/app/(clinic)/app/suppliers/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test');
@@ -192,7 +192,7 @@ describe('Server Actions CSRF Protection', () => {
         get: vi.fn(() => null),
       } as any);
 
-      const { updateOrderAction, deleteOrderAction, sendOrderAction } = await import('@/app/(dashboard)/orders/actions');
+      const { updateOrderAction, deleteOrderAction, sendOrderAction } = await import('@/app/(clinic)/app/orders/actions');
       
       const formData = new FormData();
       formData.append('orderId', 'test-order-id');
@@ -218,7 +218,7 @@ describe('Server Actions CSRF Protection', () => {
         createGoodsReceiptAction, 
         confirmGoodsReceiptAction,
         deleteGoodsReceiptAction 
-      } = await import('@/app/(dashboard)/receiving/actions');
+      } = await import('@/app/(clinic)/app/receiving/actions');
       
       const formData = new FormData();
       formData.append('locationId', 'test-location');
@@ -239,7 +239,7 @@ describe('Server Actions CSRF Protection', () => {
         createStockCountSessionAction,
         completeStockCountAction,
         deleteStockCountSessionAction
-      } = await import('@/app/(dashboard)/stock-count/actions');
+      } = await import('@/app/(clinic)/app/stock-count/actions');
       
       const formData = new FormData();
       formData.append('locationId', 'test-location');
@@ -260,7 +260,7 @@ describe('Server Actions CSRF Protection', () => {
         createProductAction,
         updateProductAction,
         deleteProductAction
-      } = await import('@/app/(dashboard)/admin/product-master/actions');
+      } = await import('@/app/(admin)/admin/product-master/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Product');
@@ -281,7 +281,7 @@ describe('Server Actions CSRF Protection', () => {
         updatePracticeSettingsAction,
         updateUserRoleAction,
         removeUserAction
-      } = await import('@/app/(dashboard)/settings/actions');
+      } = await import('@/app/(clinic)/app/settings/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Practice');
@@ -302,7 +302,7 @@ describe('Server Actions CSRF Protection', () => {
         updatePracticeSupplierAction,
         linkGlobalSupplierAction,
         unlinkPracticeSupplierAction
-      } = await import('@/app/(dashboard)/suppliers/actions');
+      } = await import('@/app/(clinic)/app/suppliers/actions');
       
       const formData = new FormData();
       formData.append('practiceSupplierId', 'test-supplier-id');
@@ -326,7 +326,7 @@ describe('Server Actions CSRF Protection', () => {
         }),
       } as any);
 
-      const { upsertItemAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { upsertItemAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       const formData = new FormData();
       formData.append('name', 'Test Item');
@@ -346,7 +346,7 @@ describe('Server Actions CSRF Protection', () => {
         }),
       } as any);
 
-      const { deleteItemAction } = await import('@/app/(dashboard)/inventory/actions');
+      const { deleteItemAction } = await import('@/app/(clinic)/app/inventory/actions');
       
       await expect(deleteItemAction('test-item-id')).rejects.toThrow('Invalid request');
     });

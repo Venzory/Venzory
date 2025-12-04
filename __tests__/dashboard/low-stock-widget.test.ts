@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateItemStockInfo } from '@/lib/inventory-utils';
-import { buildLowStockOrderHref } from '@/app/(dashboard)/dashboard/_utils/low-stock-actions';
+import { buildLowStockOrderHref } from '@/app/(clinic)/app/dashboard/_utils/low-stock-actions';
 
 describe('Low Stock Widget Behavior', () => {
   describe('Empty state handling', () => {

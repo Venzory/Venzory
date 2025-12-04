@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import ProductsPage from '@/app/(dashboard)/admin/product-master/page';
+import ProductsPage from '@/app/(admin)/admin/product-master/page';
 import * as Auth from '@/lib/auth';
 import * as OwnerGuard from '@/lib/owner-guard';
 import * as ServiceFactory from '@/src/services';
 
 // Mock child components to avoid rendering issues
-vi.mock('@/app/(dashboard)/admin/product-master/_components/product-filters', () => ({
+vi.mock('@/app/(admin)/admin/product-master/_components/product-filters', () => ({
   ProductFilters: () => <div>ProductFilters</div>
 }));
-vi.mock('@/app/(dashboard)/admin/product-master/_components/create-product-form', () => ({
+vi.mock('@/app/(admin)/admin/product-master/_components/create-product-form', () => ({
   CreateProductForm: () => <div>CreateProductForm</div>
 }));
-vi.mock('@/app/(dashboard)/admin/product-master/_components/gs1-status-badge', () => ({
+vi.mock('@/app/(admin)/admin/product-master/_components/gs1-status-badge', () => ({
   Gs1StatusBadge: () => <div>Gs1StatusBadge</div>
 }));
 vi.mock('@/components/ui/empty-state', () => ({

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
 import { getSupplierContext } from '@/lib/supplier-guard';
-import { SupplierLayoutClient } from '@/components/layout/supplier-layout-client';
+import { SupplierHubShell } from '@/components/layout/supplier-hub-shell';
 
 type SupplierLayoutProps = {
   children: ReactNode;
@@ -24,13 +24,13 @@ export default async function SupplierLayout({ children }: SupplierLayoutProps) 
   }
 
   return (
-    <SupplierLayoutClient
+    <SupplierHubShell
       userName={session.user.name}
       supplierName={supplierContext.supplierName}
       userRole={supplierContext.role}
     >
       {children}
-    </SupplierLayoutClient>
+    </SupplierHubShell>
   );
 }
 

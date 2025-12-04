@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getOrderSupplierDisplay } from '@/app/(dashboard)/dashboard/_utils/order-display';
+import { getOrderSupplierDisplay } from '@/app/(clinic)/app/dashboard/_utils/order-display';
 
 describe('getOrderSupplierDisplay', () => {
   it('should return custom label when available', () => {

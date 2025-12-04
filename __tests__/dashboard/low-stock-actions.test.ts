@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildLowStockOrderHref } from '@/app/(dashboard)/dashboard/_utils/low-stock-actions';
+import { buildLowStockOrderHref } from '@/app/(clinic)/app/dashboard/_utils/low-stock-actions';
 
 describe('buildLowStockOrderHref', () => {
   it('should return order URL with supplierId when defaultPracticeSupplierId is present', () => {

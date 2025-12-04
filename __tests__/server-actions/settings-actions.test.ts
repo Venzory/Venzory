@@ -47,7 +47,7 @@ import {
   updatePracticeSettingsAction,
   inviteUserAction,
   updateUserRoleAction,
-} from '@/app/(dashboard)/settings/actions';
+} from '@/app/(clinic)/app/settings/actions';
 
 describe('Settings Actions', () => {
   beforeEach(() => {
