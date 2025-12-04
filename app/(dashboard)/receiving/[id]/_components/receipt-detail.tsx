@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import {
@@ -25,10 +25,11 @@ import {
   confirmGoodsReceiptAction,
   cancelGoodsReceiptAction,
   searchItemByGtinAction,
+  confirmReceiptWithMismatchesAction,
 } from '../../actions';
 import { AddLineForm } from './add-line-form';
-import { BulkReceivingTable, type DiscrepancyType } from './bulk-receiving-table';
-import { MismatchPanel } from './mismatch-panel';
+import { BulkReceivingTable, type DiscrepancyType, type BulkReceivingTableRef } from './bulk-receiving-table';
+import { MismatchPanel, type SelectedMismatch } from './mismatch-panel';
 
 interface ReceiptDetailProps {
   receipt: {
@@ -94,6 +95,9 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
     unit: string | null;
   }>>([]);
   const confirm = useConfirm();
+  
+  // Ref to access BulkReceivingTable's backorder state
+  const bulkReceivingTableRef = useRef<BulkReceivingTableRef>(null);
 
   const handleScanResult = async (code: string) => {
     try {
@@ -131,8 +135,21 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
       const expiry = new Date(line.expiryDate);
       return expiry < today;
     });
+    
+    // Get backorder item IDs from the BulkReceivingTable
+    const backorderItemIds: string[] = [];
+    if (bulkReceivingTableRef.current) {
+      const backorderItems = bulkReceivingTableRef.current.getBackorderItems();
+      for (const item of backorderItems) {
+        backorderItemIds.push(item.itemId);
+      }
+    }
 
     let message = `Ready to receive ${totalItems} item${totalItems !== 1 ? 's' : ''} (${totalQty} units).`;
+    
+    if (backorderItemIds.length > 0) {
+      message += `\n\n${backorderItemIds.length} item${backorderItemIds.length !== 1 ? 's' : ''} marked as backorder.`;
+    }
     
     if (expiredItems.length > 0) {
       message += `\n\n⚠️ WARNING: ${expiredItems.length} item${expiredItems.length !== 1 ? 's have' : ' has'} a past expiry date.`;
@@ -153,20 +170,44 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
 
     setIsConfirming(true);
     try {
-      const result = await confirmGoodsReceiptAction(receipt.id);
-      
-      // Show success message
-      toast.success('Receipt confirmed and inventory updated');
-      
-      // Show low stock warnings if any
-      if (result.lowStockWarnings && result.lowStockWarnings.length > 0) {
-        result.lowStockWarnings.forEach((itemName) => {
-          toast.info(`Low stock: ${itemName}`);
+      // Use confirmReceiptWithMismatchesAction if we have backorder items to pass them through
+      if (backorderItemIds.length > 0) {
+        const result = await confirmReceiptWithMismatchesAction({
+          receiptId: receipt.id,
+          backorderItemIds,
         });
+        
+        if ('error' in result && result.error) {
+          toast.error(result.error);
+          setIsConfirming(false);
+          return;
+        }
+        
+        toast.success('Receipt confirmed and inventory updated');
+        
+        if (result.lowStockWarnings && result.lowStockWarnings.length > 0) {
+          result.lowStockWarnings.forEach((itemName) => {
+            toast.info(`Low stock: ${itemName}`);
+          });
+        }
+        
+        router.push(result.redirectTo || '/receiving');
+      } else {
+        const result = await confirmGoodsReceiptAction(receipt.id);
+        
+        // Show success message
+        toast.success('Receipt confirmed and inventory updated');
+        
+        // Show low stock warnings if any
+        if (result.lowStockWarnings && result.lowStockWarnings.length > 0) {
+          result.lowStockWarnings.forEach((itemName) => {
+            toast.info(`Low stock: ${itemName}`);
+          });
+        }
+        
+        // Navigate to the appropriate page
+        router.push(result.redirectTo);
       }
-      
-      // Navigate to the appropriate page
-      router.push(result.redirectTo);
     } catch (error) {
       console.error('Confirm error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to confirm receipt');
@@ -208,9 +249,33 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
       return;
     }
 
+    // Get backorder items from the BulkReceivingTable ref
+    const backorderItemIds = new Set<string>();
+    if (bulkReceivingTableRef.current) {
+      const backorderItems = bulkReceivingTableRef.current.getBackorderItems();
+      for (const item of backorderItems) {
+        backorderItemIds.add(item.itemId);
+      }
+    }
+
+    // Also check row states for PENDING_BACKORDER discrepancy type
+    if (bulkReceivingTableRef.current) {
+      const rowStates = bulkReceivingTableRef.current.getRowStates();
+      for (const [itemId, state] of rowStates) {
+        if (state.discrepancy === 'PENDING_BACKORDER' || state.isBackorder) {
+          backorderItemIds.add(itemId);
+        }
+      }
+    }
+
     const discrepancies: typeof mismatchItems = [];
     
     for (const expected of expectedItems) {
+      // Skip items marked as backorder - they are expected short-receives
+      if (backorderItemIds.has(expected.itemId)) {
+        continue;
+      }
+      
       const line = (receipt.lines || []).find((l) => l.item.id === expected.itemId);
       const received = line?.quantity ?? 0;
       
@@ -242,11 +307,67 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
     }
   }, [expectedItems, receipt.lines]);
 
-  // Handle proceeding with discrepancies
-  const handleProceedWithDiscrepancies = useCallback(() => {
+  // Handle confirming with mismatch logging
+  const handleConfirmWithMismatches = useCallback(async (selectedMismatches: SelectedMismatch[]) => {
+    setIsConfirming(true);
+    try {
+      // Get backorder item IDs from the BulkReceivingTable
+      const backorderItemIds: string[] = [];
+      if (bulkReceivingTableRef.current) {
+        const backorderItems = bulkReceivingTableRef.current.getBackorderItems();
+        for (const item of backorderItems) {
+          backorderItemIds.push(item.itemId);
+        }
+      }
+      
+      const result = await confirmReceiptWithMismatchesAction({
+        receiptId: receipt.id,
+        mismatches: selectedMismatches.length > 0 
+          ? selectedMismatches.map((m) => ({
+              itemId: m.itemId,
+              type: m.type as 'SHORT' | 'OVER' | 'DAMAGE' | 'SUBSTITUTION',
+              orderedQuantity: m.orderedQuantity,
+              receivedQuantity: m.receivedQuantity,
+              note: m.note ?? null,
+            }))
+          : undefined,
+        backorderItemIds: backorderItemIds.length > 0 ? backorderItemIds : undefined,
+      });
+
+      if ('error' in result && result.error) {
+        toast.error(result.error);
+        setIsConfirming(false);
+        return;
+      }
+
+      // Show success message
+      if (result.mismatchesLogged && result.mismatchesLogged > 0) {
+        toast.success(`Receipt confirmed. ${result.mismatchesLogged} discrepanc${result.mismatchesLogged === 1 ? 'y' : 'ies'} logged.`);
+      } else {
+        toast.success('Receipt confirmed and inventory updated');
+      }
+
+      // Show low stock warnings if any
+      if (result.lowStockWarnings && result.lowStockWarnings.length > 0) {
+        result.lowStockWarnings.forEach((itemName) => {
+          toast.info(`Low stock: ${itemName}`);
+        });
+      }
+
+      setShowMismatchPanel(false);
+      router.push(result.redirectTo || '/receiving');
+    } catch (error) {
+      console.error('Confirm with mismatches error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to confirm receipt');
+      setIsConfirming(false);
+    }
+  }, [receipt.id, router]);
+
+  // Handle ignoring mismatches and proceeding
+  const handleIgnoreAndProceed = useCallback(async () => {
     setShowMismatchPanel(false);
-    handleConfirm();
-  }, []);
+    await handleConfirm();
+  }, [handleConfirm]);
 
   const getStatusColor = (status: GoodsReceiptStatus) => {
     switch (status) {
@@ -374,6 +495,7 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
         {canEdit && expectedItems && Array.isArray(expectedItems) && expectedItems.length > 0 && receipt.order && (
           <div className="rounded-lg border border-card-border bg-card p-4">
             <BulkReceivingTable
+              ref={bulkReceivingTableRef}
               receiptId={receipt.id}
               expectedItems={expectedItems}
               existingLines={receipt.lines || []}
@@ -563,7 +685,9 @@ export function ReceiptDetail({ receipt, items, canEdit, expectedItems }: Receip
         isOpen={showMismatchPanel}
         onClose={() => setShowMismatchPanel(false)}
         items={mismatchItems}
-        onProceedAnyway={handleProceedWithDiscrepancies}
+        onConfirmWithMismatches={handleConfirmWithMismatches}
+        onIgnoreAndProceed={handleIgnoreAndProceed}
+        isSubmitting={isConfirming}
       />
     </>
   );

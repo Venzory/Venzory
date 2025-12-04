@@ -15,6 +15,7 @@ const statusConfig: Record<OrderStatus, { label: string; variant: BadgeVariant }
   [OrderStatus.DRAFT]: { label: 'Draft', variant: 'neutral' },
   [OrderStatus.SENT]: { label: 'Sent', variant: 'info' },
   [OrderStatus.PARTIALLY_RECEIVED]: { label: 'Partially Received', variant: 'warning' },
+  [OrderStatus.PARTIAL_BACKORDER]: { label: 'Backorder Pending', variant: 'secondary' },
   [OrderStatus.RECEIVED]: { label: 'Received', variant: 'success' },
   [OrderStatus.CANCELLED]: { label: 'Cancelled', variant: 'error' },
 };

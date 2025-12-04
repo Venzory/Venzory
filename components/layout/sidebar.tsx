@@ -26,6 +26,7 @@ import {
   FileSearch,
   CheckCircle2,
   Upload,
+  FileEdit,
 } from 'lucide-react';
 
 type NavItem = {
@@ -103,6 +104,7 @@ const adminNavSection: NavSection = {
     { href: '/admin/authority', label: 'Authority Tool', icon: Shield, accent: 'admin' },
     { href: '/admin/suppliers', label: 'Global Suppliers', icon: Building2, accent: 'admin' },
     { href: '/admin/supplier-catalog', label: 'Supplier Catalog', icon: BookOpen, accent: 'admin' },
+    { href: '/admin/supplier-corrections', label: 'Supplier Corrections', icon: FileEdit, accent: 'admin' },
     { href: '/admin/import', label: 'Bulk Import', icon: Upload, accent: 'admin' },
   ],
 };

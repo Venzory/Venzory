@@ -138,11 +138,13 @@ export const {
       authorize: async (credentials, request) => {
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) {
+          console.log('[AUTH DEBUG] Credentials validation failed:', parsed.error.issues);
           return null;
         }
 
         const email = parsed.data.email.toLowerCase();
         const password = parsed.data.password;
+        console.log('[AUTH DEBUG] Attempting login for:', email);
         
         // Enforce rate limiting
         let ip = 'unknown';
@@ -154,44 +156,57 @@ export const {
         const rateLimitResult = await loginRateLimiter.check(rateLimitKey);
 
         if (!rateLimitResult.success) {
+          console.log('[AUTH DEBUG] Rate limited:', rateLimitKey);
           throw new Error('Too many login attempts. Please try again later.');
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email },
-          include: {
-            memberships: {
-              include: {
-                practice: {
-                  select: { 
-                    id: true, 
-                    name: true, 
-                    slug: true, 
-                    onboardingCompletedAt: true, 
-                    onboardingSkippedAt: true,
-                    locations: {
-                      select: { id: true, name: true },
-                      orderBy: { name: 'asc' },
+        console.log('[AUTH DEBUG] Querying database for user...');
+        let user;
+        try {
+          user = await prisma.user.findUnique({
+            where: { email },
+            include: {
+              memberships: {
+                include: {
+                  practice: {
+                    select: { 
+                      id: true, 
+                      name: true, 
+                      slug: true, 
+                      onboardingCompletedAt: true, 
+                      onboardingSkippedAt: true,
+                      locations: {
+                        select: { id: true, name: true },
+                        orderBy: { name: 'asc' },
+                      },
                     },
                   },
-                },
-                locationAccess: {
-                  select: { locationId: true },
+                  locationAccess: {
+                    select: { locationId: true },
+                  },
                 },
               },
             },
-          },
-        });
-
-        if (!user || !user.passwordHash) {
+          });
+          console.log('[AUTH DEBUG] User query result:', user ? `Found user ${user.id}` : 'User NOT found');
+        } catch (dbError) {
+          console.error('[AUTH DEBUG] Database query error:', dbError);
           return null;
         }
 
+        if (!user || !user.passwordHash) {
+          console.log('[AUTH DEBUG] User not found or no password hash. User exists:', !!user, 'Has hash:', !!(user?.passwordHash));
+          return null;
+        }
+
+        console.log('[AUTH DEBUG] Comparing password, hash length:', user.passwordHash.length);
         const isValid = await compare(password, user.passwordHash);
+        console.log('[AUTH DEBUG] Password comparison result:', isValid);
         if (!isValid) {
           return null;
         }
 
+        console.log('[AUTH DEBUG] Login successful for:', email);
         return user;
       },
     }),

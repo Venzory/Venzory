@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Check,
@@ -13,6 +13,7 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  Clock,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import { ProductDetailDrawer } from '@/components/product/product-detail-drawer';
@@ -20,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { addReceiptLineAction, updateReceiptLineAction } from '../../actions';
 
 // Discrepancy types for receiving
-export type DiscrepancyType = 'NONE' | 'SHORT' | 'OVER' | 'DAMAGE' | 'SUBSTITUTION';
+export type DiscrepancyType = 'NONE' | 'SHORT' | 'OVER' | 'DAMAGE' | 'SUBSTITUTION' | 'PENDING_BACKORDER';
 
 interface ExpectedItem {
   itemId: string;
@@ -51,6 +52,7 @@ interface ReceiptLine {
 interface RowState {
   qtyReceived: number;
   discrepancy: DiscrepancyType;
+  isBackorder: boolean; // true if short quantity is marked as expected backorder
   batchNumber: string;
   expiryDate: string;
   notes: string;
@@ -67,6 +69,23 @@ interface BulkReceivingTableProps {
   onRefresh: () => void;
   onSubmitReceiving: () => void;
   canEdit: boolean;
+}
+
+// Information about items marked as backorder
+export interface BackorderItemInfo {
+  itemId: string;
+  itemName: string;
+  itemSku: string | null;
+  orderedQuantity: number;
+  receivedQuantity: number;
+  pendingQuantity: number;
+  unit: string | null;
+}
+
+// Expose methods via ref for parent component to access
+export interface BulkReceivingTableRef {
+  getBackorderItems: () => BackorderItemInfo[];
+  getRowStates: () => Map<string, RowState>;
 }
 
 function calculateDiscrepancy(ordered: number, received: number): DiscrepancyType {
@@ -106,6 +125,13 @@ function getDiscrepancyBadge(discrepancy: DiscrepancyType, ordered: number, rece
           Substitution
         </Badge>
       );
+    case 'PENDING_BACKORDER':
+      return (
+        <Badge variant="outline" className="gap-1 border-violet-300 bg-violet-50 text-violet-700 dark:border-violet-700 dark:bg-violet-900/20 dark:text-violet-300">
+          <Clock className="h-3 w-3" />
+          Backorder ({ordered - received})
+        </Badge>
+      );
     case 'NONE':
     default:
       if (received === ordered && received > 0) {
@@ -125,14 +151,15 @@ function getDiscrepancyBadge(discrepancy: DiscrepancyType, ordered: number, rece
   }
 }
 
-export function BulkReceivingTable({
-  receiptId,
-  expectedItems,
-  existingLines,
-  onRefresh,
-  onSubmitReceiving,
-  canEdit,
-}: BulkReceivingTableProps) {
+export const BulkReceivingTable = forwardRef<BulkReceivingTableRef, BulkReceivingTableProps>(
+  function BulkReceivingTable({
+    receiptId,
+    expectedItems,
+    existingLines,
+    onRefresh,
+    onSubmitReceiving,
+    canEdit,
+  }, ref) {
   const router = useRouter();
   
   // Product drawer state
@@ -153,6 +180,7 @@ export function BulkReceivingTable({
       states.set(item.itemId, {
         qtyReceived,
         discrepancy,
+        isBackorder: false,
         batchNumber: existingLine?.batchNumber ?? '',
         expiryDate: existingLine?.expiryDate 
           ? new Date(existingLine.expiryDate).toISOString().split('T')[0] 
@@ -174,9 +202,14 @@ export function BulkReceivingTable({
   // Global saving state
   const [isBulkSaving, setIsBulkSaving] = useState(false);
   
-  // Track if any rows have discrepancies
+  // Track if any rows have true discrepancies (not backorders)
   const hasDiscrepancies = Array.from(rowStates.values()).some(
-    (r) => r.discrepancy !== 'NONE' && r.qtyReceived > 0
+    (r) => r.discrepancy !== 'NONE' && r.discrepancy !== 'PENDING_BACKORDER' && r.qtyReceived > 0
+  );
+  
+  // Track if any rows have pending backorders
+  const hasBackorders = Array.from(rowStates.values()).some(
+    (r) => r.discrepancy === 'PENDING_BACKORDER' || r.isBackorder
   );
   
   // Track if any rows are dirty
@@ -207,13 +240,36 @@ export function BulkReceivingTable({
 
   // Handle qty change with auto-discrepancy calculation
   const handleQtyChange = useCallback((itemId: string, qty: number, orderedQty: number) => {
-    const discrepancy = calculateDiscrepancy(orderedQty, qty);
-    updateRowState(itemId, { qtyReceived: qty, discrepancy });
-  }, [updateRowState]);
+    const state = rowStates.get(itemId);
+    let discrepancy = calculateDiscrepancy(orderedQty, qty);
+    
+    // If item was marked as backorder and is still short, keep it as PENDING_BACKORDER
+    if (state?.isBackorder && discrepancy === 'SHORT') {
+      discrepancy = 'PENDING_BACKORDER';
+    }
+    // If quantity now matches or exceeds ordered, clear backorder state
+    const isBackorder = discrepancy === 'PENDING_BACKORDER' ? true : (discrepancy === 'SHORT' ? state?.isBackorder ?? false : false);
+    
+    updateRowState(itemId, { qtyReceived: qty, discrepancy, isBackorder });
+  }, [updateRowState, rowStates]);
 
   // Handle manual discrepancy override
   const handleDiscrepancyChange = useCallback((itemId: string, discrepancy: DiscrepancyType) => {
-    updateRowState(itemId, { discrepancy });
+    // If changing to PENDING_BACKORDER, also mark isBackorder
+    const isBackorder = discrepancy === 'PENDING_BACKORDER';
+    updateRowState(itemId, { discrepancy, isBackorder });
+  }, [updateRowState]);
+
+  // Toggle backorder status for a short item
+  const handleBackorderToggle = useCallback((itemId: string, orderedQty: number, receivedQty: number, isBackorder: boolean) => {
+    if (isBackorder) {
+      // Marking as backorder
+      updateRowState(itemId, { isBackorder: true, discrepancy: 'PENDING_BACKORDER' });
+    } else {
+      // Unmarking as backorder - revert to SHORT if still short
+      const discrepancy = calculateDiscrepancy(orderedQty, receivedQty);
+      updateRowState(itemId, { isBackorder: false, discrepancy });
+    }
   }, [updateRowState]);
 
   // Save a single row
@@ -325,6 +381,29 @@ export function BulkReceivingTable({
       debounceTimers.current.forEach((timer) => clearTimeout(timer));
     };
   }, []);
+
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    getBackorderItems: () => {
+      const backorderItems: BackorderItemInfo[] = [];
+      for (const item of expectedItems) {
+        const state = rowStates.get(item.itemId);
+        if (state && (state.isBackorder || state.discrepancy === 'PENDING_BACKORDER')) {
+          backorderItems.push({
+            itemId: item.itemId,
+            itemName: item.itemName,
+            itemSku: item.itemSku,
+            orderedQuantity: item.orderedQuantity,
+            receivedQuantity: state.qtyReceived,
+            pendingQuantity: item.orderedQuantity - state.qtyReceived,
+            unit: item.unit,
+          });
+        }
+      }
+      return backorderItems;
+    },
+    getRowStates: () => rowStates,
+  }), [expectedItems, rowStates]);
 
   return (
     <div className="space-y-4">
@@ -448,24 +527,49 @@ export function BulkReceivingTable({
 
                     {/* Discrepancy Status */}
                     <td className="px-4 py-3">
-                      <div className="flex justify-center">
+                      <div className="flex flex-col items-center gap-2">
                         {canEdit && state.qtyReceived > 0 ? (
-                          <select
-                            value={state.discrepancy}
-                            onChange={(e) => {
-                              handleDiscrepancyChange(item.itemId, e.target.value as DiscrepancyType);
-                              debouncedSave(item.itemId, item);
-                            }}
-                            className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                          >
-                            <option value="NONE">
-                              {state.qtyReceived === item.orderedQuantity ? '✓ OK' : '— Pending'}
-                            </option>
-                            <option value="SHORT">↓ Short</option>
-                            <option value="OVER">↑ Over</option>
-                            <option value="DAMAGE">⚠ Damage</option>
-                            <option value="SUBSTITUTION">↻ Substitution</option>
-                          </select>
+                          <>
+                            <select
+                              value={state.discrepancy}
+                              onChange={(e) => {
+                                handleDiscrepancyChange(item.itemId, e.target.value as DiscrepancyType);
+                                debouncedSave(item.itemId, item);
+                              }}
+                              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            >
+                              <option value="NONE">
+                                {state.qtyReceived === item.orderedQuantity ? '✓ OK' : '— Pending'}
+                              </option>
+                              <option value="SHORT">↓ Short</option>
+                              <option value="OVER">↑ Over</option>
+                              <option value="DAMAGE">⚠ Damage</option>
+                              <option value="SUBSTITUTION">↻ Substitution</option>
+                              <option value="PENDING_BACKORDER">⏱ Backorder</option>
+                            </select>
+                            {/* Show backorder toggle when quantity is short */}
+                            {state.qtyReceived < item.orderedQuantity && state.qtyReceived > 0 && (
+                              <label className="flex items-center gap-1.5 cursor-pointer group">
+                                <input
+                                  type="checkbox"
+                                  checked={state.isBackorder || state.discrepancy === 'PENDING_BACKORDER'}
+                                  onChange={(e) => {
+                                    handleBackorderToggle(
+                                      item.itemId, 
+                                      item.orderedQuantity, 
+                                      state.qtyReceived, 
+                                      e.target.checked
+                                    );
+                                    debouncedSave(item.itemId, item);
+                                  }}
+                                  className="h-3.5 w-3.5 rounded border-violet-300 text-violet-600 focus:ring-violet-500 dark:border-violet-600 dark:bg-slate-700"
+                                />
+                                <span className="text-xs text-violet-600 dark:text-violet-400 group-hover:text-violet-700 dark:group-hover:text-violet-300">
+                                  Backorder?
+                                </span>
+                              </label>
+                            )}
+                          </>
                         ) : (
                           getDiscrepancyBadge(state.discrepancy, item.orderedQuantity, state.qtyReceived)
                         )}
@@ -546,6 +650,12 @@ export function BulkReceivingTable({
               <span>Discrepancies detected</span>
             </div>
           )}
+          {hasBackorders && (
+            <div className="flex items-center gap-1 text-violet-600 dark:text-violet-400">
+              <Clock className="h-4 w-4" />
+              <span>Backorders pending</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -572,6 +682,11 @@ export function BulkReceivingTable({
                 Review discrepancies before submitting
               </span>
             )}
+            {!hasDiscrepancies && hasBackorders && (
+              <span className="text-sm text-violet-600 dark:text-violet-400">
+                Backorders will not block submission
+              </span>
+            )}
             <button
               type="button"
               onClick={onSubmitReceiving}
@@ -596,5 +711,5 @@ export function BulkReceivingTable({
       />
     </div>
   );
-}
+});
 

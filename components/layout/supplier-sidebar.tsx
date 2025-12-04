@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Building2,
+  Package,
 } from 'lucide-react';
 
 type NavItem = {
@@ -24,6 +25,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: '/supplier', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/supplier/items', label: 'My Items', icon: Package },
   { href: '/supplier/catalog', label: 'Catalog Upload', icon: Upload },
   { href: '/supplier/pricing', label: 'Pricing', icon: DollarSign },
   { href: '/supplier/delivery', label: 'Delivery Settings', icon: Truck },

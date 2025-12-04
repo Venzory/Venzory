@@ -43,6 +43,7 @@ enum OrderStatus {
   DRAFT
   SENT
   PARTIALLY_RECEIVED
+  PARTIAL_BACKORDER
   RECEIVED
   CANCELLED
 }
@@ -51,6 +52,22 @@ enum GoodsReceiptStatus {
   DRAFT
   CONFIRMED
   CANCELLED
+}
+
+// ============================================
+// RECEIVING MISMATCH ENUMS
+// ============================================
+enum MismatchType {
+  SHORT
+  OVER
+  DAMAGE
+  SUBSTITUTION
+}
+
+enum MismatchStatus {
+  OPEN
+  RESOLVED
+  NEEDS_SUPPLIER_CORRECTION
 }
 
 enum StockCountStatus {
@@ -166,6 +183,8 @@ model User {
   stockCountSessions    StockCountSession[]  @relation("StockCountCreatedBy")
   platformAdmin         PlatformAdmin?
   supplierAccess        SupplierUser?
+  createdMismatches     ReceivingMismatch[]  @relation("MismatchCreatedBy")
+  resolvedMismatches    ReceivingMismatch[]  @relation("MismatchResolvedBy")
 }
 
 // ============================================
@@ -215,9 +234,10 @@ model Practice {
   inAppNotifications InAppNotification[]
   invites            UserInvite[]
   orderTemplates     OrderTemplate[]
-  goodsReceipts      GoodsReceipt[]
-  stockCountSessions StockCountSession[]
-  practiceSuppliers  PracticeSupplier[]
+  goodsReceipts       GoodsReceipt[]
+  stockCountSessions  StockCountSession[]
+  practiceSuppliers   PracticeSupplier[]
+  receivingMismatches ReceivingMismatch[]
 }
 
 model PracticeUser {
@@ -361,10 +381,11 @@ model GlobalSupplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  practiceLinks  PracticeSupplier[]
-  supplierItems  SupplierItem[]
-  catalogUploads SupplierCatalogUpload[]
-  supplierUsers  SupplierUser[]
+  practiceLinks        PracticeSupplier[]
+  supplierItems        SupplierItem[]
+  catalogUploads       SupplierCatalogUpload[]
+  supplierUsers        SupplierUser[]
+  supplierCorrections  SupplierCorrection[]
 
   @@index([name])
 }
@@ -398,6 +419,16 @@ enum UploadStatus {
   FAILED
 }
 
+// ============================================
+// SUPPLIER CORRECTION STATUS (Supplier Hub)
+// ============================================
+enum CorrectionStatus {
+  DRAFT    // Supplier has edited but not submitted
+  PENDING  // Submitted for admin review
+  APPROVED // Admin approved and applied
+  REJECTED // Admin rejected
+}
+
 model SupplierCatalogUpload {
   id               String       @id @default(cuid())
   globalSupplierId String
@@ -417,6 +448,34 @@ model SupplierCatalogUpload {
   globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
 
   @@index([globalSupplierId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// SUPPLIER CORRECTION (Supplier Hub)
+// ============================================
+// Stores supplier-initiated corrections to their catalog data
+// Supports draft/submit workflow with admin review
+model SupplierCorrection {
+  id               String           @id @default(cuid())
+  supplierItemId   String
+  globalSupplierId String
+  originalData     Json             // Snapshot of original values
+  proposedData     Json             // Proposed changes (price, packaging, description, gtin)
+  status           CorrectionStatus @default(DRAFT)
+  submittedAt      DateTime?
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  reviewNotes      String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  supplierItem   SupplierItem   @relation(fields: [supplierItemId], references: [id], onDelete: Cascade)
+  globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
+
+  @@index([globalSupplierId])
+  @@index([supplierItemId])
   @@index([status])
   @@index([createdAt])
 }
@@ -445,6 +504,7 @@ model PracticeSupplier {
   defaultItems          Item[]
   orderTemplateItems    OrderTemplateItem[]
   goodsReceipts         GoodsReceipt[]
+  receivingMismatches   ReceivingMismatch[]
 
   @@unique([practiceId, globalSupplierId])
   @@index([practiceId])
@@ -496,6 +556,7 @@ model SupplierItem {
   globalSupplier GlobalSupplier @relation(fields: [globalSupplierId], references: [id], onDelete: Cascade)
   product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
   items          Item[]
+  corrections    SupplierCorrection[]
 
   @@unique([globalSupplierId, productId])
   @@index([globalSupplierId])
@@ -533,6 +594,7 @@ model Item {
   orderTemplateItems      OrderTemplateItem[]
   goodsReceiptLines       GoodsReceiptLine[]
   stockCountLines         StockCountLine[]
+  receivingMismatches     ReceivingMismatch[]
 
   @@unique([practiceId, name])
   @@index([practiceId])
@@ -592,11 +654,12 @@ model Order {
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
-  practice         Practice          @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
-  createdBy        User?             @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  items            OrderItem[]
-  goodsReceipts    GoodsReceipt[]
+  practice            Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  practiceSupplier    PracticeSupplier?   @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
+  createdBy           User?               @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items               OrderItem[]
+  goodsReceipts       GoodsReceipt[]
+  receivingMismatches ReceivingMismatch[]
 
   @@index([practiceId])
   @@index([practiceSupplierId])
@@ -710,12 +773,13 @@ model GoodsReceipt {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  practice         Practice           @relation(fields: [practiceId], references: [id], onDelete: Cascade)
-  location         Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  order            Order?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  practiceSupplier PracticeSupplier?  @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
-  createdBy        User?              @relation("GoodsReceiptCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  lines            GoodsReceiptLine[]
+  practice            Practice            @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  location            Location            @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  order               Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  practiceSupplier    PracticeSupplier?   @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
+  createdBy           User?               @relation("GoodsReceiptCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  lines               GoodsReceiptLine[]
+  receivingMismatches ReceivingMismatch[]
 
   @@index([practiceId])
   @@index([locationId])
@@ -742,6 +806,50 @@ model GoodsReceiptLine {
 
   @@index([receiptId])
   @@index([itemId])
+}
+
+// ============================================
+// RECEIVING MISMATCH TRACKING
+// ============================================
+// Records discrepancies detected during goods receiving
+// Supports workflow for resolution and supplier communication
+model ReceivingMismatch {
+  id                 String         @id @default(cuid())
+  practiceId         String
+  orderId            String?
+  goodsReceiptId     String
+  itemId             String
+  practiceSupplierId String?
+
+  type   MismatchType
+  status MismatchStatus @default(OPEN)
+
+  orderedQuantity  Int
+  receivedQuantity Int
+  varianceQuantity Int // calculated: received - ordered
+
+  note           String? // Initial note when logging the mismatch
+  resolutionNote String? // Note added when resolving
+  resolvedById   String?
+  resolvedAt     DateTime?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  practice         Practice          @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  order            Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  goodsReceipt     GoodsReceipt      @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
+  item             Item              @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  practiceSupplier PracticeSupplier? @relation(fields: [practiceSupplierId], references: [id], onDelete: SetNull)
+  createdBy        User?             @relation("MismatchCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  resolvedBy       User?             @relation("MismatchResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([practiceId, status])
+  @@index([practiceId, createdAt])
+  @@index([goodsReceiptId])
+  @@index([orderId])
+  @@index([practiceSupplierId])
 }
 
 model StockCountSession {

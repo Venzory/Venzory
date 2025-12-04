@@ -74,6 +74,11 @@
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    
+    /* Scrollbar colors */
+    --scrollbar-track: 241 245 249; /* slate-100 */
+    --scrollbar-thumb: 203 213 225; /* slate-300 */
+    --scrollbar-thumb-hover: 14 165 233; /* sky-500 - brand accent */
   }
 
   .dark {
@@ -145,6 +150,11 @@
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;
+    
+    /* Scrollbar colors */
+    --scrollbar-track: 30 41 59; /* slate-800 */
+    --scrollbar-thumb: 71 85 105; /* slate-600 */
+    --scrollbar-thumb-hover: 56 189 248; /* sky-400 - brand accent */
   }
 
   body {
@@ -153,6 +163,44 @@
 
   .dark body {
     @apply bg-slate-950 text-slate-50;
+  }
+
+  /* Modern scrollbar styles */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--scrollbar-thumb)) rgb(var(--scrollbar-track));
+  }
+
+  /* WebKit scrollbar (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    transition: width 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgb(var(--scrollbar-track));
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--scrollbar-thumb));
+    border-radius: 9999px;
+    transition: background 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--scrollbar-thumb-hover));
+  }
+
+  /* Hover expansion for scrollable containers */
+  *:hover::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: rgb(var(--scrollbar-track));
   }
 }
 

@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Package, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
+import { Package, AlertTriangle, ArrowUp, ArrowDown, ChevronRight } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
+import { ProductDetailDrawer } from '@/components/product';
+import { useProductDrawer } from '@/hooks/use-product-drawer';
 import { toast } from '@/lib/toast';
 import { createOrdersFromCatalogAction, quickOrderFromItemAction } from '../actions';
 import { DeleteItemButton } from './delete-item-button';
@@ -19,7 +21,9 @@ interface ItemWithStockInfo {
   id: string;
   name: string;
   sku: string | null;
+  productId?: string;
   product?: {
+    id: string;
     brand: string | null;
   } | null;
   defaultPracticeSupplier?: {
@@ -61,6 +65,7 @@ export function CatalogItemList({
 }: CatalogItemListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { selectedProductId, isOpen, openDrawer, closeDrawer } = useProductDrawer();
   const [highlightedId, setHighlightedId] = useState(highlightItemId);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,24 +128,38 @@ export function CatalogItemList({
     router.push(`/my-items?${params.toString()}`);
   };
 
+  // Get productId from either top-level or nested product relation
+  const getProductId = (item: ItemWithStockInfo) => item.productId || item.product?.id;
+
   const columns = [
     {
         accessorKey: 'name',
         header: 'Item Name',
         enableSorting: true,
-        cell: (item: ItemWithStockInfo) => (
-            <div className="flex items-center gap-2">
-                <div className="flex-shrink-0 w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
-                    <Package className="h-4 w-4 text-slate-400" />
+        cell: (item: ItemWithStockInfo) => {
+            const productId = getProductId(item);
+            return (
+                <div className="flex items-center gap-2">
+                    <div className="flex-shrink-0 w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
+                        <Package className="h-4 w-4 text-slate-400" />
+                    </div>
+                    {productId ? (
+                        <button
+                            type="button"
+                            onClick={() => openDrawer(productId)}
+                            className="group flex items-center gap-1 font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 hover:underline cursor-pointer"
+                        >
+                            {item.name}
+                            <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                    ) : (
+                        <span className="font-medium text-slate-900 dark:text-slate-200">
+                            {item.name}
+                        </span>
+                    )}
                 </div>
-                <Link 
-                    href={`/inventory?q=${encodeURIComponent(item.name)}`}
-                    className="font-medium text-slate-900 dark:text-slate-200 hover:text-brand transition"
-                >
-                    {item.name}
-                </Link>
-            </div>
-        )
+            );
+        }
     },
     {
         accessorKey: 'sku',
@@ -340,6 +359,13 @@ export function CatalogItemList({
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={handlePageChange}
+      />
+
+      {/* Product Detail Drawer */}
+      <ProductDetailDrawer
+        productId={selectedProductId}
+        isOpen={isOpen}
+        onClose={closeDrawer}
       />
     </div>
   );

@@ -3,13 +3,15 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Package, AlertTriangle } from 'lucide-react';
+import { Package, AlertTriangle, ChevronRight } from 'lucide-react';
 
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
 import { DataTable } from '@/components/ui/data-table';
+import { ProductDetailDrawer } from '@/components/product';
+import { useProductDrawer } from '@/hooks/use-product-drawer';
 
 import { StockLevelDialog } from './stock-level-dialog';
 
@@ -26,6 +28,7 @@ interface InventoryItem {
   id: string;
   name: string;
   sku: string | null;
+  productId?: string;
   totalStock: number;
   locationCount: number;
   isLowStock: boolean;
@@ -60,6 +63,7 @@ export function LowStockItemList({
 }: LowStockItemListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { selectedProductId, isOpen, openDrawer, closeDrawer } = useProductDrawer();
   const [editingStock, setEditingStock] = useState<{
     item: { id: string; name: string };
     location: { 
@@ -106,9 +110,20 @@ export function LowStockItemList({
                 <div className="flex-shrink-0 w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded flex items-center justify-center">
                     <Package className="h-4 w-4 text-slate-400" />
                 </div>
-                <span className="font-medium text-slate-900 dark:text-slate-200">
-                    {item.name}
-                </span>
+                {item.productId ? (
+                    <button
+                        type="button"
+                        onClick={() => openDrawer(item.productId)}
+                        className="group flex items-center gap-1 font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 hover:underline cursor-pointer"
+                    >
+                        {item.name}
+                        <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                ) : (
+                    <span className="font-medium text-slate-900 dark:text-slate-200">
+                        {item.name}
+                    </span>
+                )}
             </div>
         )
     },
@@ -335,6 +350,13 @@ export function LowStockItemList({
           location={editingStock.location}
         />
       )}
+
+      {/* Product Detail Drawer */}
+      <ProductDetailDrawer
+        productId={selectedProductId}
+        isOpen={isOpen}
+        onClose={closeDrawer}
+      />
     </div>
   );
 }

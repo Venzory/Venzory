@@ -19,6 +19,7 @@ import {
 import { EditableOrderItem } from './_components/editable-order-item';
 import { AddItemForm } from './_components/add-item-form';
 import { OrderActions } from './_components/order-actions';
+import { OrderItemsTable } from './_components/order-items-table';
 
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>;
@@ -44,8 +45,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   });
 
   const canEdit = canManage && order.status === OrderStatus.DRAFT;
-  const canReceive = canManage && (order.status === OrderStatus.SENT || order.status === OrderStatus.PARTIALLY_RECEIVED);
-  const canClose = canManage && (order.status === OrderStatus.SENT || order.status === OrderStatus.PARTIALLY_RECEIVED);
+  const canReceive = canManage && (order.status === OrderStatus.SENT || order.status === OrderStatus.PARTIALLY_RECEIVED || order.status === OrderStatus.PARTIAL_BACKORDER);
+  const canClose = canManage && (order.status === OrderStatus.SENT || order.status === OrderStatus.PARTIALLY_RECEIVED || order.status === OrderStatus.PARTIAL_BACKORDER);
+  const hasBackorders = order.status === OrderStatus.PARTIAL_BACKORDER;
 
   // Get all locations for receiving
   const locations = await getInventoryService().getLocations(ctx);
@@ -109,6 +111,31 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           ) : null}
         </div>
       </div>
+
+      {/* Backorder Info Banner */}
+      {hasBackorders && (
+        <div className="rounded-lg border border-violet-300 bg-violet-50 p-4 dark:border-violet-700 dark:bg-violet-900/20">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 rounded-full bg-violet-100 p-2 dark:bg-violet-800/50">
+              <svg className="h-5 w-5 text-violet-600 dark:text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-violet-900 dark:text-violet-100">
+                Items on Backorder
+              </h3>
+              <p className="mt-1 text-sm text-violet-700 dark:text-violet-300">
+                This order has items marked as backorder, meaning they are expected in a future shipment.
+                You can continue to receive additional shipments when they arrive.
+              </p>
+              <p className="mt-2 text-xs text-violet-600 dark:text-violet-400 italic">
+                Backorder tracking and automatic fulfillment monitoring coming soon.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Order Info */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -265,7 +292,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               {canEdit ? 'Add items using the form below.' : 'This order has no items yet.'}
             </p>
           </div>
-        ) : (
+        ) : canEdit ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
@@ -282,66 +309,33 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
                     Total
                   </th>
-                  {canEdit ? (
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
-                      Actions
-                    </th>
-                  ) : null}
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-400">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {order.items?.map((orderItem: any) => {
                   const unitPrice = decimalToNumber(orderItem.unitPrice) || 0;
-                  const lineTotal = unitPrice * orderItem.quantity;
-
-                  if (canEdit) {
-                    return (
-                      <EditableOrderItem
-                        key={orderItem.id}
-                        orderId={order.id}
-                        itemId={orderItem.itemId}
-                        quantity={orderItem.quantity}
-                        unitPrice={unitPrice}
-                        itemName={orderItem.item?.name || ''}
-                        itemSku={orderItem.item?.sku}
-                        itemUnit={orderItem.item?.unit}
-                      />
-                    );
-                  }
 
                   return (
-                    <tr key={orderItem.id}>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-slate-900 dark:text-slate-200">
-                            {orderItem.item?.name}
-                          </span>
-                          {orderItem.item?.sku ? (
-                            <span className="text-xs text-slate-500 dark:text-slate-500">{orderItem.item?.sku}</span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-slate-900 dark:text-slate-200">
-                          {orderItem.quantity} {orderItem.item?.unit || 'units'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-slate-900 dark:text-slate-200">
-                          {unitPrice > 0 ? `€${unitPrice.toFixed(2)}` : '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-200">
-                        {lineTotal > 0 ? `€${lineTotal.toFixed(2)}` : '-'}
-                      </td>
-                    </tr>
+                    <EditableOrderItem
+                      key={orderItem.id}
+                      orderId={order.id}
+                      itemId={orderItem.itemId}
+                      quantity={orderItem.quantity}
+                      unitPrice={unitPrice}
+                      itemName={orderItem.item?.name || ''}
+                      itemSku={orderItem.item?.sku}
+                      itemUnit={orderItem.item?.unit}
+                    />
                   );
                 })}
               </tbody>
               <tfoot className="border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
                 <tr>
                   <td 
-                    colSpan={canEdit ? 3 : 3} 
+                    colSpan={3} 
                     className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-200"
                   >
                     Total
@@ -349,11 +343,27 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   <td className="px-4 py-3 text-right text-lg font-bold text-slate-900 dark:text-white">
                     {total > 0 ? `€${total.toFixed(2)}` : '-'}
                   </td>
-                  {canEdit ? <td></td> : null}
+                  <td></td>
                 </tr>
               </tfoot>
             </table>
           </div>
+        ) : (
+          <OrderItemsTable
+            items={(order.items || []).map((orderItem: any) => ({
+              id: orderItem.id,
+              itemId: orderItem.itemId,
+              quantity: orderItem.quantity,
+              unitPrice: decimalToNumber(orderItem.unitPrice) || 0,
+              item: orderItem.item ? {
+                name: orderItem.item.name,
+                sku: orderItem.item.sku,
+                unit: orderItem.item.unit,
+                productId: orderItem.item.productId,
+              } : null,
+            }))}
+            total={total}
+          />
         )}
 
         {/* Add Item Form - Always visible for draft orders */}
@@ -373,19 +383,29 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 }
 
 function StatusBadge({ status }: { status: OrderStatus }) {
-  const styles = {
+  const styles: Record<OrderStatus, string> = {
     [OrderStatus.DRAFT]: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
     [OrderStatus.SENT]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
     [OrderStatus.PARTIALLY_RECEIVED]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+    [OrderStatus.PARTIAL_BACKORDER]: 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300',
     [OrderStatus.RECEIVED]: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
     [OrderStatus.CANCELLED]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
+  };
+
+  const labels: Record<OrderStatus, string> = {
+    [OrderStatus.DRAFT]: 'Draft',
+    [OrderStatus.SENT]: 'Sent',
+    [OrderStatus.PARTIALLY_RECEIVED]: 'Partially Received',
+    [OrderStatus.PARTIAL_BACKORDER]: 'Backorder Pending',
+    [OrderStatus.RECEIVED]: 'Received',
+    [OrderStatus.CANCELLED]: 'Cancelled',
   };
 
   return (
     <span
       className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${styles[status]}`}
     >
-      {status.replace('_', ' ')}
+      {labels[status]}
     </span>
   );
 }

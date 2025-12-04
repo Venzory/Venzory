@@ -300,7 +300,7 @@ export async function removeReceiptLineAction(lineId: string) {
 /**
  * Confirm a goods receipt (updates inventory)
  */
-export async function confirmGoodsReceiptAction(receiptId: string) {
+export async function confirmGoodsReceiptAction(receiptId: string, backorderItemIds?: string[]) {
   await verifyCsrfFromHeaders();
   
   try {
@@ -311,8 +311,8 @@ export async function confirmGoodsReceiptAction(receiptId: string) {
       throw new Error('Invalid receipt ID');
     }
 
-    // Confirm goods receipt using service
-    const result = await receivingService.confirmGoodsReceipt(ctx, receiptId);
+    // Confirm goods receipt using service (pass backorder item IDs if provided)
+    const result = await receivingService.confirmGoodsReceipt(ctx, receiptId, backorderItemIds);
 
     if (isDomainError(result)) {
       throw new Error(result.message);
@@ -596,4 +596,271 @@ export async function searchItemByGtinAction(gtin: string) {
   }
 }
 
+// ============================================
+// MISMATCH TRACKING ACTIONS
+// ============================================
+
+// Schema for mismatch logging
+const mismatchItemSchema = z.object({
+  itemId: z.string().min(1),
+  type: z.enum(['SHORT', 'OVER', 'DAMAGE', 'SUBSTITUTION']),
+  orderedQuantity: z.number().int().min(0),
+  receivedQuantity: z.number().int().min(0),
+  note: z.string().max(500).optional().nullable(),
+});
+
+const confirmWithMismatchesSchema = z.object({
+  receiptId: z.string().min(1, 'Receipt ID is required'),
+  mismatches: z.array(mismatchItemSchema).optional(),
+  backorderItemIds: z.array(z.string().min(1)).optional(),
+});
+
+/**
+ * Confirm goods receipt with optional mismatch logging
+ * This is the primary action for the enhanced receiving workflow
+ */
+export async function confirmReceiptWithMismatchesAction(data: {
+  receiptId: string;
+  mismatches?: Array<{
+    itemId: string;
+    type: 'SHORT' | 'OVER' | 'DAMAGE' | 'SUBSTITUTION';
+    orderedQuantity: number;
+    receivedQuantity: number;
+    note?: string | null;
+  }>;
+  backorderItemIds?: string[]; // Items marked as expected backorders
+}) {
+  await verifyCsrfFromHeaders();
+
+  try {
+    const ctx = await buildRequestContext();
+
+    const parsed = confirmWithMismatchesSchema.safeParse(data);
+
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || 'Invalid input';
+      return { error: firstError } as const;
+    }
+
+    const { receiptId, mismatches, backorderItemIds } = parsed.data;
+
+    // Log mismatches if provided
+    if (mismatches && mismatches.length > 0) {
+      await receivingService.logReceivingMismatches(ctx, receiptId, mismatches.map((m) => ({
+        itemId: m.itemId,
+        type: m.type as any, // MismatchType enum
+        orderedQuantity: m.orderedQuantity,
+        receivedQuantity: m.receivedQuantity,
+        note: m.note ?? undefined,
+      })));
+    }
+
+    // Confirm the receipt (pass backorder item IDs)
+    const result = await receivingService.confirmGoodsReceipt(ctx, receiptId, backorderItemIds);
+
+    if (isDomainError(result)) {
+      return { error: result.message } as const;
+    }
+
+    // Revalidate paths
+    revalidatePath(`/receiving/${receiptId}`);
+    revalidatePath('/receiving');
+    revalidatePath('/receiving/mismatches');
+    revalidatePath('/inventory');
+    revalidatePath('/dashboard');
+
+    if (result.orderId) {
+      revalidatePath(`/orders/${result.orderId}`);
+      revalidatePath('/orders');
+    }
+
+    return {
+      success: true,
+      redirectTo: result.orderId ? `/orders/${result.orderId}` : '/receiving',
+      lowStockWarnings: result.lowStockNotifications || [],
+      mismatchesLogged: mismatches?.length ?? 0,
+    } as const;
+  } catch (error: unknown) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'confirmReceiptWithMismatchesAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      receiptId: data.receiptId,
+      mismatchCount: data.mismatches?.length,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'Failed to confirm receipt with mismatches');
+
+    const message = error instanceof Error ? error.message : 'Failed to confirm receipt';
+    return { error: message } as const;
+  }
+}
+
+/**
+ * Get mismatches for the current practice
+ */
+export async function getMismatchesAction(filters?: {
+  status?: 'OPEN' | 'RESOLVED' | 'NEEDS_SUPPLIER_CORRECTION';
+  type?: 'SHORT' | 'OVER' | 'DAMAGE' | 'SUBSTITUTION';
+  practiceSupplierId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  try {
+    const ctx = await buildRequestContext();
+
+    const mismatchFilters: any = {};
+
+    if (filters?.status) {
+      mismatchFilters.status = filters.status;
+    }
+    if (filters?.type) {
+      mismatchFilters.type = filters.type;
+    }
+    if (filters?.practiceSupplierId) {
+      mismatchFilters.practiceSupplierId = filters.practiceSupplierId;
+    }
+    if (filters?.dateFrom) {
+      mismatchFilters.dateFrom = new Date(filters.dateFrom);
+    }
+    if (filters?.dateTo) {
+      mismatchFilters.dateTo = new Date(filters.dateTo);
+    }
+
+    const mismatches = await receivingService.getMismatchesForPractice(ctx, mismatchFilters);
+
+    return { success: true, mismatches } as const;
+  } catch (error: unknown) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'getMismatchesAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      filters,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Failed to get mismatches');
+
+    return { error: error instanceof Error ? error.message : 'Failed to get mismatches' } as const;
+  }
+}
+
+/**
+ * Get mismatch counts by status for dashboard
+ */
+export async function getMismatchCountsAction() {
+  try {
+    const ctx = await buildRequestContext();
+    const counts = await receivingService.getMismatchCounts(ctx);
+    return { success: true, counts } as const;
+  } catch (error: unknown) {
+    logger.error({
+      action: 'getMismatchCountsAction',
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Failed to get mismatch counts');
+    return { error: 'Failed to get mismatch counts' } as const;
+  }
+}
+
+/**
+ * Resolve a mismatch
+ */
+export async function resolveMismatchAction(mismatchId: string, resolutionNote?: string) {
+  await verifyCsrfFromHeaders();
+
+  try {
+    const ctx = await buildRequestContext();
+
+    if (!mismatchId || typeof mismatchId !== 'string') {
+      return { error: 'Invalid mismatch ID' } as const;
+    }
+
+    const mismatch = await receivingService.resolveMismatch(ctx, mismatchId, resolutionNote);
+
+    revalidatePath('/receiving/mismatches');
+    revalidatePath('/dashboard');
+
+    return { success: true, mismatch } as const;
+  } catch (error: unknown) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'resolveMismatchAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      mismatchId,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Failed to resolve mismatch');
+
+    return { error: error instanceof Error ? error.message : 'Failed to resolve mismatch' } as const;
+  }
+}
+
+/**
+ * Flag mismatch for supplier correction
+ */
+export async function flagMismatchForSupplierAction(mismatchId: string, note?: string) {
+  await verifyCsrfFromHeaders();
+
+  try {
+    const ctx = await buildRequestContext();
+
+    if (!mismatchId || typeof mismatchId !== 'string') {
+      return { error: 'Invalid mismatch ID' } as const;
+    }
+
+    const mismatch = await receivingService.flagMismatchForSupplier(ctx, mismatchId, note);
+
+    revalidatePath('/receiving/mismatches');
+    revalidatePath('/dashboard');
+
+    return { success: true, mismatch } as const;
+  } catch (error: unknown) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'flagMismatchForSupplierAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      mismatchId,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Failed to flag mismatch for supplier');
+
+    return { error: error instanceof Error ? error.message : 'Failed to flag mismatch' } as const;
+  }
+}
+
+/**
+ * Append a note to an existing mismatch
+ */
+export async function appendMismatchNoteAction(mismatchId: string, note: string) {
+  await verifyCsrfFromHeaders();
+
+  try {
+    const ctx = await buildRequestContext();
+
+    if (!mismatchId || typeof mismatchId !== 'string') {
+      return { error: 'Invalid mismatch ID' } as const;
+    }
+
+    if (!note || note.trim().length === 0) {
+      return { error: 'Note is required' } as const;
+    }
+
+    const mismatch = await receivingService.appendMismatchNote(ctx, mismatchId, note.trim());
+
+    revalidatePath('/receiving/mismatches');
+
+    return { success: true, mismatch } as const;
+  } catch (error: unknown) {
+    const ctx = await buildRequestContext().catch(() => null);
+    logger.error({
+      action: 'appendMismatchNoteAction',
+      userId: ctx?.userId,
+      practiceId: ctx?.practiceId,
+      mismatchId,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Failed to append mismatch note');
+
+    return { error: error instanceof Error ? error.message : 'Failed to add note' } as const;
+  }
+}
 

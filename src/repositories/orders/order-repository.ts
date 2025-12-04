@@ -153,7 +153,7 @@ export class OrderRepository extends BaseRepository {
         items: {
           include: {
             item: {
-              select: { id: true, name: true, sku: true, unit: true },
+              select: { id: true, name: true, sku: true, unit: true, productId: true },
             },
           },
         },

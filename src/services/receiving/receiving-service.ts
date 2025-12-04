@@ -3,7 +3,8 @@
  * Business logic for goods receiving workflow
  */
 
-import { ReceivingRepository } from '@/src/repositories/receiving';
+import { ReceivingRepository, ReceivingMismatchRepository } from '@/src/repositories/receiving';
+import type { MismatchFilters, ReceivingMismatchWithRelations, CreateMismatchInput } from '@/src/repositories/receiving';
 import { InventoryRepository } from '@/src/repositories/inventory';
 import { UserRepository } from '@/src/repositories/users';
 import { OrderRepository } from '@/src/repositories/orders';
@@ -32,6 +33,19 @@ import {
 } from '@/src/domain/validators';
 import { prisma } from '@/lib/prisma';
 import { checkAndCreateLowStockNotification } from '@/lib/notifications';
+import { MismatchType, MismatchStatus } from '@prisma/client';
+
+// Re-export types for consumers
+export type { MismatchFilters, ReceivingMismatchWithRelations };
+
+// Input type for logging mismatches
+export interface LogMismatchInput {
+  itemId: string;
+  type: MismatchType;
+  orderedQuantity: number;
+  receivedQuantity: number;
+  note?: string;
+}
 
 export class ReceivingService {
   constructor(
@@ -39,7 +53,8 @@ export class ReceivingService {
     private inventoryRepository: InventoryRepository,
     private userRepository: UserRepository,
     private orderRepository: OrderRepository,
-    private auditService: AuditService
+    private auditService: AuditService,
+    private mismatchRepository: ReceivingMismatchRepository
   ) {}
 
   /**
@@ -250,10 +265,12 @@ export class ReceivingService {
 
   /**
    * Confirm goods receipt (updates inventory)
+   * @param backorderItemIds - Item IDs marked as expected backorders (won't trigger PARTIALLY_RECEIVED)
    */
   async confirmGoodsReceipt(
     ctx: RequestContext,
-    receiptId: string
+    receiptId: string,
+    backorderItemIds?: string[]
   ): Promise<ConfirmGoodsReceiptResult> {
     // Check permissions
     requireRole(ctx, 'STAFF');
@@ -352,7 +369,8 @@ export class ReceivingService {
         await this.updateOrderStatusAfterReceiving(
           receipt.orderId,
           ctx.practiceId,
-          tx
+          tx,
+          backorderItemIds
         );
       }
 
@@ -455,11 +473,13 @@ export class ReceivingService {
   /**
    * Update order status based on received quantities
    * Called within transaction after confirming a receipt
+   * @param backorderItemIds - Items marked as expected backorders (triggers PARTIAL_BACKORDER instead of PARTIALLY_RECEIVED)
    */
   private async updateOrderStatusAfterReceiving(
     orderId: string,
     practiceId: string,
-    tx: any
+    tx: any,
+    backorderItemIds?: string[]
   ): Promise<void> {
     // Get the order with its items
     const order = await this.orderRepository.findOrderById(
@@ -482,6 +502,8 @@ export class ReceivingService {
     const receivedQuantities = new Map<string, number>();
     // Also track if any items were skipped across all receipts
     const skippedItems = new Set<string>();
+    // Track backorder items
+    const backorderSet = new Set(backorderItemIds ?? []);
     
     for (const receipt of confirmedReceipts) {
       for (const line of receipt.lines ?? []) {
@@ -497,6 +519,7 @@ export class ReceivingService {
     // Check if all items are fully received
     let allItemsFullyReceived = true;
     let anyItemReceived = false;
+    let hasBackorderItems = false;
 
     for (const orderItem of order.items ?? []) {
       const receivedQty = receivedQuantities.get(orderItem.itemId) || 0;
@@ -513,15 +536,23 @@ export class ReceivingService {
         // If quantity is less than ordered, it's not fully received.
         // Even if skipped, we treat it as partial unless manually closed.
         allItemsFullyReceived = false;
+        
+        // Check if this shortfall is due to a backorder
+        if (backorderSet.has(orderItem.itemId)) {
+          hasBackorderItems = true;
+        }
       }
     }
 
     // Determine new order status
     // Note: Skipped items prevent automatic 'RECEIVED' status because 
     // receivedQty < orderedQty remains true.
-    let newStatus: 'PARTIALLY_RECEIVED' | 'RECEIVED';
+    let newStatus: 'PARTIALLY_RECEIVED' | 'PARTIAL_BACKORDER' | 'RECEIVED';
     if (allItemsFullyReceived) {
       newStatus = 'RECEIVED';
+    } else if (hasBackorderItems) {
+      // If any items are marked as backorder, use PARTIAL_BACKORDER status
+      newStatus = 'PARTIAL_BACKORDER';
     } else if (anyItemReceived) {
       newStatus = 'PARTIALLY_RECEIVED';
     } else {
@@ -650,6 +681,154 @@ export class ReceivingService {
 
     return mismatches;
   }
+
+  // ============================================
+  // MISMATCH TRACKING METHODS
+  // ============================================
+
+  /**
+   * Log receiving mismatches for a receipt
+   * Called when user chooses to persist discrepancy records
+   */
+  async logReceivingMismatches(
+    ctx: RequestContext,
+    receiptId: string,
+    mismatches: LogMismatchInput[]
+  ): Promise<ReceivingMismatchWithRelations[]> {
+    requireRole(ctx, 'STAFF');
+
+    if (mismatches.length === 0) {
+      return [];
+    }
+
+    return withTransaction(async (tx) => {
+      // Get receipt to extract context
+      const receipt = await this.receivingRepository.findGoodsReceiptById(
+        receiptId,
+        ctx.practiceId,
+        { tx }
+      );
+
+      // Build mismatch inputs
+      const inputs: CreateMismatchInput[] = mismatches.map((m) => ({
+        practiceId: ctx.practiceId,
+        orderId: receipt.orderId,
+        goodsReceiptId: receiptId,
+        itemId: m.itemId,
+        practiceSupplierId: receipt.practiceSupplierId,
+        type: m.type,
+        orderedQuantity: m.orderedQuantity,
+        receivedQuantity: m.receivedQuantity,
+        note: m.note,
+        createdById: ctx.userId,
+      }));
+
+      // Create mismatches in batch
+      await this.mismatchRepository.createMismatches(inputs, { tx });
+
+      // Fetch created mismatches with relations
+      return this.mismatchRepository.findMismatches(
+        ctx.practiceId,
+        { goodsReceiptId: receiptId },
+        { tx }
+      );
+    });
+  }
+
+  /**
+   * Get mismatches for practice with filters
+   */
+  async getMismatchesForPractice(
+    ctx: RequestContext,
+    filters?: Partial<MismatchFilters>
+  ): Promise<ReceivingMismatchWithRelations[]> {
+    requireRole(ctx, 'STAFF');
+    return this.mismatchRepository.findMismatches(ctx.practiceId, filters);
+  }
+
+  /**
+   * Get mismatch by ID
+   */
+  async getMismatchById(
+    ctx: RequestContext,
+    mismatchId: string
+  ): Promise<ReceivingMismatchWithRelations> {
+    requireRole(ctx, 'STAFF');
+    return this.mismatchRepository.findMismatchById(mismatchId, ctx.practiceId);
+  }
+
+  /**
+   * Count mismatches by status for dashboard
+   */
+  async getMismatchCounts(
+    ctx: RequestContext
+  ): Promise<{ open: number; resolved: number; needsSupplierCorrection: number }> {
+    requireRole(ctx, 'STAFF');
+    return this.mismatchRepository.countByStatus(ctx.practiceId);
+  }
+
+  /**
+   * Resolve a mismatch
+   */
+  async resolveMismatch(
+    ctx: RequestContext,
+    mismatchId: string,
+    resolutionNote?: string
+  ): Promise<ReceivingMismatchWithRelations> {
+    requireRole(ctx, 'STAFF');
+
+    await this.mismatchRepository.updateMismatchStatus(
+      mismatchId,
+      ctx.practiceId,
+      MismatchStatus.RESOLVED,
+      ctx.userId,
+      resolutionNote
+    );
+
+    return this.mismatchRepository.findMismatchById(mismatchId, ctx.practiceId);
+  }
+
+  /**
+   * Flag mismatch for supplier correction
+   * 
+   * TODO: When NEEDS_SUPPLIER_CORRECTION is set, emit event for:
+   * - Admin Console: Add to supplier issues queue
+   * - Supplier Hub: Create supplier notification (future work)
+   */
+  async flagMismatchForSupplier(
+    ctx: RequestContext,
+    mismatchId: string,
+    note?: string
+  ): Promise<ReceivingMismatchWithRelations> {
+    requireRole(ctx, 'STAFF');
+
+    await this.mismatchRepository.updateMismatchStatus(
+      mismatchId,
+      ctx.practiceId,
+      MismatchStatus.NEEDS_SUPPLIER_CORRECTION,
+      ctx.userId,
+      note
+    );
+
+    // TODO: Integration point for Admin Console queue and Supplier Hub
+    // Example: await this.eventEmitter.emit('mismatch.flaggedForSupplier', { mismatchId, ctx });
+
+    return this.mismatchRepository.findMismatchById(mismatchId, ctx.practiceId);
+  }
+
+  /**
+   * Append a note to an existing mismatch
+   */
+  async appendMismatchNote(
+    ctx: RequestContext,
+    mismatchId: string,
+    note: string
+  ): Promise<ReceivingMismatchWithRelations> {
+    requireRole(ctx, 'STAFF');
+
+    await this.mismatchRepository.appendNote(mismatchId, ctx.practiceId, note);
+    return this.mismatchRepository.findMismatchById(mismatchId, ctx.practiceId);
+  }
 }
 
 // Singleton instance
@@ -662,7 +841,8 @@ export function getReceivingService(): ReceivingService {
       new InventoryRepository(),
       new UserRepository(),
       new OrderRepository(),
-      getAuditService()
+      getAuditService(),
+      new ReceivingMismatchRepository()
     );
   }
   return receivingServiceInstance;

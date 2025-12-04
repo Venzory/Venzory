@@ -7,7 +7,7 @@ import type { BaseEntity } from './common';
 import type { Item } from './inventory';
 import type { PracticeSupplierWithRelations } from './suppliers';
 
-export type OrderStatus = 'DRAFT' | 'SENT' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED';
+export type OrderStatus = 'DRAFT' | 'SENT' | 'PARTIALLY_RECEIVED' | 'PARTIAL_BACKORDER' | 'RECEIVED' | 'CANCELLED';
 
 /**
  * Order - Purchase order to a supplier
