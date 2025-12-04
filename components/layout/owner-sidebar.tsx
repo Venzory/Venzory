@@ -11,6 +11,7 @@ import {
   ChevronRight,
   LayoutDashboard,
 } from 'lucide-react';
+import { SidebarTooltip } from '@/components/ui/sidebar-tooltip';
 
 type NavItem = {
   href: string;
@@ -144,23 +145,27 @@ export function OwnerSidebar({ isOpen, onClose }: OwnerSidebarProps) {
                   : pathname.startsWith(`${item.href}`);
 
               return (
-                <Link
+                <SidebarTooltip
                   key={item.href}
-                  href={item.href}
-                  onClick={handleLinkClick}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                    isActive
-                      ? 'bg-amber-200/70 font-medium text-amber-900 dark:bg-amber-800/40 dark:text-amber-100'
-                      : 'text-amber-800 hover:bg-amber-100 hover:text-amber-900 dark:text-amber-200 dark:hover:bg-amber-900/30 dark:hover:text-amber-100'
-                  } ${isCollapsed && mounted ? 'justify-center' : ''}`}
-                  aria-current={isActive ? 'page' : undefined}
-                  title={isCollapsed && mounted ? item.label : undefined}
+                  content={item.label}
+                  disabled={!isCollapsed || !mounted}
                 >
-                  <Icon className={`h-5 w-5 flex-shrink-0 ${
-                    isActive ? 'text-amber-700 dark:text-amber-300' : 'text-amber-600 dark:text-amber-400'
-                  }`} />
-                  {(!isCollapsed || !mounted) && <span>{item.label}</span>}
-                </Link>
+                  <Link
+                    href={item.href}
+                    onClick={handleLinkClick}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                      isActive
+                        ? 'bg-amber-200/70 font-medium text-amber-900 dark:bg-amber-800/40 dark:text-amber-100'
+                        : 'text-amber-800 hover:bg-amber-100 hover:text-amber-900 dark:text-amber-200 dark:hover:bg-amber-900/30 dark:hover:text-amber-100'
+                    } ${isCollapsed && mounted ? 'justify-center' : ''}`}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <Icon className={`h-5 w-5 flex-shrink-0 ${
+                      isActive ? 'text-amber-700 dark:text-amber-300' : 'text-amber-600 dark:text-amber-400'
+                    }`} />
+                    {(!isCollapsed || !mounted) && <span>{item.label}</span>}
+                  </Link>
+                </SidebarTooltip>
               );
             })}
           </div>
@@ -172,17 +177,18 @@ export function OwnerSidebar({ isOpen, onClose }: OwnerSidebarProps) {
                 Quick Access
               </div>
             )}
-            <Link
-              href="/admin"
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-amber-700 transition hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/30 ${
-                isCollapsed && mounted ? 'justify-center' : ''
-              }`}
-              title={isCollapsed && mounted ? 'Admin Console' : undefined}
-            >
-              <LayoutDashboard className="h-5 w-5 flex-shrink-0 text-indigo-500 dark:text-indigo-400" />
-              {(!isCollapsed || !mounted) && <span>Admin Console →</span>}
-            </Link>
+            <SidebarTooltip content="Admin Console" disabled={!isCollapsed || !mounted}>
+              <Link
+                href="/admin"
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-amber-700 transition hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/30 ${
+                  isCollapsed && mounted ? 'justify-center' : ''
+                }`}
+              >
+                <LayoutDashboard className="h-5 w-5 flex-shrink-0 text-indigo-500 dark:text-indigo-400" />
+                {(!isCollapsed || !mounted) && <span>Admin Console →</span>}
+              </Link>
+            </SidebarTooltip>
           </div>
         </nav>
 

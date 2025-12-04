@@ -15,6 +15,7 @@ import {
   Building2,
   Package,
 } from 'lucide-react';
+import { SidebarTooltip } from '@/components/ui/sidebar-tooltip';
 
 type NavItem = {
   href: string;
@@ -149,23 +150,27 @@ export function SupplierSidebar({ supplierName, userRole, isOpen, onClose }: Sup
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
 
               return (
-                <Link
+                <SidebarTooltip
                   key={item.href}
-                  href={item.href}
-                  onClick={handleLinkClick}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                    isActive
-                      ? 'bg-teal-50 font-medium text-teal-700 dark:bg-teal-900/30 dark:text-teal-300'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
-                  } ${isCollapsed && mounted ? 'justify-center' : ''}`}
-                  aria-current={isActive ? 'page' : undefined}
-                  title={isCollapsed && mounted ? item.label : undefined}
+                  content={item.label}
+                  disabled={!isCollapsed || !mounted}
                 >
-                  <Icon className={`h-5 w-5 flex-shrink-0 ${
-                    isActive ? 'text-teal-600 dark:text-teal-400' : ''
-                  }`} />
-                  {(!isCollapsed || !mounted) && <span>{item.label}</span>}
-                </Link>
+                  <Link
+                    href={item.href}
+                    onClick={handleLinkClick}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                      isActive
+                        ? 'bg-teal-50 font-medium text-teal-700 dark:bg-teal-900/30 dark:text-teal-300'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+                    } ${isCollapsed && mounted ? 'justify-center' : ''}`}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <Icon className={`h-5 w-5 flex-shrink-0 ${
+                      isActive ? 'text-teal-600 dark:text-teal-400' : ''
+                    }`} />
+                    {(!isCollapsed || !mounted) && <span>{item.label}</span>}
+                  </Link>
+                </SidebarTooltip>
               );
             })}
           </div>

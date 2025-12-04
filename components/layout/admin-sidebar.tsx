@@ -16,6 +16,7 @@ import {
   ChevronRight,
   LayoutDashboard,
 } from 'lucide-react';
+import { SidebarTooltip } from '@/components/ui/sidebar-tooltip';
 
 type NavItem = {
   href: string;
@@ -155,23 +156,27 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   : pathname.startsWith(`${item.href}`);
 
               return (
-                <Link
+                <SidebarTooltip
                   key={item.href}
-                  href={item.href}
-                  onClick={handleLinkClick}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                    isActive
-                      ? 'bg-indigo-200/70 font-medium text-indigo-900 dark:bg-indigo-800/40 dark:text-indigo-100'
-                      : 'text-indigo-800 hover:bg-indigo-100 hover:text-indigo-900 dark:text-indigo-200 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-100'
-                  } ${isCollapsed && mounted ? 'justify-center' : ''}`}
-                  aria-current={isActive ? 'page' : undefined}
-                  title={isCollapsed && mounted ? item.label : undefined}
+                  content={item.label}
+                  disabled={!isCollapsed || !mounted}
                 >
-                  <Icon className={`h-5 w-5 flex-shrink-0 ${
-                    isActive ? 'text-indigo-700 dark:text-indigo-300' : 'text-indigo-600 dark:text-indigo-400'
-                  }`} />
-                  {(!isCollapsed || !mounted) && <span>{item.label}</span>}
-                </Link>
+                  <Link
+                    href={item.href}
+                    onClick={handleLinkClick}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                      isActive
+                        ? 'bg-indigo-200/70 font-medium text-indigo-900 dark:bg-indigo-800/40 dark:text-indigo-100'
+                        : 'text-indigo-800 hover:bg-indigo-100 hover:text-indigo-900 dark:text-indigo-200 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-100'
+                    } ${isCollapsed && mounted ? 'justify-center' : ''}`}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <Icon className={`h-5 w-5 flex-shrink-0 ${
+                      isActive ? 'text-indigo-700 dark:text-indigo-300' : 'text-indigo-600 dark:text-indigo-400'
+                    }`} />
+                    {(!isCollapsed || !mounted) && <span>{item.label}</span>}
+                  </Link>
+                </SidebarTooltip>
               );
             })}
           </div>
@@ -183,28 +188,30 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 Quick Access
               </div>
             )}
-            <Link
-              href="/owner"
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-indigo-700 transition hover:bg-indigo-100 dark:text-indigo-300 dark:hover:bg-indigo-900/30 ${
-                isCollapsed && mounted ? 'justify-center' : ''
-              }`}
-              title={isCollapsed && mounted ? 'Owner Portal' : undefined}
-            >
-              <Shield className="h-5 w-5 flex-shrink-0 text-amber-500 dark:text-amber-400" />
-              {(!isCollapsed || !mounted) && <span>Owner Portal →</span>}
-            </Link>
-            <Link
-              href="/dashboard"
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-indigo-700 transition hover:bg-indigo-100 dark:text-indigo-300 dark:hover:bg-indigo-900/30 ${
-                isCollapsed && mounted ? 'justify-center' : ''
-              }`}
-              title={isCollapsed && mounted ? 'Clinic Dashboard' : undefined}
-            >
-              <LayoutDashboard className="h-5 w-5 flex-shrink-0 text-sky-500 dark:text-sky-400" />
-              {(!isCollapsed || !mounted) && <span>Clinic Dashboard →</span>}
-            </Link>
+            <SidebarTooltip content="Owner Portal" disabled={!isCollapsed || !mounted}>
+              <Link
+                href="/owner"
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-indigo-700 transition hover:bg-indigo-100 dark:text-indigo-300 dark:hover:bg-indigo-900/30 ${
+                  isCollapsed && mounted ? 'justify-center' : ''
+                }`}
+              >
+                <Shield className="h-5 w-5 flex-shrink-0 text-amber-500 dark:text-amber-400" />
+                {(!isCollapsed || !mounted) && <span>Owner Portal →</span>}
+              </Link>
+            </SidebarTooltip>
+            <SidebarTooltip content="Clinic Dashboard" disabled={!isCollapsed || !mounted}>
+              <Link
+                href="/dashboard"
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-indigo-700 transition hover:bg-indigo-100 dark:text-indigo-300 dark:hover:bg-indigo-900/30 ${
+                  isCollapsed && mounted ? 'justify-center' : ''
+                }`}
+              >
+                <LayoutDashboard className="h-5 w-5 flex-shrink-0 text-sky-500 dark:text-sky-400" />
+                {(!isCollapsed || !mounted) && <span>Clinic Dashboard →</span>}
+              </Link>
+            </SidebarTooltip>
           </div>
         </nav>
 

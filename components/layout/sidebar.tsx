@@ -20,6 +20,7 @@ import {
   ListPlus,
   AlertTriangle,
 } from 'lucide-react';
+import { SidebarTooltip } from '@/components/ui/sidebar-tooltip';
 
 type NavItem = {
   href: string;
@@ -209,21 +210,25 @@ export function Sidebar({ practiceName, userRole, isOpen, onClose }: SidebarProp
                       pathname === item.href || pathname.startsWith(`${item.href}/`);
 
                     return (
-                      <Link
+                      <SidebarTooltip
                         key={item.href}
-                        href={item.href}
-                        onClick={handleLinkClick}
-                        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                          isActive
-                            ? 'bg-sidebar-active-bg text-sidebar-active-text font-medium'
-                            : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text font-normal'
-                        } ${isCollapsed && mounted ? 'justify-center' : ''}`}
-                        aria-current={isActive ? 'page' : undefined}
-                        title={isCollapsed && mounted ? item.label : undefined}
+                        content={item.label}
+                        disabled={!isCollapsed || !mounted}
                       >
-                        <Icon className="h-5 w-5 flex-shrink-0" />
-                        {(!isCollapsed || !mounted) && <span>{item.label}</span>}
-                      </Link>
+                        <Link
+                          href={item.href}
+                          onClick={handleLinkClick}
+                          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                            isActive
+                              ? 'bg-sidebar-active-bg text-sidebar-active-text font-medium'
+                              : 'text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text font-normal'
+                          } ${isCollapsed && mounted ? 'justify-center' : ''}`}
+                          aria-current={isActive ? 'page' : undefined}
+                        >
+                          <Icon className="h-5 w-5 flex-shrink-0" />
+                          {(!isCollapsed || !mounted) && <span>{item.label}</span>}
+                        </Link>
+                      </SidebarTooltip>
                     );
                   })}
                 </div>
